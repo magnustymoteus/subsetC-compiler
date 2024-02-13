@@ -1,4 +1,3 @@
-import antlr4.tree.Trees
 from antlr4 import *
 from C.gen.CLexer import *
 from C.gen.CParser import *
