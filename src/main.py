@@ -1,18 +1,23 @@
+import antlr4.tree.Trees
 from antlr4 import *
 import sys
-import C.gen.CLexer as CLexer
-import C.gen.CParser as CParser
+from C.gen.CLexer import *
+from C.gen.CParser import *
 
-def main(argv):
-    input_stream = FileStream(argv[1])
+def tokenizeInput(input_stream):
     lexer = CLexer(input_stream)
     stream = CommonTokenStream(lexer)
-    parser = CParser(stream)
-    tree = parser.start_()
+    return stream
+
+def parseTokens(token_stream):
+    parser = CParser(token_stream)
+    return parser.expression()
+
+# run with "program.c -s"
+def main(argv):
+    input_stream = FileStream(argv[1])
+    tokens = tokenizeInput(input_stream)
+    tree = parseTokens(tokens)
 
 if __name__ == '__main__':
     main(sys.argv)
-
-
-
-
