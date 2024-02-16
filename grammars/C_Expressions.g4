@@ -1,4 +1,4 @@
-grammar C;
+grammar C_Expressions;
 
 // Parser rules
 expr: term (('+' | '-') term)*;
