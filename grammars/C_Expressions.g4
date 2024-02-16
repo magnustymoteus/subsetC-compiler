@@ -1,7 +1,7 @@
 grammar C_Expressions;
 
 // Parser rules
-statement: exprStatement;
+statement: exprStatement | statement exprStatement;
 exprStatement: expr ';';
 expr: constantExpr | constant;
 constantExpr: conditionalExpr;
