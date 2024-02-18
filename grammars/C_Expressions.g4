@@ -1,8 +1,8 @@
 grammar C_Expressions;
 
 // Parser rules
-statement: exprStatement | statement exprStatement;
-exprStatement: expr ';';
+statement: exprStatement ';' | statement exprStatement | ';';
+exprStatement: expr;
 expr: constantExpr | constant;
 constantExpr: conditionalExpr;
 conditionalExpr: logicalOrExpr;
