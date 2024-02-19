@@ -94,11 +94,11 @@ class Ast:
     def __init__(self) -> None:
         self.root: AstBasicNode = None
 
-    def __iter__(self):
-        AstIterPostorder(self)
+    # def __iter__(self):
+    #     AstIterPostorder(self)
 
-    def iter(self, iter_method: AstIter):
-        return iter_method(self)
+    # def iter(self, iter_method: AstIter):
+    #     return iter_method(self)
 
     def set_root(self, node: AstBasicNode):
         self.root = node
@@ -157,6 +157,16 @@ class AstUnOpNode(AstBasicNode):
 
 
 class AstLiteralNode(AstBasicNode):
+    """
+    Literal node. Node containing an actual value. (e.g. string, integer).
+    """
+
+    def __init__(self, name: str) -> None:
+        self.value = None  # TODO
+        super().__init__(name)
+
+
+class AstAssignNode(AstBasicNode):
     """
     Literal node. Node containing an actual value. (e.g. string, integer).
     """
