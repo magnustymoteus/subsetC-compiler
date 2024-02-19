@@ -1,3 +1,4 @@
 # libraries required for the project
 # run 'python3 -m pip install -r requirements.txt' to install them for venv
 antlr4-python3-runtime==4.13.1
+graphviz=0.20.1
