@@ -1,4 +1,6 @@
 import sys
+
+from parser import Ast, AstBasicNode
 from antlr4.tree.Trees import Trees
 from antlr4 import *
 from src.antlr_files.C_ExpressionsParser import *
