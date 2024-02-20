@@ -1,0 +1,1 @@
+from src.parser.optimizations.constant_folding import constant_folding
