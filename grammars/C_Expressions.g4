@@ -1,7 +1,7 @@
 grammar C_Expressions;
 
 // Parser rules
-statement: exprStatement ';' | statement exprStatement ';';
+statement: exprStatement ';' | statement exprStatement ';' | ';';
 exprStatement: expr;
 expr: constantExpr | constant;
 constantExpr: conditionalExpr;
@@ -50,5 +50,5 @@ BITXOR: '^';
 SL: '<<';
 SR: '>>';
 
-INT: '0' | [1-9] [0-9]*;
+INT: [0-9]+;
 WS: [ \t\r\n]+ -> skip;

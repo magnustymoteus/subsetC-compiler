@@ -1,4 +1,4 @@
-# Generated from C_Expressions.g4 by ANTLR 4.13.1
+# Generated from ../../grammars/C_Expressions.g4 by ANTLR 4.13.1
 from antlr4 import *
 if "." in __name__:
     from .C_ExpressionsParser import C_ExpressionsParser
