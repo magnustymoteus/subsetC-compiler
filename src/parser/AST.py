@@ -30,6 +30,14 @@ def main():
 
 
 class AstIter(ABC):
+    """
+    Generic AST iteration type.
+    Provides common methods for each node type all derived iterators must implement.
+
+    Derived iterators should yield node wrappers rather than actual nodes.
+    This way the reference in the wrapper can be changed and a node can be replace by an entirely different one.
+    """
+
     def __init__(self, ast: Ast) -> None:
         self.ast = ast
 
@@ -37,6 +45,9 @@ class AstIter(ABC):
         yield from self.match_node(self.ast.root)
 
     def match_node(self, node_w: NodeWrapper[NodeType]):  # TODO rename
+        """
+        Match the type of the node to decide what handler function to call.
+        """
         match node_w.n:
             case AstBinOpNode():
                 yield from self.bin_op(node_w)
@@ -51,22 +62,50 @@ class AstIter(ABC):
 
     @abstractmethod
     def bin_op(self, node_w: NodeWrapper[AstBinOpNode]):
+        """
+        Method called when encountering a BinOp node. This method MUST use the yield keyword at least one node.
+
+        If the function should yield nothing use the statement `return; yield`.
+        (`return` is sufficient if the function contains a yield elsewhere)
+        """
         raise Exception  # TODO proper exception type
 
     @abstractmethod
     def un_op(self, node_w: NodeWrapper[AstUnOpNode]):
+        """
+        Method called when encountering a UnOp node. This method MUST use the yield keyword at least one node.
+
+        If the function should yield nothing use the statement `return; yield`.
+        (`return` is sufficient if the function contains a yield elsewhere)
+        """
         raise Exception  # TODO proper exception type
 
     @abstractmethod
     def literal(self, node_w: NodeWrapper[AstLiteralNode]):
+        """
+        Method called when encountering a Literal node. This method MUST use the yield keyword at least one node.
+
+        If the function should yield nothing use the statement `return; yield`.
+        (`return` is sufficient if the function contains a yield elsewhere)
+        """
         raise Exception  # TODO proper exception type
 
     @abstractmethod
     def assign(self, node_w: NodeWrapper[AstAssignNode]):
+        """
+        Method called when encountering a Assign node. This method MUST use the yield keyword at least one node.
+
+        If the function should yield nothing use the statement `return; yield`.
+        (`return` is sufficient if the function contains a yield elsewhere)
+        """
         raise Exception  # TODO proper exception type
 
 
 class AstIterPostorder(AstIter):
+    """
+    Iterate over AST in postorder.
+    """
+
     def __init__(self, ast: Ast) -> None:
         super().__init__(ast)
 
@@ -93,12 +132,22 @@ class Ast:
         self.root: NodeWrapper[AstBasicNode] = None
 
     def iter(self, iter_method: AstIter) -> Generator[NodeWrapper[NodeType], None, None]:
+        """
+        Iterate over the nodes of the tree.
+        What elements and in which order is decided by the handler functions from the `iter_method`.
+        """
         return iter_method(self)
 
-    def set_root(self, nodw_w: NodeWrapper[AstBasicNode]):
-        self.root = nodw_w
+    def set_root(self, node_w: NodeWrapper[AstBasicNode]):
+        """
+        Set the root node of the ast.
+        """
+        self.root = node_w
 
     def to_dot_graph(self) -> Digraph:
+        """
+        Export the AST to a dot graph.
+        """
         graph = Digraph()
         self.root.n.append_to_graph(graph, None)
 
@@ -115,6 +164,9 @@ class AstBasicNode(ABC):
 
     @abstractmethod
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
+        """
+        Add the node to the dot graph. The name is determined by the node's repr.
+        """
         graph.node(str(self.id), str(self))
         if parent_id is not None:
             graph.edge(str(parent_id), str(self.id))
@@ -127,11 +179,18 @@ NodeType = TypeVar("NodeType", bound=AstBasicNode)
 
 
 class NodeWrapper(Generic[NodeType]):
+    """
+    Wrapper for AST node. This allows for editing the tree in-place by reassigning the contained node.
+    """
+
     def __init__(self, node: NodeType = None) -> None:
         self.n = node
 
 
 def wrap(node: NodeType = None):
+    """
+    Return a wrapper of the provided node.
+    """
     return NodeWrapper(node)
 
 
@@ -142,12 +201,27 @@ class AstBinOpNode(AstBasicNode):
 
     def __init__(self, operator: str) -> None:
         self.lhs_w: NodeWrapper = wrap()  # TODO ensure gets set
+        """
+        Wrapper for left hand side value node.
+        """
+
         self.rhs_w: NodeWrapper = wrap()  # TODO ensure gets set
+        """
+        Wrapper for right hand side value node.
+        """
+
         self.operator: str = operator  # TODO use enum instead of string for operator type
+        """
+        Opertion type of the node.
+        """
+
         super().__init__()
 
     @property
     def lhs(self) -> AstBasicNode:
+        """
+        The left hand side value node of the operation.
+        """
         return self.lhs_w.n
 
     @lhs.setter
@@ -156,6 +230,9 @@ class AstBinOpNode(AstBasicNode):
 
     @property
     def rhs(self) -> AstBasicNode:
+        """
+        The right hand side value node of the operation.
+        """
         return self.rhs_w.n
 
     @rhs.setter
@@ -178,7 +255,15 @@ class AstUnOpNode(AstBasicNode):
 
     def __init__(self, operator: str) -> None:
         self.operand_w: NodeWrapper = wrap()  # TODO ensure gets set
+        """
+        Wrapper for the value node operated on.
+        """
+
         self.operator: str = operator  # TODO use enum instead of string for operator type
+        """
+        Opertion type of the node.
+        """
+
         super().__init__()
 
     def append_to_graph(self, graph: Digraph, parent_id: str | None) -> None:
@@ -187,6 +272,9 @@ class AstUnOpNode(AstBasicNode):
 
     @property
     def operand(self) -> AstBasicNode:
+        """
+        The value node the operation acts on.
+        """
         return self.operand_w.n
 
     @operand.setter
@@ -204,6 +292,10 @@ class AstLiteralNode(AstBasicNode):
 
     def __init__(self, value: int) -> None:
         self.value: int = value  # TODO ensure gets set
+        """
+        Value of the literal.
+        """
+
         super().__init__()
 
     def append_to_graph(self, graph: Digraph, parent_id: str | None) -> None:
@@ -220,11 +312,22 @@ class AstAssignNode(AstBasicNode):
 
     def __init__(self) -> None:
         self.assignee_w: NodeWrapper = wrap()  # TODO ensure gets set
+        """
+        Wrapper for the variable node assigned to.
+        """
+
         self.value_w: NodeWrapper = wrap()  # TODO ensure gets set
+        """
+        Wrapper for the assigned value node.
+        """
+
         super().__init__()
 
     @property
     def assignee(self):
+        """
+        The variable node assigned to.
+        """
         return self.assignee_w.n
 
     @assignee.setter
@@ -233,6 +336,9 @@ class AstAssignNode(AstBasicNode):
 
     @property
     def value(self):
+        """
+        The value node assigned to the variable.
+        """
         return self.value_w.n
 
     @value.setter
