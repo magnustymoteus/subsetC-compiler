@@ -9,6 +9,11 @@ else:
 
 class C_ExpressionsVisitor(ParseTreeVisitor):
 
+    # Visit a parse tree produced by C_ExpressionsParser#program.
+    def visitProgram(self, ctx:C_ExpressionsParser.ProgramContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by C_ExpressionsParser#statement.
     def visitStatement(self, ctx:C_ExpressionsParser.StatementContext):
         return self.visitChildren(ctx)
@@ -89,13 +94,18 @@ class C_ExpressionsVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by C_ExpressionsParser#parenExpr.
+    def visitParenExpr(self, ctx:C_ExpressionsParser.ParenExprContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by C_ExpressionsParser#unaryOperator.
     def visitUnaryOperator(self, ctx:C_ExpressionsParser.UnaryOperatorContext):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by C_ExpressionsParser#constant.
-    def visitConstant(self, ctx:C_ExpressionsParser.ConstantContext):
+    # Visit a parse tree produced by C_ExpressionsParser#literal.
+    def visitLiteral(self, ctx:C_ExpressionsParser.LiteralContext):
         return self.visitChildren(ctx)
 
 

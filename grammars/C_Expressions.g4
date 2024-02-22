@@ -1,9 +1,10 @@
 grammar C_Expressions;
 
 // Parser rules
-statement: exprStatement ';' | statement exprStatement ';' | ';';
+program: statement*;
+statement: exprStatement ';';
 exprStatement: expr;
-expr: constantExpr | constant;
+expr: constantExpr;
 constantExpr: conditionalExpr;
 conditionalExpr: logicalOrExpr;
 logicalOrExpr: logicalAndExpr | logicalOrExpr OR logicalAndExpr;
@@ -16,9 +17,10 @@ relationalExpr: shiftExpr | relationalExpr (GT | LT | GTEQ | LTEQ) shiftExpr;
 shiftExpr: addExpr | shiftExpr (SL | SR) addExpr;
 addExpr: multExpr | addExpr (PLUS | MINUS) multExpr;
 multExpr: unaryExpr | multExpr (MUL | DIV | MOD) unaryExpr;
-unaryExpr: unaryOperator expr | LPAREN expr RPAREN | constant;
+unaryExpr: unaryOperator expr | literal | parenExpr;
+parenExpr: LPAREN expr RPAREN;
 unaryOperator: PLUS | MINUS | NOT | BITNOT;
-constant: INT;
+literal: INT;
 
 // Lexer rules
 LPAREN: '(';

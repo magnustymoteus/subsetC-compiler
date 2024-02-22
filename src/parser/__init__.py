@@ -1,14 +1,5 @@
 # classes
-from src.parser.AST import \
-    Ast, \
-    AstBasicNode, \
-    NodeWrapper, \
-    AstBinOpNode, \
-    AstUnOpNode, \
-    AstLiteralNode, \
-    AstAssignNode, \
-    AstIterPostorder, \
-    AstIter
+from src.parser.AST import *
 
 # functions
 from src.parser.AST import wrap

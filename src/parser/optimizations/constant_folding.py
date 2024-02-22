@@ -1,4 +1,4 @@
-from ..AST import *
+from src.parser import *
 
 
 def constant_folding(ast: Ast):

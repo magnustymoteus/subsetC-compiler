@@ -49,6 +49,8 @@ class AstIter(ABC):
         Match the type of the node to decide what handler function to call.
         """
         match node_w.n:
+            case AstProgramNode():
+                yield from self.program(node_w)
             case AstBinOpNode():
                 yield from self.bin_op(node_w)
             case AstUnOpNode():
@@ -60,6 +62,13 @@ class AstIter(ABC):
             case _:
                 raise Exception  # TODO proper exception type
 
+    @abstractmethod
+    def program(self, node_w: NodeWrapper[AstProgramNode]):
+        """
+        :param node_w:
+        :return:
+        """
+        raise Exception # TODO
     @abstractmethod
     def bin_op(self, node_w: NodeWrapper[AstBinOpNode]):
         """
@@ -109,7 +118,12 @@ class AstIterPostorder(AstIter):
     def __init__(self, ast: Ast) -> None:
         super().__init__(ast)
 
+    def program(self, node_w: NodeWrapper[AstProgramNode]):
+        yield from node_w.n.statements
+        yield node_w
+
     def bin_op(self, node_w: NodeWrapper[AstBinOpNode]):
+
         yield from self.match_node(node_w.n.lhs_w)
         yield from self.match_node(node_w.n.rhs_w)
         yield node_w
@@ -192,6 +206,25 @@ def wrap(node: NodeType = None):
     Return a wrapper of the provided node.
     """
     return NodeWrapper(node)
+
+
+class AstProgramNode(AstBasicNode):
+    """
+    Program node that has all statements of the program as its children.
+    """
+
+    def __init__(self, statements: list[NodeWrapper[AstBasicNode]]):
+        self.statements = statements
+        super().__init__()
+
+    def append_to_graph(self, graph: Digraph, parent_id: str | None) -> None:
+        super().append_to_graph(graph, parent_id)
+        for i in range(0, len(self.statements)):
+            self.statements[i].n.append_to_graph(graph, self.id)
+
+
+    def __repr__(self):
+        return f"program"
 
 
 class AstBinOpNode(AstBasicNode):

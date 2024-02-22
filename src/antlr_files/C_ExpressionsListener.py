@@ -8,6 +8,15 @@ else:
 # This class defines a complete listener for a parse tree produced by C_ExpressionsParser.
 class C_ExpressionsListener(ParseTreeListener):
 
+    # Enter a parse tree produced by C_ExpressionsParser#program.
+    def enterProgram(self, ctx:C_ExpressionsParser.ProgramContext):
+        pass
+
+    # Exit a parse tree produced by C_ExpressionsParser#program.
+    def exitProgram(self, ctx:C_ExpressionsParser.ProgramContext):
+        pass
+
+
     # Enter a parse tree produced by C_ExpressionsParser#statement.
     def enterStatement(self, ctx:C_ExpressionsParser.StatementContext):
         pass
@@ -152,6 +161,15 @@ class C_ExpressionsListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by C_ExpressionsParser#parenExpr.
+    def enterParenExpr(self, ctx:C_ExpressionsParser.ParenExprContext):
+        pass
+
+    # Exit a parse tree produced by C_ExpressionsParser#parenExpr.
+    def exitParenExpr(self, ctx:C_ExpressionsParser.ParenExprContext):
+        pass
+
+
     # Enter a parse tree produced by C_ExpressionsParser#unaryOperator.
     def enterUnaryOperator(self, ctx:C_ExpressionsParser.UnaryOperatorContext):
         pass
@@ -161,12 +179,12 @@ class C_ExpressionsListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by C_ExpressionsParser#constant.
-    def enterConstant(self, ctx:C_ExpressionsParser.ConstantContext):
+    # Enter a parse tree produced by C_ExpressionsParser#literal.
+    def enterLiteral(self, ctx:C_ExpressionsParser.LiteralContext):
         pass
 
-    # Exit a parse tree produced by C_ExpressionsParser#constant.
-    def exitConstant(self, ctx:C_ExpressionsParser.ConstantContext):
+    # Exit a parse tree produced by C_ExpressionsParser#literal.
+    def exitLiteral(self, ctx:C_ExpressionsParser.LiteralContext):
         pass
 
 

@@ -3,7 +3,7 @@ from graphviz import Digraph
 from antlr4.tree.Trees import Trees
 
 class VisualizationVisitor():
-    def visualize(self, root: ParserRuleContext, rules, filename: str) -> Digraph:
+    def visualize(self, root: ParserRuleContext, rules, filename: str):
         dot = Digraph()
         dot.node_attr['shape'] = 'box'
         def add_nodes(node: ParserRuleContext):
