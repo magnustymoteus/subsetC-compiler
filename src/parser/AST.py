@@ -20,7 +20,7 @@ def main():
     n1.n.rhs_w = n3
     n2.n.lhs_w = n4
     n2.n.rhs_w = n5
-    n5.n.operand = n6
+    n5.n.operand_w = n6
 
     graph = ast.to_dot_graph()
     graph.save(filename="graph.gv")
@@ -35,7 +35,7 @@ class AstIter(ABC):
     Provides common methods for each node type all derived iterators must implement.
 
     Derived iterators should yield node wrappers rather than actual nodes.
-    This way the reference in the wrapper can be changed and a node can be replace by an entirely different one.
+    This way the reference in the wrapper can be changed and a node can be replaced by an entirely different one.
     """
 
     def __init__(self, ast: Ast) -> None:
@@ -212,7 +212,7 @@ class AstBinOpNode(AstBasicNode):
 
         self.operator: str = operator  # TODO use enum instead of string for operator type
         """
-        Opertion type of the node.
+        Operation type of the node.
         """
 
         super().__init__()
@@ -261,7 +261,7 @@ class AstUnOpNode(AstBasicNode):
 
         self.operator: str = operator  # TODO use enum instead of string for operator type
         """
-        Opertion type of the node.
+        Operation type of the node.
         """
 
         super().__init__()
