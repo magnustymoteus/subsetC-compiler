@@ -9,42 +9,34 @@ from src.antlr_files.C_ExpressionsLexer import *
 from src.antlr_files.C_ExpressionsParser import *
 from src.antlr_files.C_ExpressionsVisitor import *
 
-def tokenizeInput(input_stream):
+def getTokens(filepath: str):
+    input_stream = FileStream(filepath)
     lexer = C_ExpressionsLexer(input_stream)
     stream = CommonTokenStream(lexer)
     return stream
 
+def visualizeCST(tree, rules, filename):
+    visualizationVisitor = VisualizationVisitor()
+    visualizationVisitor.visualize(tree, rules, filename)
 
-def parseTokens(token_stream):
-    parser = C_ExpressionsParser(token_stream)
-    return parser
+def getAST(tree) -> Ast:
+    ast = Ast()
+    converterVisitor = CSTToASTVisitor()
+    root = converterVisitor.visit(tree)
+    ast.set_root(root)
+    return ast
+def applyConstantFolding(ast: Ast):
+    optim.constant_folding(ast)
+
+def visualizeAST(ast: Ast, filename: str):
+    graph = ast.to_dot_graph()
+    graph.save(filename=filename)
+
+
 
 
 def main(argv):
-    input_stream = FileStream("example_source_files/proj1_man_pass_operators.c")
-    tokens = tokenizeInput(input_stream)
-    parser = parseTokens(tokens)
-    tree = parser.program()
-    rules = parser.ruleNames
-
-    visualizationVisitor = VisualizationVisitor()
-    visualizationVisitor.visualize(tree, rules, "raw-CST")
-
-    converterVisitor = CSTToASTVisitor()
-    ast = Ast()
-    root = converterVisitor.visit(tree)
-    ast.set_root(root)
-    graph = ast.to_dot_graph()
-    graph.save(filename="AST.gv")
-
-    optim.constant_folding(ast)
-
-
-    graph = ast.to_dot_graph()
-    graph.save(filename="AST_constant_fold.gv")
-
-    #for node in ast.iter(AstIterPostorder):
-    #     print(node.n)
+    pass
 
 
 if __name__ == '__main__':
