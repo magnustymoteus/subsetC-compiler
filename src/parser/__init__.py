@@ -8,7 +8,8 @@ from src.parser.AST import \
     AstLiteralNode, \
     AstAssignNode, \
     AstIterPostorder, \
-    AstIter
+    AstIter, \
+    AstVisit
 
 # functions
 from src.parser.AST import wrap

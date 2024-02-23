@@ -127,6 +127,66 @@ class AstIterPostorder(AstIter):
         yield node_w
 
 
+class AstVisit(ABC):
+    """
+    Generic AST visitor type.
+    Provides common methods for each node type all derived iterators must implement.
+
+    Derived visitors should yield node wrappers rather than actual nodes.
+    This way the reference in the wrapper can be changed and a node can be replace by an entirely different one.
+    """
+
+    def __init__(self, ast: Ast) -> None:
+        self.ast = ast
+
+    def __iter__(self) -> Generator[NodeWrapper[NodeType], None, None]:
+        self.match_node(self.ast.root)
+
+    def match_node(self, node_w: NodeWrapper[NodeType]):  # TODO rename
+        """
+        Match the type of the node to decide what handler function to call.
+        """
+        match node_w.n:
+            case AstBinOpNode():
+                self.bin_op(node_w)
+            case AstUnOpNode():
+                self.un_op(node_w)
+            case AstLiteralNode():
+                self.literal(node_w)
+            case AstAssignNode():
+                self.assign(node_w)
+            case _:
+                raise Exception  # TODO proper exception type
+
+    @abstractmethod
+    def bin_op(self, node_w: NodeWrapper[AstBinOpNode]):
+        """
+        Method called when encountering a BinOp node.
+        """
+        raise Exception  # TODO proper exception type
+
+    @abstractmethod
+    def un_op(self, node_w: NodeWrapper[AstUnOpNode]):
+        """
+        Method called when encountering a UnOp node.
+        """
+        raise Exception  # TODO proper exception type
+
+    @abstractmethod
+    def literal(self, node_w: NodeWrapper[AstLiteralNode]):
+        """
+        Method called when encountering a Literal node.
+        """
+        raise Exception  # TODO proper exception type
+
+    @abstractmethod
+    def assign(self, node_w: NodeWrapper[AstAssignNode]):
+        """
+        Method called when encountering a Assign node.
+        """
+        raise Exception  # TODO proper exception type
+
+
 class Ast:
     def __init__(self) -> None:
         self.root: NodeWrapper[AstBasicNode] = None
@@ -137,6 +197,13 @@ class Ast:
         What elements and in which order is decided by the handler functions from the `iter_method`.
         """
         return iter_method(self)
+
+    def visit(self, visit_method: AstVisit):
+        """
+        Visit the nodes of the tree.
+        What elements and in which order is decided by the handler functions from the `iter_method`.
+        """
+        visit_method(self)
 
     def set_root(self, node_w: NodeWrapper[AstBasicNode]):
         """
