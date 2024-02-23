@@ -1,8 +1,8 @@
 grammar C_Expressions;
 
 // Parser rules
-program: statement*;
-statement: exprStatement ';';
+program: statement* EOF;
+statement: exprStatement ';' | ';';
 exprStatement: expr;
 expr: constantExpr;
 constantExpr: conditionalExpr;
@@ -53,4 +53,4 @@ SL: '<<';
 SR: '>>';
 
 INT: '0' | [1-9][0-9]*;
-WS: [ \t\r\n]+ -> skip;
+WS: [\t\r\n]+ -> skip;

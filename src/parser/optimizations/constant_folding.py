@@ -54,6 +54,7 @@ def constant_folding(ast: Ast):
                         case "+":
                             result = node_w.n.operand.value
                         case "-":
+                            print("-",node_w.n.operand.value)
                             result = -node_w.n.operand.value
                         case "!":
                             result = not node_w.n.operand.value

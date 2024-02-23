@@ -119,7 +119,8 @@ class AstIterPostorder(AstIter):
         super().__init__(ast)
 
     def program(self, node_w: NodeWrapper[AstProgramNode]):
-        yield from node_w.n.statements
+        for statement in node_w.n.statements:
+            yield from self.match_node(statement)
         yield node_w
 
     def bin_op(self, node_w: NodeWrapper[AstBinOpNode]):

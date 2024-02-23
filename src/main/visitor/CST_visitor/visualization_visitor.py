@@ -1,14 +1,17 @@
 from src.antlr_files.C_ExpressionsParser import *
 from graphviz import Digraph
 from antlr4.tree.Trees import Trees
+from src.antlr_files.C_ExpressionsVisitor import *
 
-class VisualizationVisitor():
+class VisualizationVisitor(C_ExpressionsVisitor):
+    def visit(self, tree):
+        return tree.visitChildren(self)
     def visualize(self, root: ParserRuleContext, rules, filename: str):
         dot = Digraph()
         dot.node_attr['shape'] = 'box'
         def add_nodes(node: ParserRuleContext):
             currentName = Trees.getNodeText(node, rules)
-            dot.node(str(id(node)), currentName, fillcolor= 'lightblue' if node.getChildCount() else 'lightgreen', style='filled')
+            dot.node(str(id(node)), currentName, fillcolor= 'lightblue' if not isinstance(node, TerminalNode) else 'lightgreen', style='filled')
             if node.getChildCount():
                 for child in node.getChildren():
                     child_id = id(child)
