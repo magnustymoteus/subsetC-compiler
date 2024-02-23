@@ -32,7 +32,7 @@ def test_syntaxErr():
         try:
             result = compile(path_in_str)
         except SyntaxError:
-            return
+            break
         pytest.fail("Expected to have syntax error")
 
 
