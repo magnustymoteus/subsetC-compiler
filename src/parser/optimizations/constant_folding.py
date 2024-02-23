@@ -37,6 +37,9 @@ def constant_folding(ast: Ast):
                             result = node_w.n.lhs.value % node_w.n.rhs.value
                         case "<<":
                             result = node_w.n.lhs.value << node_w.n.rhs.value
+                        case ">>":
+                            # TODO: patryk
+                            result = node_w.n.lhs.value >> node_w.n.rhs.value
                         case "&":
                             result = node_w.n.lhs.value & node_w.n.rhs.value
                         case "|":
@@ -44,6 +47,7 @@ def constant_folding(ast: Ast):
                         case "^":
                             result = node_w.n.lhs.value ^ node_w.n.rhs.value
 
+                    print(node_w.n.lhs.value, node_w.n, node_w.n.rhs.value, "->",result)
                     node_w.n = AstLiteralNode(result)
 
             case AstUnOpNode():
@@ -54,7 +58,6 @@ def constant_folding(ast: Ast):
                         case "+":
                             result = node_w.n.operand.value
                         case "-":
-                            print("-",node_w.n.operand.value)
                             result = -node_w.n.operand.value
                         case "!":
                             result = not node_w.n.operand.value
