@@ -12,10 +12,11 @@ program: functionDef EOF;
 functionDef: declarationSpec* declarator (declaration)* compoundStmt;
 typeSpec: 'char' | 'int' | 'float';
 typeQual: 'const';
-declarationSpec: typeSpec | typeQual;
+declarationSpec: typeQual? typeSpec;
 declaration: declarationSpec+ initDeclarator ';';
 initDeclarator: declarator | declarator EQ initializer;
-declarator: directDeclarator;
+declarator: pointer? directDeclarator;
+pointer: ARISK typeQual* pointer?;
 directDeclarator: identifier | '(' declarator ')' | directDeclarator '(' (parameterList)? ')';
 initializer: assignmentExpr;
 
@@ -29,7 +30,7 @@ exprStmt: expr? ';';
 expr: constantExpr | assignmentExpr | expr ',' assignmentExpr;
 
 assignmentExpr: conditionalExpr | unaryExpr assignmentOp assignmentExpr;
-assignmentOp: EQ | (ARISK | DIV | MOD | PLUS | MINUS | SR | SL | AMP | BITXOR | BITOR) EQ;
+assignmentOp: EQ | '*=' | '/=' | '%=' | '+=' | '-=' | '>>=' | '<<=' | '&=' | '^=' | '|=';
 
 constantExpr: conditionalExpr;
 conditionalExpr: logicalOrExpr;
@@ -49,7 +50,7 @@ unaryExpr: postfixExpr | unaryOp expr;
 postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr (DPLUS | DMINUS);
 primaryExpr: identifier | literal | parenExpr;
 parenExpr: LPAREN expr RPAREN;
-unaryOp: PLUS | MINUS | NOT | BITNOT | DPLUS | DMINUS;
+unaryOp: PLUS | MINUS | NOT | BITNOT | DPLUS | DMINUS | AMP | ARISK;
 
 identifier: ID;
 literal: intLiteral | charLiteral | floatLiteral;
@@ -96,7 +97,7 @@ ID: [a-zA-Z_] [a-zA-Z_0-9]*;
 
 INT: '0' | [1-9][0-9]*;
 FLOAT: INT* '.' [0-9]*;
-CHAR: '\'' . '\'' | '\'' '\\' ([abefnrtv]|'\\'|'\''|'"'|'?') '\'';
+CHAR: '\'' . '\'' | '\'' '\\' ([abefnrtv0]|'\\'|'\''|'"'|'?') '\'';
 
 // the space in [] is important
 WS: [ \t\r\n]+ -> skip;
