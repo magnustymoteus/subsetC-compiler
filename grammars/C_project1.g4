@@ -1,4 +1,4 @@
-grammar C_Expressions;
+grammar C_project1;
 
 // Parser rules
 program: statement* EOF;

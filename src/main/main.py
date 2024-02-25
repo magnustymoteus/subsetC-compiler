@@ -9,6 +9,12 @@ from src.antlr_files.C_ExpressionsLexer import *
 from src.antlr_files.C_ExpressionsParser import *
 from src.antlr_files.C_ExpressionsVisitor import *
 
+"""
+flags to implement: 
+main : main() required
+cfold : enable constant folding
+"""
+
 def getTokens(filepath: str):
     input_stream = FileStream(filepath)
     lexer = C_ExpressionsLexer(input_stream)
