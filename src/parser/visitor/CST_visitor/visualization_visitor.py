@@ -1,9 +1,9 @@
-from src.antlr_files.C_ExpressionsParser import *
+from src.antlr_files.C_GrammarParser import *
 from graphviz import Digraph
 from antlr4.tree.Trees import Trees
-from src.antlr_files.C_ExpressionsVisitor import *
+from src.antlr_files.C_GrammarVisitor import *
 
-class VisualizationVisitor(C_ExpressionsVisitor):
+class VisualizationVisitor(C_GrammarVisitor):
     def visit(self, tree):
         return tree.visitChildren(self)
     def visualize(self, root: ParserRuleContext, rules, filename: str):

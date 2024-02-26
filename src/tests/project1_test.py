@@ -1,9 +1,9 @@
 import os.path
 
 import pytest
-from src.main.main import *
+from src.parser import *
 from pathlib import Path
-from src.main.listener.error_listener import MyErrorListener
+from src.parser.listener.error_listener import MyErrorListener
 
 
 pass_tests = Path("../../example_source_files").glob('proj1_*_pass_*.c')

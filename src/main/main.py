@@ -1,13 +1,13 @@
 import sys
 
-from src.main.visitor.CST_visitor.cst_to_ast_visitor import CSTToASTVisitor
-from src.main.visitor.CST_visitor.visualization_visitor import VisualizationVisitor
+from src.parser.visitor.CST_visitor.cst_to_ast_visitor import CSTToASTVisitor
+from src.parser.visitor.CST_visitor.visualization_visitor import VisualizationVisitor
 
 from src.parser import *
 from src.parser import optimizations as optim
-from src.antlr_files.C_ExpressionsLexer import *
-from src.antlr_files.C_ExpressionsParser import *
-from src.antlr_files.C_ExpressionsVisitor import *
+from src.antlr_files.C_GrammarLexer import *
+from src.antlr_files.C_GrammarParser import *
+from src.antlr_files.C_GrammarVisitor import *
 
 """
 flags to implement: 
@@ -17,7 +17,7 @@ cfold : enable constant folding
 
 def getTokens(filepath: str):
     input_stream = FileStream(filepath)
-    lexer = C_ExpressionsLexer(input_stream)
+    lexer = C_GrammarLexer(input_stream)
     stream = CommonTokenStream(lexer)
     return stream
 

@@ -1,4 +1,4 @@
-grammar C_project2;
+grammar C_Grammar;
 
 /*
     expr: expression
@@ -17,14 +17,14 @@ declaration: declarationSpec+ initDeclarator ';';
 initDeclarator: declarator | declarator EQ initializer;
 declarator: pointer? directDeclarator;
 pointer: ARISK typeQual* pointer?;
-directDeclarator: identifier | '(' declarator ')' | directDeclarator '(' (parameterList)? ')';
+directDeclarator: identifier | LPAREN declarator RPAREN | directDeclarator LPAREN (parameterList)? RPAREN;
 initializer: assignmentExpr;
 
 parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
 parameterDeclaration: declarationSpec declarator?;
 
 stmt: exprStmt | compoundStmt;
-compoundStmt: '{' blockItem* '}';
+compoundStmt: LBRACE blockItem* RBRACE;
 blockItem: declaration | stmt;
 exprStmt: expr? ';';
 expr: constantExpr | assignmentExpr | expr ',' assignmentExpr;
@@ -61,6 +61,9 @@ floatLiteral: FLOAT;
 // Lexer rules
 LPAREN: '(';
 RPAREN: ')';
+
+LBRACE: '{';
+RBRACE: '}';
 
 PLUS: '+';
 MINUS: '-';
