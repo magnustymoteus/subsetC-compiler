@@ -1,12 +1,11 @@
-from src.parser import *
+from ..ast import *
 
 
 def constant_folding(ast: Ast):
-    for node_w in ast.iter(AstIterPostorder):
+    for node_w in ast.iter(AstIter):
         match node_w.n:
-            case AstBinOpNode():
-                if isinstance(node_w.n.lhs, AstLiteralNode) and isinstance(node_w.n.rhs, AstLiteralNode):
-                    print("binop")
+            case BinaryOp():
+                if isinstance(node_w.n.lhs, IntLiteral) and isinstance(node_w.n.rhs, IntLiteral):
                     result = node_w.n
                     match node_w.n.operator:
                         case "+":
@@ -39,12 +38,14 @@ def constant_folding(ast: Ast):
                             if node_w.n.rhs.value >= 0:
                                 result = node_w.n.lhs.value << node_w.n.rhs.value
                             else:
-                                result = node_w.n.lhs.value >> abs(node_w.n.rhs.value)
+                                result = node_w.n.lhs.value >> abs(
+                                    node_w.n.rhs.value)
                         case ">>":
                             if node_w.n.rhs.value >= 0:
                                 result = node_w.n.lhs.value >> node_w.n.rhs.value
                             else:
-                                result = node_w.n.lhs.value << abs(node_w.n.rhs.value)
+                                result = node_w.n.lhs.value << abs(
+                                    node_w.n.rhs.value)
                         case "&":
                             result = node_w.n.lhs.value & node_w.n.rhs.value
                         case "|":
@@ -52,11 +53,10 @@ def constant_folding(ast: Ast):
                         case "^":
                             result = node_w.n.lhs.value ^ node_w.n.rhs.value
 
-                    node_w.n = AstLiteralNode(result)
+                    node_w.n = IntLiteral(result)
 
-            case AstUnOpNode():
-                if isinstance(node_w.n.operand, AstLiteralNode):
-                    print("unop")
+            case UnaryOp():
+                if isinstance(node_w.n.operand, IntLiteral):
                     result = node_w.n
                     match node_w.n.operator:
                         case "+":
@@ -68,4 +68,4 @@ def constant_folding(ast: Ast):
                         case "~":
                             result = ~node_w.n.operand.value
 
-                    node_w.n = AstLiteralNode(result)
+                    node_w.n = IntLiteral(result)

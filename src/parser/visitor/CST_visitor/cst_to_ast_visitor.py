@@ -1,12 +1,14 @@
 from src.antlr_files.C_GrammarVisitor import *
 from src.antlr_files.C_GrammarParser import *
-from src.parser.AST import *
+from src.parser.ast import Ast
+from src.parser.node import *
 
 
 class CSTToASTVisitor(C_GrammarVisitor):
     def visitBinaryOp(self, ctx: ParserRuleContext):
         if ctx.getChildCount() == 3:
-            node: NodeWrapper[AstBinOpNode] = wrap(AstBinOpNode(ctx.getChild(1).getText()))
+            node: Wrapper[BinaryOp] = wrap(
+                BinaryOp(ctx.getChild(1).getText()))
             left = self.visit(ctx.getChild(0))
             right = self.visit(ctx.getChild(2))
             node.n.lhs_w = left
@@ -22,7 +24,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
         for i in range(0, ctx.getChildCount()):
             if ctx.getChild(i).getChildCount() == 2:
                 statements.append(self.visit(ctx.getChild(i)))
-        program_node = wrap(AstProgramNode(statements))
+        program_node = wrap(Program(statements))
         return program_node
 
     # Visit a parse tree produced by C_GrammarParser#logicalOrExpr.
@@ -67,13 +69,15 @@ class CSTToASTVisitor(C_GrammarVisitor):
     # Visit a parse tree produced by C_GrammarParser#unaryExpr.
     def visitUnaryExpr(self, ctx: C_GrammarParser.UnaryExprContext):
         if ctx.getChildCount() == 2:
-            node: NodeWrapper[AstUnOpNode] = wrap(AstUnOpNode(ctx.getChild(0).getText()))
+            node: Wrapper[UnaryOp] = wrap(
+                UnaryOp(ctx.getChild(0).getText()))
             node.n.operand_w = self.visit(ctx.getChild(1))
             return node
         return self.visitChildren(ctx)
 
     def visitLiteral(self, ctx: C_GrammarParser.LiteralContext):
-        node: NodeWrapper[AstLiteralNode] = wrap(AstLiteralNode(int(ctx.getChild(0).getText()))) # TODO: delete the int cast and do better
+        node: Wrapper[IntLiteral] = wrap(IntLiteral(
+            int(ctx.getChild(0).getText())))  # TODO: delete the int cast and do better
         return node
 
     def visitParenExpr(self, ctx: C_GrammarParser.ParenExprContext):
