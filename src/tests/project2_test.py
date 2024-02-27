@@ -17,8 +17,6 @@ def compile(path, cfold: bool):
     parser.addErrorListener(MyErrorListener())
     tree = parser.program()
 
-    print(os.path.basename(path))
-
     visualizeCST(tree, parser.ruleNames, os.path.basename(path))
 
     ast = getAST(tree)
@@ -28,15 +26,15 @@ def compile(path, cfold: bool):
 def test_pass():
     for path in pass_tests:
         try:
-            result = compile(path, False)
+            result = compile(path,  False)
             visualizeAST(result, os.path.basename(path)+".gv")
         except Exception as e:
-            pytest.fail("pass test "+ str(path), "failed: "+ e)
+            pytest.fail("pass test "+ str(os.path.basename(path)), "failed: "+ e)
 
 def test_syntaxErr():
     for path in syntaxErr_tests:
         try:
-            result = compile(path, False)
+            compile(path, False)
         except SyntaxError:
             break
         pytest.fail("Expected to have syntax error")

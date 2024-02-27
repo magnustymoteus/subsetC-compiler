@@ -1,8 +1,8 @@
 from __future__ import annotations
-
+from src.symbol_table import SymbolType
 
 class SymbolTableEntry:
-    def __init__(self, name: str, symbolType, definition_line=None, usage_lines=None):
+    def __init__(self, name: str, symbolType: SymbolType, definition_line=None, usage_lines=None):
         self.name = name
         self.type = symbolType
         self.definition_line = definition_line

@@ -9,7 +9,7 @@ grammar C_Grammar;
 // Parser rules
 
 program: functionDef EOF;
-functionDef: declarationSpec* declarator (declaration)* compoundStmt;
+functionDef: declarationSpec* declarator compoundStmt;
 typeSpec: 'char' | 'int' | 'float';
 typeQual: 'const';
 declarationSpec: typeQual? typeSpec;
@@ -47,7 +47,8 @@ addExpr: multExpr | addExpr (PLUS | MINUS) multExpr;
 multExpr: castExpr | multExpr (ARISK | DIV | MOD) castExpr;
 castExpr: unaryExpr | LPAREN typeSpec RPAREN castExpr;
 unaryExpr: postfixExpr | unaryOp expr;
-postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr (DPLUS | DMINUS);
+postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr postfixOp;
+postfixOp: DPLUS | DMINUS;
 primaryExpr: identifier | literal | parenExpr;
 parenExpr: LPAREN expr RPAREN;
 unaryOp: PLUS | MINUS | NOT | BITNOT | DPLUS | DMINUS | AMP | ARISK;

@@ -1,4 +1,7 @@
 import sys
+import os
+from pathlib import Path
+
 
 from src.parser.visitor.CST_visitor.cst_to_ast_visitor import CSTToASTVisitor
 from src.parser.visitor.CST_visitor.visualization_visitor import VisualizationVisitor
@@ -46,7 +49,21 @@ def visualizeAST(ast: Ast, filename: str):
 
 
 def main(argv):
-    pass
+    pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')
+    #syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
+    for path in pass_tests:
+        path_in_str = str(path)
+        tokens = getTokens(path_in_str)
+        parser = C_GrammarParser(tokens)
+        #parser.addErrorListener(MyErrorListener())
+        tree = parser.program()
+
+        visualizeCST(tree, parser.ruleNames, os.path.basename(path))
+
+        ast = getAST(tree)
+        visualizeAST(ast, os.path.basename(path) + ".gv")
+    #if cfold:
+     #   applyConstantFolding(ast)
 
 
 if __name__ == '__main__':
