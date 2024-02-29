@@ -12,22 +12,7 @@ class SymbolTableEntry:
 class SymbolTable:
     def __init__(self, parent: SymbolTable | None = None):
         self.lookup_table: dict[str, SymbolTableEntry] = dict()  # identifier (symbol) mapped to symbol table entry
-        self.children: list[SymbolTable] = list()
         self.parent: None | SymbolTable = parent
-
-    @property
-    def parent(self) -> None | SymbolTable:
-        return self.parent
-
-    @parent.setter
-    def parent(self, parent: SymbolTable):
-        self.parent = parent
-
-    def add_child(self, child: SymbolTable):
-        self.children.append(child)
-
-    def remove_child(self, child: SymbolTable):
-        self.children.remove(child)
 
     def lookup_symbol(self, name: str) -> SymbolTableEntry | None:
         return self.lookup_table.get(name, None)

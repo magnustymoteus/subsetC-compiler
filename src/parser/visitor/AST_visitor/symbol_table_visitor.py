@@ -1,6 +1,12 @@
 from src.parser import *
 from src.parser.node import *
+from src.symbol_table import *
+from src.parser.ast import Stack
 class SymbolTableVisitor(AstVisit):
+    def visit(self) -> SymbolTable:
+        #self.symtab_stack: Stack = Stack()
+        self.__iter__()
+        #return self.root_symtab
     def __init__(self, ast: Ast):
         super().__init__(ast)
     def program(self, node_w: Wrapper[Program]):
@@ -16,7 +22,6 @@ class SymbolTableVisitor(AstVisit):
     def lit(self, node_w: Wrapper[Literal]):
         """Method called when encountering a UnOp node."""
         pass
-
     def assign(self, node_w: Wrapper[Assignment]):
         """Method called when encountering a Assign node."""
         pass
@@ -27,7 +32,7 @@ class SymbolTableVisitor(AstVisit):
 
     def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
         """Method called when encountering a Assign node."""
-        pass
+        print("comp stmt")
 
     def func_def(self, node_w: Wrapper[FunctionDefinition]):
         """Method called when encountering a Assign node."""
@@ -37,6 +42,4 @@ class SymbolTableVisitor(AstVisit):
         """Method called when encountering a Assign node."""
         pass
 
-    def literal(self, node_w: Wrapper[Literal]):
-        pass
 

@@ -15,7 +15,7 @@ typeSpec: 'char' | 'int' | 'float';
 typeQual: 'const';
 
 declarationSpec: typeQual? typeSpec pointer*;
-declaration: declarationSpec declarator; //(',' declarator)*;
+declaration: declarationSpec declarator ';'; //(',' declarator)*;
 declarator: identifier LPAREN (parameterList)? RPAREN | identifier | identifier EQ assignmentExpr;
 
 pointer: ARISK typeQual*;
@@ -24,9 +24,9 @@ initializer: assignmentExpr;
 parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
 parameterDeclaration: declarationSpec declarator?;
 
-stmt: exprStmt | compoundStmt;
+stmt: exprStmt ';' | compoundStmt;
 compoundStmt: LBRACE blockItem* RBRACE;
-blockItem: (declaration | stmt)? ';';
+blockItem: declaration | stmt;
 exprStmt: expr;
 expr: constantExpr | assignmentExpr | expr ',' assignmentExpr;
 

@@ -209,6 +209,8 @@ class AstVisit(ABC):
     This way the reference in the wrapper can be changed and a node can be replaced by an entirely different one.
     """
 
+    def visit(self):
+        self.__iter__()
     def __init__(self, ast: Ast) -> None:
         self.ast = ast
 
@@ -240,30 +242,31 @@ class AstVisit(ABC):
                     case _:
                         raise Exception  # TODO proper exception type
             else:
-                match self.stack.peek_next().n:
+                next = self.stack.next()
+                match next.n:
                     case Program():
-                        self.program(self.stack.peek_next())
+                        self.program(next)
                     case BinaryOp():
-                        self.bin_op(self.stack.peek_next())
+                        self.bin_op(next)
                     case UnaryOp():
-                        self.un_op(self.stack.peek_next())
+                        self.un_op(next)
                     case Assignment():
-                        self.assign(self.stack.peek_next())
+                        self.assign(next)
                     case CompoundStatement():
-                        self.expand_compound_stmt(self.stack.peek_next())
+                        self.compound_stmt(next)
                     case FunctionDefinition():
-                        self.expand_func_def(self.stack.peek_next())
+                        self.func_def(next)
                     case VariableDeclaration():
-                        self.expand_variable_decl(self.stack.peek_next())
+                        self.variable_decl(next)
                     case Literal():
-                        self.literal(self.stack.peek_next())
+                        self.lit(next)
                     case Identifier():
-                        self.identifier(self.stack.peek_next())
+                        self.identifier(next)
                     case _:
                         raise Exception  # TODO proper exception type
 
     def expand_program(self, node_w: Wrapper[Program]):
-        """Method called when encountering a BinOp node."""
+        """Method called when encountering a Program node."""
         self.stack.new_frame([stmt for stmt in node_w.n.children])
 
     def expand_bin_op(self, node_w: Wrapper[BinaryOp]):
@@ -272,7 +275,7 @@ class AstVisit(ABC):
 
     def expand_un_op(self, node_w: Wrapper[UnaryOp]):
         """Method called when encountering a UnOp node."""
-        self.stack.new_frame(node_w.n.operand_w)
+        self.stack.new_frame([node_w.n.operand_w])
 
     def expand_assign(self, node_w: Wrapper[Assignment]):
         """Method called when encountering a Assign node."""
@@ -333,9 +336,6 @@ class AstVisit(ABC):
         """Method called when encountering a Assign node."""
         raise Exception  # TODO proper exception type
 
-    @abstractmethod
-    def literal(self, node_w: Wrapper[Literal]):
-        raise Exception
 
 
 class Ast:

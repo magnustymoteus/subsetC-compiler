@@ -11,12 +11,15 @@ from src.parser import optimizations as optim
 from src.antlr_files.C_GrammarLexer import *
 from src.antlr_files.C_GrammarParser import *
 from src.antlr_files.C_GrammarVisitor import *
-#from src.parser.visitor.AST_visitor.symbol_table_visitor import *
+from src.parser.visitor.AST_visitor.symbol_table_visitor import *
 
 """
 flags to implement: 
-main : main() required
-cfold : enable constant folding
+disable-cfold : disable constant folding (should be enabled by default)
+disable-cprog: disable constant propagation (should be enabled by default)
+viz-cst: visualize CST
+viz-ast visualize AST
+viz-symtab visualize tree of symbol tables
 """
 
 
@@ -49,8 +52,9 @@ def visualizeAST(ast: Ast, filename: str):
     graph.save(filename=filename)
 
 
+# TODO: turn AST into a parent pointer tree
 def main(argv):
-    pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')
+    pass_tests = Path("example_source_files").glob('proj2_*_pass_*advancedPointer*.c')
     #syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
     for path in pass_tests:
         path_in_str = str(path)
@@ -64,9 +68,7 @@ def main(argv):
         ast = getAST(tree)
         applyConstantFolding(ast)
         visualizeAST(ast, os.path.basename(path) + ".gv")
-
-        #for current_node in ast.iter(SymbolTableVisitor):
-            #pass
+        SymbolTableVisitor(ast).visit()
 
 
 
