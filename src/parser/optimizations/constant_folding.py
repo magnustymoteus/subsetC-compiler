@@ -52,20 +52,23 @@ def constant_folding(ast: Ast):
                             result = node_w.n.lhs.value | node_w.n.rhs.value
                         case "^":
                             result = node_w.n.lhs.value ^ node_w.n.rhs.value
-
-                    node_w.n = IntLiteral(result)
+                    node_w.n = Literal(result)
 
             case UnaryOp():
-                if isinstance(node_w.n.operand, IntLiteral):
+                if isinstance(node_w.n.operand, Literal) and not node_w.n.is_postfix:
                     result = node_w.n
                     match node_w.n.operator:
                         case "+":
                             result = node_w.n.operand.value
                         case "-":
                             result = -node_w.n.operand.value
+                        case "--":
+                            result = node_w.n.operand.value - 1
+                        case "++":
+                            result = node_w.n.operand.value + 1
                         case "!":
                             result = not node_w.n.operand.value
                         case "~":
                             result = ~node_w.n.operand.value
-
-                    node_w.n = IntLiteral(result)
+                    literal_type = type(node_w.n.operand)
+                    node_w.n = literal_type(result)

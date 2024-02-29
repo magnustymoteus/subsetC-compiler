@@ -5,10 +5,10 @@ from src.parser.node.compound_stmt import *
 
 class FunctionDefinition(Basic):
 
-    def __init__(self, return_type: SymbolType, name: str, parameter_list, body: CompoundStatement) -> None:
+    def __init__(self, return_type: SymbolType, name: str, parameter_list) -> None:
         self.return_type: SymbolType = return_type
         self.parameter_list = parameter_list
-        self.body : CompoundStatement = body
+        self.body_w : Wrapper[CompoundStatement] = wrap()
         self.name = name
 
         super().__init__()

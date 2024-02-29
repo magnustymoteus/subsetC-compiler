@@ -9,8 +9,6 @@ class CSTToASTVisitor(C_GrammarVisitor):
         return ctx.getChild(0).getText()
     def visitFunctionDef(self, ctx: C_GrammarParser.FunctionDefContext):
         # TODO complete this in the future: patryk
-#        return_type: SymbolType = self.visit(ctx.getChild())
-        #return wrap(CompoundStatement(ctx.getChild(0)))
         return self.visit(ctx.getChild(ctx.getChildCount()-1))
     def visitPostfixExpr(self, ctx:C_GrammarParser.PostfixExprContext):
         if ctx.getChildCount() > 1:

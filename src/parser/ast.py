@@ -1,7 +1,8 @@
+from _ast import FunctionDef
 from abc import ABC, abstractmethod
 from typing import Generator
 from graphviz import Digraph
-from src.parser.node import Wrapper, wrap, NodeType, BinaryOp, UnaryOp, IntLiteral, Assignment, Program
+from src.parser.node import *
 
 
 def main():
@@ -155,7 +156,15 @@ class AstIter:
                         self.expand_un_op(self.stack.top.front)
                     case Assignment():
                         self.expand_assign(self.stack.top.front)
-                    case IntLiteral():
+                    case CompoundStatement():
+                        self.expand_compound_stmt(self.stack.top.front)
+                    case FunctionDefinition():
+                        self.expand_func_def(self.stack.top.front)
+                    case VariableDeclaration():
+                        self.expand_variable_decl(self.stack.top.front)
+                    case Literal():
+                        pass
+                    case Identifier():
                         pass
                     case _:
                         # TODO proper exception type
@@ -165,7 +174,7 @@ class AstIter:
 
     def expand_program(self, node_w: Wrapper[Program]):
         """Method called when encountering a BinOp node."""
-        self.stack.new_frame([stmt for stmt in node_w.n.statements])
+        self.stack.new_frame([stmt for stmt in node_w.n.children])
 
     def expand_bin_op(self, node_w: Wrapper[BinaryOp]):
         """Method called when encountering a BinOp node."""
@@ -178,6 +187,17 @@ class AstIter:
     def expand_assign(self, node_w: Wrapper[Assignment]):
         """Method called when encountering a Assign node."""
         self.stack.new_frame([node_w.n.assignee_w, node_w.n.value])
+
+    def expand_compound_stmt(self, node_w: Wrapper[CompoundStatement]):
+        """Method called when encountering a Compound Statement node."""
+        self.stack.new_frame([stmt for stmt in node_w.n.statements])
+    def expand_func_def(self, node_w: Wrapper[FunctionDefinition]):
+        """Method called when encountering a Function Definition node."""
+        self.stack.new_frame([node_w.n.body_w])
+    def expand_variable_decl(self, node_w: Wrapper[VariableDeclaration]):
+        """Method called when encountering a Variable Declaration node."""
+        self.stack.new_frame([node_w.n.definition_w])
+
 
 
 class AstVisit(ABC):
@@ -193,34 +213,58 @@ class AstVisit(ABC):
         self.ast = ast
 
     def __iter__(self) -> Generator[Wrapper[NodeType], None, None]:
-        self.stack: Stack = Stack(self.ast.root)
+        self.stack: Stack = Stack(self.ast.root_w)
 
         while len(self.stack) > 0:
             if not self.stack.top.first_visited:
                 self.stack.top.first_visited = True
                 match self.stack.peek_next().n:
+                    case Program():
+                        self.expand_program(self.stack.top.front)
                     case BinaryOp():
                         self.expand_bin_op(self.stack.top.front)
                     case UnaryOp():
                         self.expand_un_op(self.stack.top.front)
                     case Assignment():
                         self.expand_assign(self.stack.top.front)
-                    case IntLiteral():
+                    case CompoundStatement():
+                        self.expand_compound_stmt(self.stack.top.front)
+                    case FunctionDefinition():
+                        self.expand_func_def(self.stack.top.front)
+                    case VariableDeclaration():
+                        self.expand_variable_decl(self.stack.top.front)
+                    case Literal():
+                        pass
+                    case Identifier():
                         pass
                     case _:
                         raise Exception  # TODO proper exception type
             else:
                 match self.stack.peek_next().n:
+                    case Program():
+                        self.program(self.stack.peek_next())
                     case BinaryOp():
                         self.bin_op(self.stack.peek_next())
                     case UnaryOp():
                         self.un_op(self.stack.peek_next())
                     case Assignment():
                         self.assign(self.stack.peek_next())
-                    case IntLiteral():
-                        self.int_lit(self.stack.peek_next())
+                    case CompoundStatement():
+                        self.expand_compound_stmt(self.stack.peek_next())
+                    case FunctionDefinition():
+                        self.expand_func_def(self.stack.peek_next())
+                    case VariableDeclaration():
+                        self.expand_variable_decl(self.stack.peek_next())
+                    case Literal():
+                        self.literal(self.stack.peek_next())
+                    case Identifier():
+                        self.identifier(self.stack.peek_next())
                     case _:
                         raise Exception  # TODO proper exception type
+
+    def expand_program(self, node_w: Wrapper[Program]):
+        """Method called when encountering a BinOp node."""
+        self.stack.new_frame([stmt for stmt in node_w.n.children])
 
     def expand_bin_op(self, node_w: Wrapper[BinaryOp]):
         """Method called when encountering a BinOp node."""
@@ -234,6 +278,21 @@ class AstVisit(ABC):
         """Method called when encountering a Assign node."""
         self.stack.new_frame([node_w.n.assignee_w, node_w.n.value])
 
+    def expand_compound_stmt(self, node_w: Wrapper[CompoundStatement]):
+        """Method called when encountering a Compound Statement node."""
+        self.stack.new_frame([stmt for stmt in node_w.n.statements])
+    def expand_func_def(self, node_w: Wrapper[FunctionDefinition]):
+        """Method called when encountering a Function Definition node."""
+        self.stack.new_frame([node_w.n.body_w])
+    def expand_variable_decl(self, node_w: Wrapper[VariableDeclaration]):
+        """Method called when encountering a Variable Declaration node."""
+        self.stack.new_frame([node_w.n.definition_w])
+
+    @abstractmethod
+    def program(self, node_w: Wrapper[Program]):
+        """Method called when encountering a Program node."""
+        raise Exception  # TODO proper exception type
+
     @abstractmethod
     def bin_op(self, node_w: Wrapper[BinaryOp]):
         """Method called when encountering a BinOp node."""
@@ -245,7 +304,7 @@ class AstVisit(ABC):
         raise Exception  # TODO proper exception type
 
     @abstractmethod
-    def int_lit(self, node_w: Wrapper[IntLiteral]):
+    def lit(self, node_w: Wrapper[Literal]):
         """Method called when encountering a UnOp node."""
         raise Exception  # TODO proper exception type
 
@@ -253,6 +312,30 @@ class AstVisit(ABC):
     def assign(self, node_w: Wrapper[Assignment]):
         """Method called when encountering a Assign node."""
         raise Exception  # TODO proper exception type
+
+    @abstractmethod
+    def identifier(self, node_w: Wrapper[Identifier]):
+        """Method called when encountering a Assign node."""
+        raise Exception  # TODO proper exception type
+
+    @abstractmethod
+    def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
+        """Method called when encountering a Assign node."""
+        raise Exception  # TODO proper exception type
+
+    @abstractmethod
+    def func_def(self, node_w: Wrapper[FunctionDefinition]):
+        """Method called when encountering a Assign node."""
+        raise Exception  # TODO proper exception type
+
+    @abstractmethod
+    def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
+        """Method called when encountering a Assign node."""
+        raise Exception  # TODO proper exception type
+
+    @abstractmethod
+    def literal(self, node_w: Wrapper[Literal]):
+        raise Exception
 
 
 class Ast:

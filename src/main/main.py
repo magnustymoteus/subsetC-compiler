@@ -11,6 +11,7 @@ from src.parser import optimizations as optim
 from src.antlr_files.C_GrammarLexer import *
 from src.antlr_files.C_GrammarParser import *
 from src.antlr_files.C_GrammarVisitor import *
+#from src.parser.visitor.AST_visitor.symbol_table_visitor import *
 
 """
 flags to implement: 
@@ -61,8 +62,12 @@ def main(argv):
         visualizeCST(tree, parser.ruleNames, os.path.basename(path))
 
         ast = getAST(tree)
+        applyConstantFolding(ast)
         visualizeAST(ast, os.path.basename(path) + ".gv")
-        #applyConstantFolding(ast)
+
+        #for current_node in ast.iter(SymbolTableVisitor):
+            #pass
+
 
 
 if __name__ == '__main__':
