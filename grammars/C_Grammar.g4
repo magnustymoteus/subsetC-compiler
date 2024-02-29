@@ -9,15 +9,16 @@ grammar C_Grammar;
 // Parser rules
 
 program: functionDef EOF;
-functionDef: declarationSpec* declarator compoundStmt;
+
+functionDef: declarationSpec identifier LPAREN (parameterList)? RPAREN compoundStmt;
 typeSpec: 'char' | 'int' | 'float';
 typeQual: 'const';
-declarationSpec: typeQual? typeSpec;
-declaration: declarationSpec+ initDeclarator ';';
-initDeclarator: declarator | declarator EQ initializer;
-declarator: pointer? directDeclarator;
-pointer: ARISK typeQual* pointer?;
-directDeclarator: identifier | LPAREN declarator RPAREN | directDeclarator LPAREN (parameterList)? RPAREN;
+
+declarationSpec: typeQual? typeSpec pointer*;
+declaration: declarationSpec declarator; //(',' declarator)*;
+declarator: identifier LPAREN (parameterList)? RPAREN | identifier | identifier EQ assignmentExpr;
+
+pointer: ARISK typeQual*;
 initializer: assignmentExpr;
 
 parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
@@ -25,8 +26,8 @@ parameterDeclaration: declarationSpec declarator?;
 
 stmt: exprStmt | compoundStmt;
 compoundStmt: LBRACE blockItem* RBRACE;
-blockItem: declaration | stmt;
-exprStmt: expr? ';';
+blockItem: (declaration | stmt)? ';';
+exprStmt: expr;
 expr: constantExpr | assignmentExpr | expr ',' assignmentExpr;
 
 assignmentExpr: conditionalExpr | unaryExpr assignmentOp assignmentExpr;

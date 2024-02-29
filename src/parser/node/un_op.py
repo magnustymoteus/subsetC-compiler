@@ -7,8 +7,9 @@ class UnaryOp(Basic):
     Unary Operation node. Node operating on one other node.
     """
 
-    def __init__(self, operator: str) -> None:
+    def __init__(self, operator: str, is_postfix: bool = False) -> None:
         self.operand_w: Wrapper = wrap()  # TODO ensure gets set
+        self.is_postfix: bool = is_postfix
         """
         Wrapper for the value node operated on.
         """
@@ -36,4 +37,4 @@ class UnaryOp(Basic):
         self.operand.append_to_graph(graph, self.id)
 
     def __repr__(self) -> str:
-        return f"{self.operator}"
+        return f"{self.operator}" if not self.is_postfix else f"{self.operator} (postfix)"

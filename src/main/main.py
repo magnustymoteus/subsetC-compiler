@@ -62,8 +62,7 @@ def main(argv):
 
         ast = getAST(tree)
         visualizeAST(ast, os.path.basename(path) + ".gv")
-    #if cfold:
-     #   applyConstantFolding(ast)
+        #applyConstantFolding(ast)
 
 
 if __name__ == '__main__':

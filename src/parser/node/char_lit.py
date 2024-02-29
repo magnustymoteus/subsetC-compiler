@@ -1,17 +1,18 @@
-from .basic import Basic, Digraph
+from .basic import Digraph
+from .lit import Literal
 from uuid import UUID
 
 
-class CharLiteral(Basic):
+class CharLiteral(Literal):
     """
     Literal node. Node containing an actual value. (e.g. string, integer).
     """
 
     def __init__(self, value: int | str) -> None:
-        self.value: int = 0
         """
         Value of the literal.
         """
+        super().__init__(value)
 
         if isinstance(value, int):
             self.value: int = value
@@ -20,7 +21,6 @@ class CharLiteral(Basic):
             self.value: int = ord(value)
         assert self.value < 128  # basic ascii only
 
-        super().__init__()
 
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
         super().append_to_graph(graph, parent_id)

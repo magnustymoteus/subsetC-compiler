@@ -141,7 +141,7 @@ class AstIter:
         self.ast = ast
 
     def __iter__(self) -> Generator[Wrapper[NodeType], None, None]:
-        self.stack: Stack = Stack(self.ast.root)
+        self.stack: Stack = Stack(self.ast.root_w)
 
         while len(self.stack) > 0:
             if not self.stack.top.first_visited:
@@ -257,7 +257,7 @@ class AstVisit(ABC):
 
 class Ast:
     def __init__(self) -> None:
-        self.root: Wrapper[NodeType] = None
+        self.root_w: Wrapper[NodeType] = wrap()
 
     def iter(self, iter_method: AstIter) -> Generator[Wrapper[NodeType], None, None]:
         """
@@ -266,18 +266,15 @@ class Ast:
         """
         return iter_method(self)
 
-    def set_root(self, node_w: Wrapper[NodeType]):
-        """
-        Set the root node of the ast.
-        """
-        self.root = node_w
+    def set_root(self, root: Wrapper[NodeType]) -> None:
+        self.root_w = root
 
     def to_dot_graph(self) -> Digraph:
         """
         Export the AST to a dot graph.
         """
         graph = Digraph()
-        self.root.n.append_to_graph(graph, None)
+        self.root_w.n.append_to_graph(graph, None)
 
         return graph
 

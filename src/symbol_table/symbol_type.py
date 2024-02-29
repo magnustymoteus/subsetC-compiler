@@ -6,13 +6,8 @@ class PrimitiveType(SymbolType):
     def __init__(self, type: str, is_constant: bool = False):
         self.type: str = type
         super().__init__(is_constant)
-
-class PointerType(SymbolType):
-    def __init__(self, is_constant: bool = False):
-        super().__init__(is_constant)
-class ReferenceType(SymbolType):
-    def __init__(self, is_constant: bool = False):
-        super().__init__(is_constant)
+    def __repr__(self):
+        return f"{self.type}" if not self.is_constant else f"constant {self.type}"
 
 class ArrayType(SymbolType):
     def __init__(self, element_type: str, is_constant: bool = False):
@@ -22,3 +17,12 @@ class ArrayType(SymbolType):
 class FunctionType(SymbolType):
     def __init__(self, is_constant: bool = False):
         super().__init__(is_constant)
+
+"""
+class PointerType(SymbolType):
+    def __init__(self, is_constant: bool = False):
+        super().__init__(is_constant)
+class ReferenceType(SymbolType):
+    def __init__(self, is_constant: bool = False):
+        super().__init__(is_constant)
+"""

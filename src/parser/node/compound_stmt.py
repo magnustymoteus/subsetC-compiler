@@ -1,4 +1,4 @@
-from .basic import Basic, Wrapper, NodeType, Digraph
+from .basic import Basic, Wrapper, NodeType, Digraph, wrap
 from uuid import UUID
 
 
@@ -7,8 +7,8 @@ class CompoundStatement(Basic):
     Program node that has all statements of the program as its children.
     """
 
-    def __init__(self, statements: list[Wrapper[NodeType]]):
-        self.statements: list[Wrapper[NodeType]] = statements
+    def __init__(self):
+        self.statements: list[Wrapper[NodeType]] = []
         super().__init__()
 
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:

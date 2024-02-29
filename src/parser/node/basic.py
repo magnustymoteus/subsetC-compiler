@@ -12,7 +12,6 @@ class Basic(ABC):
     def __init__(self) -> None:
         self.id: UUID = uuid4()
 
-    @abstractmethod
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
         """
         Add the node to the dot graph. The name is determined by the node's repr.

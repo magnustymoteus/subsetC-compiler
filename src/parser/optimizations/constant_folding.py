@@ -1,11 +1,11 @@
 from ..ast import *
-
+from src.parser.node import *
 
 def constant_folding(ast: Ast):
     for node_w in ast.iter(AstIter):
         match node_w.n:
             case BinaryOp():
-                if isinstance(node_w.n.lhs, IntLiteral) and isinstance(node_w.n.rhs, IntLiteral):
+                if isinstance(node_w.n.lhs, Literal) and isinstance(node_w.n.rhs, Literal):
                     result = node_w.n
                     match node_w.n.operator:
                         case "+":
