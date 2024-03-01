@@ -4,9 +4,10 @@ from src.symbol_table import *
 from src.parser.ast import Stack
 class SymbolTableVisitor(AstVisit):
     def visit(self) -> SymbolTable:
-        #self.symtab_stack: Stack = Stack()
+        self.symtab_stack: Stack = Stack()
+        #self.root = T
         self.__iter__()
-        #return self.root_symtab
+        return
     def __init__(self, ast: Ast):
         super().__init__(ast)
     def program(self, node_w: Wrapper[Program]):
@@ -32,7 +33,7 @@ class SymbolTableVisitor(AstVisit):
 
     def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
         """Method called when encountering a Assign node."""
-        print("comp stmt")
+        pass
 
     def func_def(self, node_w: Wrapper[FunctionDefinition]):
         """Method called when encountering a Assign node."""
