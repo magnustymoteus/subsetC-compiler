@@ -4,7 +4,7 @@ from src.symbol_table import *
 from src.parser.ast import Stack
 class SymbolTableVisitor(AstVisit):
     def visit(self) -> SymbolTable:
-        self.symtab_stack: Stack = Stack()
+        #elf.symtab_stack: Stack = Stack()
         #self.root = T
         self.__iter__()
         return
