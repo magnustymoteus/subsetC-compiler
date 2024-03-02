@@ -28,20 +28,23 @@ class CSTToASTVisitor(C_GrammarVisitor):
         # TODO with pointers: patryk
         if ctx.getChildCount() > 1:
             return self.visit(ctx.getChild(0)), self.visit(ctx.getChild(2))
-        return self.visit(ctx.getChild(0)), None
+        return self.visit(ctx.getChild(0)), wrap()
 
     def visitDeclarationSpec(self, ctx:C_GrammarParser.DeclarationSpecContext):
         type_specifier = None
         is_constant = False
         ptr_count = 0
+        const_ptrs = []
         for child in ctx.getChildren():
             if isinstance(child, C_GrammarParser.TypeQualContext):
                 is_constant = True
             elif isinstance(child, C_GrammarParser.TypeSpecContext):
                 type_specifier = self.visit(child)
-            else:
+            elif isinstance(child, C_GrammarParser.PointerContext):
+                if child.getChildCount() > 1:
+                    const_ptrs.append(ptr_count)
                 ptr_count += 1
-        return PrimitiveType(type_specifier, is_constant)
+        return PrimitiveType(type_specifier, is_constant, ptr_count, const_ptrs)
 
 
     def visitExprStmt(self, ctx:C_GrammarParser.ExprStmtContext):
@@ -57,7 +60,14 @@ class CSTToASTVisitor(C_GrammarVisitor):
         return result
 
     def visitAssignmentExpr(self, ctx:C_GrammarParser.AssignmentOpContext):
-        return self.visitBinaryOp(ctx)
+        if ctx.getChildCount() == 1:
+            return self.visitChildren(ctx)
+        node: Wrapper[Assignment] = wrap(Assignment())
+        left = self.visit(ctx.getChild(0))
+        right = self.visit(ctx.getChild(2))
+        node.n.assignee_w = left
+        node.n.value_w = right
+        return node
 
     def visitBinaryOp(self, ctx: ParserRuleContext):
         if ctx.getChildCount() == 1:
@@ -119,8 +129,13 @@ class CSTToASTVisitor(C_GrammarVisitor):
     # Visit a parse tree produced by C_GrammarParser#unaryExpr.
     def visitUnaryExpr(self, ctx: C_GrammarParser.UnaryExprContext):
         if ctx.getChildCount() == 2:
-            node: Wrapper[UnaryOp] = wrap(
-                UnaryOp(ctx.getChild(0).getText()))
+            match ctx.getChild(0).getText():
+                case '*':
+                    node = wrap(DerefOp())
+                case '&':
+                    node = wrap(AddressOfOp())
+                case _:
+                    node = wrap(UnaryOp(ctx.getChild(0).getText()))
             node.n.operand_w = self.visit(ctx.getChild(1))
             return node
         return self.visitChildren(ctx)

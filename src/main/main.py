@@ -11,7 +11,7 @@ from src.parser import optimizations as optim
 from src.antlr_files.C_GrammarLexer import *
 from src.antlr_files.C_GrammarParser import *
 from src.antlr_files.C_GrammarVisitor import *
-from src.parser.visitor.AST_visitor.symbol_table_visitor import *
+from src.parser.visitor.AST_visitor import *
 
 """
 flags to implement: 
@@ -52,9 +52,8 @@ def visualizeAST(ast: Ast, filename: str):
     graph.save(filename=filename)
 
 
-# TODO: turn AST into a parent pointer tree
 def main(argv):
-    pass_tests = Path("example_source_files").glob('proj2_*_pass_*advancedPointer*.c')
+    pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')
     #syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
     for path in pass_tests:
         path_in_str = str(path)
@@ -63,12 +62,15 @@ def main(argv):
         #parser.addErrorListener(MyErrorListener())
         tree = parser.program()
 
-        visualizeCST(tree, parser.ruleNames, os.path.basename(path))
+        #visualizeCST(tree, parser.ruleNames, os.path.basename(path))
 
         ast = getAST(tree)
         applyConstantFolding(ast)
+        try:
+            SymbolTableVisitor(ast)
+        except SemanticError as e:
+            print(f"{e}")
         visualizeAST(ast, os.path.basename(path) + ".gv")
-        SymbolTableVisitor(ast).visit()
 
 
 

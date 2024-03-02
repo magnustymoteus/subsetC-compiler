@@ -13,6 +13,9 @@ class VariableDeclaration(Basic):
         super().append_to_graph(graph, parent_id)
         if self.definition_w.n is not None:
             self.definition_w.n.append_to_graph(graph, self.id)
+        #if self.local_symtab_w.n is not None:
+        #    self.local_symtab_w.n.append_to_graph(graph, self.id)
+
 
     def __repr__(self) -> str:
         str1 = f"definition: {self.identifier}" if self.definition_w.n is not None \

@@ -186,7 +186,7 @@ class AstIter:
 
     def expand_assign(self, node_w: Wrapper[Assignment]):
         """Method called when encountering a Assign node."""
-        self.stack.new_frame([node_w.n.assignee_w, node_w.n.value])
+        self.stack.new_frame([node_w.n.assignee_w, node_w.n.value_w])
 
     def expand_compound_stmt(self, node_w: Wrapper[CompoundStatement]):
         """Method called when encountering a Compound Statement node."""
@@ -196,7 +196,8 @@ class AstIter:
         self.stack.new_frame([node_w.n.body_w])
     def expand_variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         """Method called when encountering a Variable Declaration node."""
-        self.stack.new_frame([node_w.n.definition_w])
+        if node_w.n.definition_w.n is not None:
+            self.stack.new_frame([node_w.n.definition_w])
 
 
 
@@ -356,7 +357,7 @@ class Ast:
         """
         Export the AST to a dot graph.
         """
-        graph = Digraph()
+        graph = Digraph(strict="true")
         self.root_w.n.append_to_graph(graph, None)
 
         return graph

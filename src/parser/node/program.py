@@ -16,5 +16,6 @@ class Program(Basic):
         for child in self.children:
             child.n.append_to_graph(graph, self.id)
 
+
     def __repr__(self):
         return f"program"

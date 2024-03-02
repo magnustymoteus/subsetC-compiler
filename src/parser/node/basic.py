@@ -3,6 +3,9 @@ from graphviz import Digraph
 from uuid import UUID, uuid4
 from typing import TypeVar, Generic
 
+class SymbolTable:
+    pass
+
 
 class Basic(ABC):
     """
@@ -11,6 +14,10 @@ class Basic(ABC):
 
     def __init__(self) -> None:
         self.id: UUID = uuid4()
+        self.local_symtab_w: Wrapper[SymbolTable] = wrap()
+
+
+
 
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
         """
@@ -19,9 +26,13 @@ class Basic(ABC):
         graph.node(str(self.id), str(self))
         if parent_id is not None:
             graph.edge(str(parent_id), str(self.id))
+        if self.local_symtab_w.n is not None:
+            self.local_symtab_w.n.append_to_graph(graph, self.id)
 
     def __repr__(self) -> str:
         return f"node-id:{str(self.id)}"
+
+
 
 
 NodeType = TypeVar("NodeType", bound=Basic)

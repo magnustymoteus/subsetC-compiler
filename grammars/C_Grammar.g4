@@ -47,7 +47,7 @@ shiftExpr: addExpr | shiftExpr (SL | SR) addExpr;
 addExpr: multExpr | addExpr (PLUS | MINUS) multExpr;
 multExpr: castExpr | multExpr (ARISK | DIV | MOD) castExpr;
 castExpr: unaryExpr | LPAREN typeSpec RPAREN castExpr;
-unaryExpr: postfixExpr | unaryOp expr;
+unaryExpr: postfixExpr | unaryOp castExpr;
 postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr postfixOp;
 postfixOp: DPLUS | DMINUS;
 primaryExpr: identifier | literal | parenExpr;

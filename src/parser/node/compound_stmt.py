@@ -1,4 +1,4 @@
-from .basic import Basic, Wrapper, NodeType, Digraph, wrap
+from .basic import Wrapper, NodeType, Digraph, wrap, Basic
 from uuid import UUID
 
 
@@ -15,6 +15,7 @@ class CompoundStatement(Basic):
         super().append_to_graph(graph, parent_id)
         for w in self.statements:
             w.n.append_to_graph(graph, self.id)
+
 
     def __repr__(self):
         return f"compound_stmt"
