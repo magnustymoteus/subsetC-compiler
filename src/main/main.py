@@ -52,6 +52,13 @@ def visualizeAST(ast: Ast, filename: str):
     graph.save(filename=filename)
 
 
+'''
+TODO: 
+    * Documentation
+    * Finish semantic error analysis
+    * Add constant propagation in adherence to const casting
+    * Add derefencing detection so the pointerConstReassignment test passes
+'''
 def main(argv):
     pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')
     #syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')

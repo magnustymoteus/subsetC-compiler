@@ -19,10 +19,10 @@ def compile(path, cfold: bool = True):
     tree = parser.program()
     visualizeCST(tree, parser.ruleNames, "cst-viz/"+str(os.path.basename(path)))
     ast = getAST(tree)
-    visualizeAST(ast, "ast-viz/" + str(os.path.basename(path)) + ".gv")
     if cfold:
         applyConstantFolding(ast)
     SymbolTableVisitor(ast)
+    visualizeAST(ast, "ast-viz/" + str(os.path.basename(path)) + ".gv")
     return ast
 
 def test_pass():
