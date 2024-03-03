@@ -22,7 +22,7 @@ viz-ast visualize AST
 viz-symtab visualize tree of symbol tables
 """
 
-
+# Gives filepath to C_GrammarLexer to generate tokens
 def getTokens(filepath: str):
     input_stream = FileStream(filepath)
     lexer = C_GrammarLexer(input_stream)
