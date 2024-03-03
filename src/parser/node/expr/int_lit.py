@@ -1,4 +1,4 @@
-from .basic import Digraph
+from ..basic import Digraph
 from .lit import Literal
 from uuid import UUID
 

@@ -1,7 +1,7 @@
-from .basic import Basic, Wrapper, wrap, Digraph
+from ..basic import Basic, Wrapper, wrap, Digraph
+from .expr import Expression
 
-
-class Assignment(Basic):
+class Assignment(Expression):
     """
     Assignment node. Indicates an assignment to a value.
     """
@@ -47,4 +47,4 @@ class Assignment(Basic):
         self.value.append_to_graph(graph, self.id)
 
     def __repr__(self) -> str:
-        return f"="
+        return self.get_typed_str("=")

@@ -18,8 +18,7 @@ flags to implement:
 disable-cfold : disable constant folding (should be enabled by default)
 disable-cprog: disable constant propagation (should be enabled by default)
 viz-cst: visualize CST
-viz-ast visualize AST
-viz-symtab visualize tree of symbol tables
+viz-ast visualize AST and symbol tables
 """
 
 
@@ -55,9 +54,9 @@ def visualizeAST(ast: Ast, filename: str):
 '''
 TODO: 
     * Documentation
-    * Finish semantic error analysis
     * Add constant propagation in adherence to const casting
     * Add derefencing detection so the pointerConstReassignment test passes
+    * Explicit conversions
 '''
 def main(argv):
     pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')
@@ -75,6 +74,7 @@ def main(argv):
         applyConstantFolding(ast)
         try:
             SymbolTableVisitor(ast)
+            TypeCheckerVisitor(ast)
         except SemanticError as e:
             print(f"{e}")
         visualizeAST(ast, os.path.basename(path) + ".gv")

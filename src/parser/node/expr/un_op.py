@@ -1,8 +1,9 @@
-from .basic import Basic, Wrapper, wrap, Digraph
+from ..basic import Basic, Wrapper, wrap, Digraph
 from uuid import UUID
+from .expr import Expression
 
 
-class UnaryOp(Basic):
+class UnaryOp(Expression):
     """
     Unary Operation node. Node operating on one other node.
     """
@@ -37,4 +38,5 @@ class UnaryOp(Basic):
         self.operand.append_to_graph(graph, self.id)
 
     def __repr__(self) -> str:
-        return f"{self.operator}" if not self.is_postfix else f"{self.operator} (postfix)"
+        result = f"{self.operator}" if not self.is_postfix else f"{self.operator} (postfix)"
+        return self.get_typed_str(result)

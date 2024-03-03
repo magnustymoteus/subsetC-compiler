@@ -1,6 +1,7 @@
-from .basic import Digraph
+from ..basic import Digraph
 from .un_op import UnaryOp
 from uuid import UUID
+from .expr import Expression
 
 
 class AddressOfOp(UnaryOp):
@@ -15,4 +16,4 @@ class AddressOfOp(UnaryOp):
         super().append_to_graph(graph, parent_id)
 
     def __repr__(self) -> str:
-        return f"address of"
+        return self.get_typed_str("address of")

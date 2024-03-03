@@ -1,8 +1,8 @@
-from .basic import Basic, Wrapper, wrap, Digraph
+from ..basic import Basic, Wrapper, wrap, Digraph
 from uuid import UUID
+from .expr import Expression
 
-
-class BinaryOp(Basic):
+class BinaryOp(Expression):
     # class Operator:
     #     def __init__(self, op: str) -> None:
     #         self.op: str = op
@@ -68,4 +68,4 @@ class BinaryOp(Basic):
         self.rhs.append_to_graph(graph, self.id)
 
     def __repr__(self) -> str:
-        return f"{self.operator}"
+        return self.get_typed_str(self.operator)

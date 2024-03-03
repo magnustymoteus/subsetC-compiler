@@ -1,21 +1,9 @@
 from src.parser.visitor.AST_visitor.ast_visitor import *
 
-class SemanticError(Exception):
-    def __init__(self, message):
-        self.message = message
-        super().__init__(self.message)
+'''Here we traverse the AST in pre-order in terms of making symbol tables and references to them '''
 class SymbolTableVisitor(ASTVisitor):
     def _getMostLocalSymTab(self) -> Wrapper[SymbolTable]:
         return self.stack[-1]
-
-    def _checkAssignee(self, assignee_w: Wrapper):
-        if isinstance(assignee_w.n, Identifier):
-            if assignee_w.n.local_symtab_w.n.lookup_symbol(assignee_w.n.name).type.is_constant:
-                raise SemanticError("assignment of constant variable "+assignee_w.n.name)
-        elif isinstance(assignee_w.n, DerefOp):
-            pass
-        else:
-            raise SemanticError("lvalue required as left operand of assignment")
 
     def __init__(self, ast: Ast):
         self.stack: list[Wrapper[SymbolTable]] = list()
@@ -30,8 +18,6 @@ class SymbolTableVisitor(ASTVisitor):
     def un_op(self, node_w: Wrapper[UnaryOp]):
         node_w.n.local_symtab_w = self._getMostLocalSymTab()
         super().un_op(node_w)
-        if node_w.n.is_postfix:
-            self._checkAssignee(node_w.n.operand_w)
 
     def deref_op(self, node_w: Wrapper[DerefOp]):
         super().deref_op(node_w)
@@ -45,7 +31,6 @@ class SymbolTableVisitor(ASTVisitor):
     def assign(self, node_w: Wrapper[Assignment]):
         node_w.n.local_symtab_w = self._getMostLocalSymTab()
         super().assign(node_w)
-        self._checkAssignee(node_w.n.assignee_w)
 
 
     def identifier(self, node_w: Wrapper[Identifier]):

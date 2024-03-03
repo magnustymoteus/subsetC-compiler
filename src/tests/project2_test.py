@@ -21,8 +21,10 @@ def compile(path, cfold: bool = True):
     ast = getAST(tree)
     if cfold:
         applyConstantFolding(ast)
-    SymbolTableVisitor(ast)
     visualizeAST(ast, "ast-viz/" + str(os.path.basename(path)) + ".gv")
+    SymbolTableVisitor(ast)
+    TypeCheckerVisitor(ast)
+    visualizeAST(ast, "ast-viz/type-checked/" + str(os.path.basename(path)) + ".gv")
     return ast
 
 def test_pass():

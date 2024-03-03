@@ -1,4 +1,4 @@
-from .basic import Digraph
+from ..basic import Digraph
 from .lit import Literal
 from uuid import UUID
 
@@ -26,4 +26,4 @@ class CharLiteral(Literal):
         super().append_to_graph(graph, parent_id)
 
     def __repr__(self) -> str:
-        return f"'{chr(self.value)}'"
+        return self.get_typed_str(f"{(chr(self.value).encode('unicode_escape'))}")

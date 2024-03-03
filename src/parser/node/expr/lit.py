@@ -1,8 +1,9 @@
-from .basic import Basic, Digraph
+from ..basic import Basic, Digraph
 from uuid import UUID
+from .expr import Expression
 
 
-class Literal(Basic):
+class Literal(Expression):
     """
     Literal node. Node containing an actual value. (e.g. string, integer).
     """
@@ -19,4 +20,4 @@ class Literal(Basic):
         super().append_to_graph(graph, parent_id)
 
     def __repr__(self) -> str:
-        return f"{self.value}"
+        return self.get_typed_str(self.value)
