@@ -21,7 +21,7 @@ viz-cst: visualize CST
 viz-ast visualize AST and symbol tables
 """
 
-
+# Gives filepath to C_GrammarLexer to generate tokens
 def getTokens(filepath: str):
     input_stream = FileStream(filepath)
     lexer = C_GrammarLexer(input_stream)
