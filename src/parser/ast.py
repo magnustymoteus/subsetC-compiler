@@ -154,6 +154,8 @@ class AstIter:
                         self.expand_bin_op(self.stack.top.front)
                     case UnaryOp():
                         self.expand_un_op(self.stack.top.front)
+                    case CastOp():
+                        self.expand_cast_op(self.stack.top.front)
                     case Assignment():
                         self.expand_assign(self.stack.top.front)
                     case CompoundStatement():
@@ -183,6 +185,10 @@ class AstIter:
     def expand_un_op(self, node_w: Wrapper[UnaryOp]):
         """Method called when encountering a UnOp node."""
         self.stack.new_frame(node_w.n.operand_w)
+
+
+    def expand_cast_op(self, node_w: Wrapper[CastOp]):
+        self.stack.new_frame([node_w.n.expression_w])
 
     def expand_assign(self, node_w: Wrapper[Assignment]):
         """Method called when encountering a Assign node."""
@@ -228,6 +234,8 @@ class AstVisit(ABC):
                         self.expand_bin_op(self.stack.top.front)
                     case UnaryOp():
                         self.expand_un_op(self.stack.top.front)
+                    case CastOp():
+                        self.expand_cast_op(self.stack.top.front)
                     case Assignment():
                         self.expand_assign(self.stack.top.front)
                     case CompoundStatement():
@@ -278,6 +286,9 @@ class AstVisit(ABC):
         """Method called when encountering a UnOp node."""
         self.stack.new_frame([node_w.n.operand_w])
 
+    def expand_cast_op(self, node_w: Wrapper[CastOp]):
+        self.stack.new_frame([node_w.n.expression_w])
+
     def expand_assign(self, node_w: Wrapper[Assignment]):
         """Method called when encountering a Assign node."""
         self.stack.new_frame([node_w.n.assignee_w, node_w.n.value])
@@ -306,6 +317,10 @@ class AstVisit(ABC):
     def un_op(self, node_w: Wrapper[UnaryOp]):
         """Method called when encountering a UnOp node."""
         raise Exception  # TODO proper exception type
+
+    @abstractmethod
+    def cast_op(self, node_w: Wrapper[CastOp]):
+        raise Exception
 
     @abstractmethod
     def lit(self, node_w: Wrapper[Literal]):

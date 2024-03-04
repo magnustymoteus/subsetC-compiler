@@ -10,6 +10,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
     def visitFunctionDef(self, ctx: C_GrammarParser.FunctionDefContext):
         # TODO complete this in the future: patryk
         return self.visit(ctx.getChild(ctx.getChildCount()-1))
+
     def visitPostfixExpr(self, ctx:C_GrammarParser.PostfixExprContext):
         if ctx.getChildCount() > 1:
             result = wrap(UnaryOp(ctx.getChild(1).getChild(0).getText(), True))
@@ -17,7 +18,6 @@ class CSTToASTVisitor(C_GrammarVisitor):
             return result
         return self.visit(ctx.getChild(0))
     def visitDeclaration(self, ctx:C_GrammarParser.DeclarationContext):
-        # TODO with pointers: patryk
         type_specifier = self.visit(ctx.getChild(0))
         declarator_result = self.visit(ctx.getChild(1))
         identifier_node = declarator_result[0]
@@ -25,11 +25,22 @@ class CSTToASTVisitor(C_GrammarVisitor):
         result.n.definition_w = declarator_result[1]
         return result
     def visitDeclarator(self, ctx:C_GrammarParser.DeclaratorContext):
-        # TODO with pointers: patryk
         if ctx.getChildCount() > 1:
             return self.visit(ctx.getChild(0)), self.visit(ctx.getChild(2))
         return self.visit(ctx.getChild(0)), wrap()
-
+    def visitCastExpr(self, ctx:C_GrammarParser.CastExprContext):
+        if ctx.getChildCount() > 1:
+            target_type: PrimitiveType | None = None
+            expr_w: Wrapper | None = None
+            for i in range(0, ctx.getChildCount()):
+                if isinstance(ctx.getChild(i), C_GrammarParser.TypeSpecContext):
+                    target_type = PrimitiveType(self.visit(ctx.getChild(i)))
+                if isinstance(ctx.getChild(i), C_GrammarParser.CastExprContext):
+                    expr_w = self.visit(ctx.getChild(i))
+            result: Wrapper[CastOp] = wrap(CastOp(target_type))
+            result.n.expression_w = expr_w
+            return result
+        return self.visitChildren(ctx)
     def visitDeclarationSpec(self, ctx:C_GrammarParser.DeclarationSpecContext):
         type_specifier = None
         is_constant = False

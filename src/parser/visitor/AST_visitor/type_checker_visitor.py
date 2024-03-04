@@ -16,7 +16,7 @@ class TypeCheckerVisitor(ASTVisitor):
                 current_rank = index
         return PrimitiveType(self.type_ranks[current_rank], is_constant)
 
-    def checkDemotion(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
+    def checkImplicitDemotion(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
         if self.type_ranks.index(assignee_type.type) < self.type_ranks.index(value_type.type):
             warnings.warn(f"Type warning: demotion from {value_type} to {assignee_type} (possible loss of information)")
 
@@ -80,11 +80,14 @@ class TypeCheckerVisitor(ASTVisitor):
                 type_str = "char"
         node_w.n.type = PrimitiveType(type_str, True)
 
+    def cast_op(self, node_w: Wrapper[CastOp]):
+        super().cast_op(node_w)
+        node_w.n.type = node_w.n.target_type
 
     def assign(self, node_w: Wrapper[Assignment]):
         super().assign(node_w)
         node_w.n.type = deepcopy(node_w.n.assignee_w.n.type)
-        self.checkDemotion(node_w.n.assignee_w.n.type, node_w.n.value_w.n.type)
+        self.checkImplicitDemotion(node_w.n.assignee_w.n.type, node_w.n.value_w.n.type)
         self.checkAssignee(node_w.n.assignee_w)
         self.checkPointerTypes(node_w.n.assignee_w.n.type, node_w.n.value_w.n.type)
 
@@ -96,6 +99,7 @@ class TypeCheckerVisitor(ASTVisitor):
         super().variable_decl(node_w)
         if node_w.n.definition_w is not None:
             self.checkPointerTypes(node_w.n.type, node_w.n.definition_w.n.type)
+            self.checkImplicitDemotion(node_w.n.type, node_w.n.definition_w.n.type)
 
 
 

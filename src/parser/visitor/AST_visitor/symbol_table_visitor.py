@@ -46,6 +46,10 @@ class SymbolTableVisitor(ASTVisitor):
         super().compound_stmt(node_w)
         self.stack.pop()
 
+    def cast_op(self, node_w: Wrapper[CastOp]):
+        node_w.n.local_symtab_w = self._getMostLocalSymTab()
+        super().cast_op(node_w)
+
     def func_def(self, node_w: Wrapper[FunctionDefinition]):
         # TODO
         pass

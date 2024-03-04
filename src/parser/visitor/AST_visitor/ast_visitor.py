@@ -24,6 +24,8 @@ class ASTVisitor():
                 self.addressof_op(node_w)
             case UnaryOp():
                 self.un_op(node_w)
+            case CastOp():
+                self.cast_op(node_w)
             case CompoundStatement():
                 self.compound_stmt(node_w)
             case FunctionDefinition():
@@ -57,6 +59,9 @@ class ASTVisitor():
     def un_op(self, node_w: Wrapper[UnaryOp]):
         """Method called when encountering a UnOp node."""
         self.visit(node_w.n.operand_w)
+
+    def cast_op(self, node_w: Wrapper[CastOp]):
+        self.visit(node_w.n.expression_w)
 
     
     def lit(self, node_w: Wrapper[Literal]):

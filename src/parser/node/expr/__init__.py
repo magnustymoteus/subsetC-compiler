@@ -8,3 +8,4 @@ from src.parser.node.expr.float_lit import *
 from src.parser.node.expr.char_lit import *
 from src.parser.node.expr.identifier import *
 from src.parser.node.expr.lit import *
+from src.parser.node.expr.cast_op import *
