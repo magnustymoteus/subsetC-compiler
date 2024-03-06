@@ -36,7 +36,7 @@ class SymbolTableVisitor(ASTVisitor):
     def identifier(self, node_w: Wrapper[Identifier]):
         node_w.n.local_symtab_w = self._getMostLocalSymTab()
         if node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name) is None:
-            raise SemanticError("Undeclared variable "+node_w.n.name)
+            raise SemanticError(f"Semantic error on {node_w.n.line_nr}:{node_w.n.col_nr}: Undeclared variable {node_w.n.name}")
 
 
     def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
@@ -60,8 +60,9 @@ class SymbolTableVisitor(ASTVisitor):
         symbol_name = node_w.n.identifier
         if node_w.n.local_symtab_w.n.symbol_exists(symbol_name):
             decl_or_def : str = "Redeclaration" if not node_w.n.definition_w.n else "Redefinition"
-            raise SemanticError(decl_or_def+" of symbol "+symbol_name)
+            raise SemanticError(f"Semantic error on line {node_w.n.line_nr}:{node_w.n.col_nr}: {decl_or_def} of symbol {symbol_name}")
         symtab_entry = SymbolTableEntry(symbol_name, node_w.n.type)
+        symtab_entry.definition_w.n = node_w.n.definition_w.n
         node_w.n.local_symtab_w.n.add_symbol(symtab_entry)
 
 

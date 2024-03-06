@@ -1,5 +1,5 @@
-from ..ast import *
-from src.parser.node import *
+from src.parser.AST.ast import *
+from src.parser.AST.node import *
 
 def constant_folding(ast: Ast):
     for node_w in ast.iter(AstIter):

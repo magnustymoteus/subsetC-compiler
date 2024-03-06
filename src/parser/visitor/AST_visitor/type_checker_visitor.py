@@ -18,7 +18,12 @@ class TypeCheckerVisitor(ASTVisitor):
 
     def checkImplicitDemotion(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
         if self.type_ranks.index(assignee_type.type) < self.type_ranks.index(value_type.type):
-            warnings.warn(f"Type warning: demotion from {value_type} to {assignee_type} (possible loss of information)")
+            warnings.warn(f"Type warning: implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
+
+    def checkDiscardedPointerQualifier(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
+        if assignee_type.ptr_count > 0 and value_type.ptr_count > 0:
+            if (not assignee_type.is_constant and value_type.is_constant):
+                warnings.warn(f"Type warning: assignment of {assignee_type} to {value_type} discards const qualifier")
 
 
     def checkAssignee(self, assignee_w: Wrapper):
@@ -28,7 +33,7 @@ class TypeCheckerVisitor(ASTVisitor):
             symtype = assignee_w.n.type
             # TODO: with constant pointers?
             if symtype.ptr_count == 0 and symtype.is_constant:
-                raise SemanticError(f"assignment of constant variable {symtype}")
+                raise SemanticError(f"{assignee_w.n.line_nr}:{assignee_w.n.col_nr} assignment of readonly variable {symtype}")
         else:
             raise SemanticError("lvalue required as left operand of assignment")
     def checkPointerTypes(self, left_type: PrimitiveType, right_type: PrimitiveType):
@@ -59,7 +64,7 @@ class TypeCheckerVisitor(ASTVisitor):
         super().deref_op(node_w)
         new_type: PrimitiveType = deepcopy(node_w.n.operand_w.n.type)
         if new_type.ptr_count == 0:
-            raise SemanticError("Cannot dereference non pointer")
+            raise SemanticError(f"Error on {node_w.n.line_nr}:{node_w.n.col_nr}: Cannot dereference non pointer")
         new_type.decrease_ptr_count()
         node_w.n.type = new_type
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
@@ -90,6 +95,7 @@ class TypeCheckerVisitor(ASTVisitor):
         self.checkImplicitDemotion(node_w.n.assignee_w.n.type, node_w.n.value_w.n.type)
         self.checkAssignee(node_w.n.assignee_w)
         self.checkPointerTypes(node_w.n.assignee_w.n.type, node_w.n.value_w.n.type)
+        self.checkDiscardedPointerQualifier(node_w.n.assignee_w.n.type, node_w.n.value_w.n.type)
 
 
     def identifier(self, node_w: Wrapper[Identifier]):
@@ -100,6 +106,8 @@ class TypeCheckerVisitor(ASTVisitor):
         if node_w.n.definition_w is not None:
             self.checkPointerTypes(node_w.n.type, node_w.n.definition_w.n.type)
             self.checkImplicitDemotion(node_w.n.type, node_w.n.definition_w.n.type)
+            self.checkDiscardedPointerQualifier(node_w.n.type, node_w.n.definition_w.n.type)
+
 
 
 

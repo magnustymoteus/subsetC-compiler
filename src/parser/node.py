@@ -1,54 +1,34 @@
-from abc import ABC, abstractmethod
-from graphviz import Digraph
 from uuid import UUID, uuid4
 from typing import TypeVar, Generic
+from abc import ABC, abstractmethod
+from graphviz import Digraph
 
-class SymbolTable:
-    pass
 
-
-class Basic(ABC):
-    """
-    Basic node. Contains attributes shared by all nodes.
-    """
-
+class AbstractNode(ABC):
     def __init__(self) -> None:
         self.id: UUID = uuid4()
-        self.local_symtab_w: Wrapper[SymbolTable] = wrap()
-
-
-
-
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
-        """
-        Add the node to the dot graph. The name is determined by the node's repr.
-        """
         graph.node(str(self.id), str(self))
         if parent_id is not None:
             graph.edge(str(parent_id), str(self.id))
-        if self.local_symtab_w.n is not None:
-            self.local_symtab_w.n.append_to_graph(graph, self.id)
 
     def __repr__(self) -> str:
         return f"node-id:{str(self.id)}"
 
-
-
-
-NodeType = TypeVar("NodeType", bound=Basic)
-
+NodeType = TypeVar("NodeType", bound=AbstractNode)
 
 class Wrapper(Generic[NodeType]):
     """
     Wrapper for AST node. This allows for editing the tree in-place by reassigning the contained node.
     """
 
-    def __init__(self, node: NodeType = None) -> None:
+    def __init__(self, node: AbstractNode = None) -> None:
         self.n = node
 
 
-def wrap(node: NodeType = None):
+def wrap(node: AbstractNode = None):
     """
     Return a wrapper of the provided node.
     """
     return Wrapper(node)
+

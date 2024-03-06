@@ -1,6 +1,6 @@
-from src.parser import *
-from src.parser.node import *
+from src.parser.AST import *
 from src.symbol_table import *
+from src.parser.AST.ast import *
 
 class SemanticError(Exception):
     def __init__(self, message):
@@ -10,7 +10,7 @@ class ASTVisitor():
     def __init__(self, ast: Ast):
         self.visit(ast.root_w)
 
-    def visit(self, node_w: Wrapper[NodeType]):
+    def visit(self, node_w: Wrapper[Basic]):
         match node_w.n:
             case Program():
                 self.program(node_w)

@@ -1,8 +1,8 @@
 # classes
-from src.parser.ast import \
+from src.parser.AST.ast import \
     Ast, \
     AstIter, \
     AstVisit
 
 import src.parser.optimizations
-import src.parser.node
+import src.parser.AST.node

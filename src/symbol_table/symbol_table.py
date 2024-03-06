@@ -1,18 +1,18 @@
 from __future__ import annotations
 from src.symbol_table import SymbolType
-from src.parser.node.basic import *
-
+from src.parser.AST.node import *
+from src.parser.node import *
 class SymbolTableEntry:
-    def __init__(self, name: str, symbolType: SymbolType, definition_line=None, usage_lines=None):
+    def __init__(self, name: str, symbolType: SymbolType):
         self.name = name
         self.type = symbolType
-        self.definition_line = definition_line
-        self.usage_lines = usage_lines
+        self.definition_w: Wrapper = wrap()
+        self.usages: list[Wrapper] = []
     def __repr__(self):
         return f"symbol: {self.name}, type: {self.type}"
 
 
-class SymbolTable(Basic):
+class SymbolTable(AbstractNode):
     def __init__(self, parent: Wrapper[SymbolTable] | None = None):
         self.lookup_table: dict[str, SymbolTableEntry] = dict()  # identifier (symbol) mapped to symbol table entry
         self.parent: None | Wrapper[SymbolTable] = parent

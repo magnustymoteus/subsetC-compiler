@@ -1,9 +1,6 @@
 from src.antlr_files.C_GrammarVisitor import *
 from src.antlr_files.C_GrammarParser import *
-from src.parser.ast import Ast
-from src.parser.node import *
-from src.symbol_table import *
-
+from src.parser.AST import *
 class CSTToASTVisitor(C_GrammarVisitor):
     def visitTypeSpec(self, ctx:C_GrammarParser.TypeSpecContext):
         return ctx.getChild(0).getText()
@@ -14,6 +11,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
     def visitPostfixExpr(self, ctx:C_GrammarParser.PostfixExprContext):
         if ctx.getChildCount() > 1:
             result = wrap(UnaryOp(ctx.getChild(1).getChild(0).getText(), True))
+            result.n.line_nr = ctx.start.line
+            result.n.col_nr = ctx.start.column
             result.n.operand_w = self.visit(ctx.getChild(0))
             return result
         return self.visit(ctx.getChild(0))
@@ -22,6 +21,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
         declarator_result = self.visit(ctx.getChild(1))
         identifier_node = declarator_result[0]
         result = wrap(VariableDeclaration(identifier_node.n.name, type_specifier))
+        result.n.line_nr = ctx.start.line
+        result.n.col_nr = ctx.start.column
         result.n.definition_w = declarator_result[1]
         return result
     def visitDeclarator(self, ctx:C_GrammarParser.DeclaratorContext):
@@ -38,6 +39,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
                 if isinstance(ctx.getChild(i), C_GrammarParser.CastExprContext):
                     expr_w = self.visit(ctx.getChild(i))
             result: Wrapper[CastOp] = wrap(CastOp(target_type))
+            result.n.line_nr = ctx.start.line
+            result.n.col_nr = ctx.start.column
             result.n.expression_w = expr_w
             return result
         return self.visitChildren(ctx)
@@ -67,6 +70,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
             if not (child.getText() in ['{', '}']):
                 statement_list.append(self.visit(child))
         result = wrap(CompoundStatement())
+        result.n.line_nr = ctx.start.line
+        result.n.col_nr = ctx.start.column
         result.n.statements = statement_list
         return result
 
@@ -74,6 +79,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
         if ctx.getChildCount() == 1:
             return self.visitChildren(ctx)
         node: Wrapper[Assignment] = wrap(Assignment())
+        node.n.line_nr = ctx.start.line
+        node.n.col_nr = ctx.start.column
         left = self.visit(ctx.getChild(0))
         right = self.visit(ctx.getChild(2))
         node.n.assignee_w = left
@@ -85,6 +92,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
             return self.visitChildren(ctx)
         node: Wrapper[BinaryOp] = wrap(
             BinaryOp(ctx.getChild(1).getText()))
+        node.n.line_nr = ctx.start.line
+        node.n.col_nr = ctx.start.column
         left = self.visit(ctx.getChild(0))
         right = self.visit(ctx.getChild(2))
         node.n.lhs_w = left
@@ -95,6 +104,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
         ctx.removeLastChild()
         children = [self.visit(child) for child in ctx.getChildren()]
         program_node = wrap(Program())
+        program_node.n.line_nr = ctx.start.line
+        program_node.n.col_nr = ctx.start.column
         program_node.n.children = children
         return program_node
 
@@ -148,25 +159,35 @@ class CSTToASTVisitor(C_GrammarVisitor):
                 case _:
                     node = wrap(UnaryOp(ctx.getChild(0).getText()))
             node.n.operand_w = self.visit(ctx.getChild(1))
+            node.n.line_nr = ctx.start.line
+            node.n.col_nr = ctx.start.column
             return node
         return self.visitChildren(ctx)
 
     def visitCharLiteral(self, ctx: C_GrammarParser.CharLiteralContext):
         char_value = ctx.getChild(0).getText()[1:-1].encode('utf-8').decode('unicode_escape')
         node: Wrapper[CharLiteral] = wrap(CharLiteral(char_value))
+        node.n.line_nr = ctx.start.line
+        node.n.col_nr = ctx.start.column
         return node
 
     def visitIntLiteral(self, ctx: C_GrammarParser.IntLiteralContext):
         node: Wrapper[IntLiteral] = wrap(IntLiteral(
             int(ctx.getChild(0).getText())))
+        node.n.line_nr = ctx.start.line
+        node.n.col_nr = ctx.start.column
         return node
     def visitFloatLiteral(self, ctx:C_GrammarParser.FloatLiteralContext):
         node: Wrapper[FloatLiteral] = wrap(FloatLiteral(
             float(ctx.getChild(0).getText())))
+        node.n.line_nr = ctx.start.line
+        node.n.col_nr = ctx.start.column
         return node
 
     def visitIdentifier(self, ctx:C_GrammarParser.IdentifierContext):
         node: Wrapper[Identifier] = wrap(Identifier(ctx.getChild(0).getText()))
+        node.n.line_nr = ctx.start.line
+        node.n.col_nr = ctx.start.column
         return node
 
     def visitParenExpr(self, ctx: C_GrammarParser.ParenExprContext):

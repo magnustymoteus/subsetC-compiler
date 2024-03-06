@@ -1,8 +1,5 @@
-from _ast import FunctionDef
-from abc import ABC, abstractmethod
 from typing import Generator
-from graphviz import Digraph
-from src.parser.node import *
+from src.parser.AST.node import *
 
 
 def main():
@@ -45,8 +42,8 @@ class Stack:
     class FrameQueue:
         """Frame queue. Each frames has a number of items which are popped FIFO order."""
 
-        def __init__(self, nodes: Wrapper[NodeType] | list[Wrapper[NodeType]]) -> None:
-            self.queue: list[Wrapper[NodeType]]
+        def __init__(self, nodes: Wrapper[Basic] | list[Wrapper[Basic]]) -> None:
+            self.queue: list[Wrapper[Basic]]
             match nodes:
                 case list():
                     self.queue = nodes
@@ -55,16 +52,16 @@ class Stack:
             self.first_visited: bool = False
 
         @property
-        def front(self) -> Wrapper[NodeType]:
+        def front(self) -> Wrapper[Basic]:
             """Return the node at the front of the queue."""
             return self.queue[0]
 
-        def pop_front(self) -> Wrapper[NodeType]:
+        def pop_front(self) -> Wrapper[Basic]:
             """Remove and return the node at the front of the queue."""
             self.first_visited = False
             return self.queue.pop(0)
 
-        def from_start(self, index: int) -> Wrapper[NodeType]:
+        def from_start(self, index: int) -> Wrapper[Basic]:
             """Get the node at given index, starting from the front."""
             return self.queue[index]
 
@@ -84,18 +81,18 @@ class Stack:
 
     # =====================================================================
 
-    def __init__(self, start_node: Wrapper[NodeType]) -> None:
+    def __init__(self, start_node: Wrapper[Basic]) -> None:
         self.frame_stack: list[Stack.FrameQueue] = []
         self.new_frame(start_node)
 
-    def next(self) -> Wrapper[NodeType]:
+    def next(self) -> Wrapper[Basic]:
         """Remove and return the next node on the top frame."""
-        next: Wrapper[NodeType] = self.top.pop_front()
+        next: Wrapper[Basic] = self.top.pop_front()
         if self.top.empty():
             self.frame_stack.pop()
         return next
 
-    def peek_next(self) -> Wrapper[NodeType]:
+    def peek_next(self) -> Wrapper[Basic]:
         """Return the next node on the top frame."""
         return self.top.front
 
@@ -112,7 +109,7 @@ class Stack:
         """Get the frame queue at provided index, starting from the bottom."""
         return self.frame_stack[index]
 
-    def new_frame(self, frame: Wrapper[NodeType] | list[Wrapper[NodeType]] | FrameQueue):
+    def new_frame(self, frame: Wrapper[Basic] | list[Wrapper[Basic]] | FrameQueue):
         """Add a new frame to the top of the frame stack."""
         match frame:
             case Wrapper() | list():
@@ -141,7 +138,7 @@ class AstIter:
     def __init__(self, ast: Ast) -> None:
         self.ast = ast
 
-    def __iter__(self) -> Generator[Wrapper[NodeType], None, None]:
+    def __iter__(self) -> Generator[Wrapper[Basic], None, None]:
         self.stack: Stack = Stack(self.ast.root_w)
 
         while len(self.stack) > 0:
@@ -221,7 +218,7 @@ class AstVisit(ABC):
     def __init__(self, ast: Ast) -> None:
         self.ast = ast
 
-    def __iter__(self) -> Generator[Wrapper[NodeType], None, None]:
+    def __iter__(self) -> Generator[Wrapper[Basic], None, None]:
         self.stack: Stack = Stack(self.ast.root_w)
 
         while len(self.stack) > 0:
@@ -356,16 +353,16 @@ class AstVisit(ABC):
 
 class Ast:
     def __init__(self) -> None:
-        self.root_w: Wrapper[NodeType] = wrap()
+        self.root_w: Wrapper[Basic] = wrap()
 
-    def iter(self, iter_method: AstIter) -> Generator[Wrapper[NodeType], None, None]:
+    def iter(self, iter_method: AstIter) -> Generator[Wrapper[Basic], None, None]:
         """
         Iterate over the nodes of the tree.
         What elements and in which order is decided by the handler functions from the `iter_method`.
         """
         return iter_method(self)
 
-    def set_root(self, root: Wrapper[NodeType]) -> None:
+    def set_root(self, root: Wrapper[Basic]) -> None:
         self.root_w = root
 
     def to_dot_graph(self) -> Digraph:

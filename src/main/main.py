@@ -1,4 +1,3 @@
-import sys
 import os
 from pathlib import Path
 
@@ -6,7 +5,7 @@ from pathlib import Path
 from src.parser.visitor.CST_visitor.cst_to_ast_visitor import CSTToASTVisitor
 from src.parser.visitor.CST_visitor.visualization_visitor import VisualizationVisitor
 
-from src.parser.ast import Ast
+from src.parser.AST.ast import Ast
 from src.parser import optimizations as optim
 from src.antlr_files.C_GrammarLexer import *
 from src.antlr_files.C_GrammarParser import *
@@ -55,8 +54,8 @@ def visualizeAST(ast: Ast, filename: str):
 TODO: 
     * Documentation
     * Add constant propagation in adherence to const casting
-    * Add derefencing detection so the pointerConstReassignment test passes
-    * Explicit conversions
+    * AST to Control Flow Graph (useful for dead code analysis, constant propagation, ...)
+    * AST node has a line and a column
 '''
 def main(argv):
     pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')

@@ -1,21 +1,21 @@
-from .basic import Basic, Wrapper, NodeType, Digraph, wrap
+from .basic import Wrapper, AbstractNode, Digraph, wrap, Basic
 from uuid import UUID
 
 
-class Program(Basic):
+class CompoundStatement(Basic):
     """
     Program node that has all statements of the program as its children.
     """
 
     def __init__(self):
-        self.children: list[Wrapper[NodeType]] = []
+        self.statements: list[Wrapper[AbstractNode]] = []
         super().__init__()
 
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
         super().append_to_graph(graph, parent_id)
-        for child in self.children:
-            child.n.append_to_graph(graph, self.id)
+        for w in self.statements:
+            w.n.append_to_graph(graph, self.id)
 
 
     def __repr__(self):
-        return f"program"
+        return f"compound_stmt"

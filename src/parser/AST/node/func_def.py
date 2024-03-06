@@ -1,7 +1,5 @@
-from .basic import Basic, Digraph
-from uuid import UUID
 from src.symbol_table import SymbolType
-from src.parser.node.compound_stmt import *
+from src.parser.AST.node.compound_stmt import *
 
 class FunctionDefinition(Basic):
 
