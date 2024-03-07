@@ -13,7 +13,9 @@ class Basic(AbstractNode):
         self.local_symtab_w: Wrapper[SymbolTable] = wrap()
 
 
-
+    def set_line_col_nr(self, line_nr: int, col_nr: int):
+        self.line_nr = line_nr
+        self.col_nr = col_nr
 
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
         """

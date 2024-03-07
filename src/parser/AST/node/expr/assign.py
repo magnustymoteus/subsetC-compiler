@@ -1,6 +1,7 @@
 from ..basic import Basic, Wrapper, wrap, Digraph
 from .expr import Expression
 
+
 class Assignment(Expression):
     """
     Assignment node. Indicates an assignment to a value.

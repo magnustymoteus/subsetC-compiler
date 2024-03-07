@@ -63,6 +63,7 @@ class SymbolTableVisitor(ASTVisitor):
             raise SemanticError(f"Semantic error on line {node_w.n.line_nr}:{node_w.n.col_nr}: {decl_or_def} of symbol {symbol_name}")
         symtab_entry = SymbolTableEntry(symbol_name, node_w.n.type)
         symtab_entry.definition_w.n = node_w.n.definition_w.n
+        symtab_entry.value_w.n = node_w.n.definition_w.n
         node_w.n.local_symtab_w.n.add_symbol(symtab_entry)
 
 

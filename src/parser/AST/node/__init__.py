@@ -5,3 +5,5 @@ from src.parser.AST.node.func_def import *
 from src.parser.AST.node.compound_stmt import *
 from src.parser.AST.node.variable_decl import *
 from src.parser.AST.node.expr import *
+from src.parser.AST.node.block_item import *
+from src.parser.AST.node.statement import *

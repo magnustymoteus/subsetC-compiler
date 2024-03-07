@@ -5,13 +5,13 @@ from src.main.main import *
 from pathlib import Path
 from src.parser.listener.error_listener import MyErrorListener
 from src.parser.visitor.CST_visitor.visualization_visitor import *
-
+from src.parser.optimizations import *
 
 pass_tests = Path("../../example_source_files").glob('proj2_*_pass_*.c')
 syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
 semanticErr_tests = Path("../../example_source_files").glob('proj2_*_semanticErr_*.c')
 
-def compile(path, cfold: bool = True):
+def compile(path, cfold: bool = True, cprog: bool = True):
     path_in_str = str(path)
     tokens = getTokens(path_in_str)
     parser = C_GrammarParser(tokens)
@@ -19,12 +19,14 @@ def compile(path, cfold: bool = True):
     tree = parser.program()
     visualizeCST(tree, parser.ruleNames, "cst-viz/"+str(os.path.basename(path)))
     ast = getAST(tree)
-    if cfold:
-        applyConstantFolding(ast)
-    visualizeAST(ast, "ast-viz/" + str(os.path.basename(path)) + ".gv")
+    #visualizeAST(ast, "ast-viz/" + str(os.path.basename(path)) + ".gv")
     SymbolTableVisitor(ast)
     TypeCheckerVisitor(ast)
-    visualizeAST(ast, "ast-viz/type-checked/" + str(os.path.basename(path)) + ".gv")
+    if cprog:
+        OptimizationVisitor(ast)
+    #if cfold:
+     #   applyConstantFolding(ast)
+    visualizeAST(ast, "ast-viz/" + str(os.path.basename(path)) + ".gv")
     return ast
 
 def test_pass():

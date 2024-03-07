@@ -1,7 +1,9 @@
 from src.parser.AST.node import *
+from .node.basic_block import *
 class ControlFlowGraph():
     def __init__(self) -> None:
-        self.entry_block_w: Wrapper[AbstractNode] = wrap()
+        self.entry_block_w: Wrapper[BasicBlock] = wrap(BasicBlock())
+
 
 
     def to_dot_graph(self) -> Digraph:

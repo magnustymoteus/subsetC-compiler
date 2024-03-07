@@ -7,7 +7,9 @@ class SymbolTableEntry:
         self.name = name
         self.type = symbolType
         self.definition_w: Wrapper = wrap()
-        self.usages: list[Wrapper] = []
+        self.has_changed: bool = False
+        self.value_w: Wrapper = wrap()
+    @property
     def __repr__(self):
         return f"symbol: {self.name}, type: {self.type}"
 

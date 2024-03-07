@@ -1,8 +1,9 @@
 from .basic import Wrapper, AbstractNode, Digraph, wrap, Basic
 from uuid import UUID
+from .statement import Statement
 
 
-class CompoundStatement(Basic):
+class CompoundStatement(Statement):
     """
     Program node that has all statements of the program as its children.
     """

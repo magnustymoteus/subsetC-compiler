@@ -1,7 +1,8 @@
-from .basic import Basic, Digraph, Wrapper, wrap
+from .basic import Digraph, Wrapper, wrap
+from .block_item import BlockItem
 from uuid import UUID
 from src.symbol_table import SymbolType
-class VariableDeclaration(Basic):
+class VariableDeclaration(BlockItem):
 
     def __init__(self, identifier: str, type: SymbolType):
         self.identifier: str = identifier
