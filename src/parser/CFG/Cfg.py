@@ -1,8 +1,8 @@
 from src.parser.AST.node import *
-from .node.basic_block import *
+from .node.basic_block_list import *
 class ControlFlowGraph():
     def __init__(self) -> None:
-        self.entry_block_w: Wrapper[BasicBlock] = wrap(BasicBlock())
+        self.bblock_list: Wrapper[BasicBlockList] = wrap(BasicBlockList())
 
 
 
@@ -11,6 +11,6 @@ class ControlFlowGraph():
         Export the AST to a dot graph.
         """
         graph = Digraph(strict="true")
-        self.entry_block_w.n.append_to_graph(graph, None)
+        self.bblock_list.n.append_to_graph(graph, None)
 
         return graph

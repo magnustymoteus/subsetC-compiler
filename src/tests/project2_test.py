@@ -6,6 +6,7 @@ from pathlib import Path
 from src.parser.listener.error_listener import MyErrorListener
 from src.parser.visitor.CST_visitor.visualization_visitor import *
 from src.parser.optimizations import *
+from src.llvm_target.tac_visitor import *
 
 pass_tests = Path("../../example_source_files").glob('proj2_*_pass_*.c')
 syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
@@ -24,9 +25,12 @@ def compile(path, cfold: bool = True, cprog: bool = True):
     TypeCheckerVisitor(ast)
     if cprog:
         OptimizationVisitor(ast)
-    #if cfold:
-     #   applyConstantFolding(ast)
+    if cfold:
+        applyConstantFolding(ast)
     visualizeAST(ast, "ast-viz/" + str(os.path.basename(path)) + ".gv")
+    cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
+    visualizeCFG(cfg, "cfg-viz/" + str(os.path.basename(path)) + ".gv")
+    TACVisitor(cfg)
     return ast
 
 def test_pass():

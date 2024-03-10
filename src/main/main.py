@@ -11,6 +11,8 @@ from src.antlr_files.C_GrammarLexer import *
 from src.antlr_files.C_GrammarParser import *
 from src.antlr_files.C_GrammarVisitor import *
 from src.parser.visitor.AST_visitor import *
+from src.llvm_target import *
+from src.parser.optimizations import *
 
 """
 flags to implement: 
@@ -49,6 +51,10 @@ def visualizeAST(ast: Ast, filename: str):
     graph = ast.to_dot_graph()
     graph.save(filename=filename)
 
+def visualizeCFG(cfg: ControlFlowGraph, filename: str):
+    graph = cfg.to_dot_graph()
+    graph.save(filename=filename)
+
 
 '''
 TODO: 
@@ -70,13 +76,17 @@ def main(argv):
         #visualizeCST(tree, parser.ruleNames, os.path.basename(path))
 
         ast = getAST(tree)
-        applyConstantFolding(ast)
         try:
             SymbolTableVisitor(ast)
             TypeCheckerVisitor(ast)
         except SemanticError as e:
             print(f"{e}")
-        visualizeAST(ast, os.path.basename(path) + ".gv")
+        OptimizationVisitor(ast)
+        applyConstantFolding(ast)
+        #visualizeAST(ast, os.path.basename(path) + ".gv")
+        cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
+        TACVisitor(cfg)
+        visualizeCFG(cfg, "cfg-viz/" + str(os.path.basename(path)) + ".gv")
 
 
 
