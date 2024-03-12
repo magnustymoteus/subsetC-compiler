@@ -1,4 +1,4 @@
-grammar C_Grammar;
+grammar C_project4;
 
 /*
     expr: expression
