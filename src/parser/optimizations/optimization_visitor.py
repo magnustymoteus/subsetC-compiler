@@ -10,12 +10,15 @@ class OptimizationVisitor(ASTVisitor):
         if node_w.n.definition_w.n is not None:
             self.visit(node_w.n.definition_w)
 
+
     def un_op(self, node_w: Wrapper[UnaryOp]):
         super().un_op(node_w)
         if node_w.n.operator in ["++", "--"]:
             if isinstance(node_w.n.operand_w.n, Identifier):
                 symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.operand_w.n.name)
                 symbol.has_changed = True
+
+
     def assign(self, node_w: Wrapper[Assignment]):
         self.visit(node_w.n.value_w)
         if isinstance(node_w.n.assignee_w.n, Identifier):

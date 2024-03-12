@@ -77,3 +77,18 @@ def constant_folding(ast: Ast):
                             result = ~node_w.n.operand.value
                     literal_type = type(node_w.n.operand)
                     node_w.n = literal_type(result)
+            case CastOp():
+                if isinstance(node_w.n.expression_w.n, Literal):
+                    result = node_w.n
+                    match node_w.n.target_type.type:
+                        case "int":
+                            result = IntLiteral(int(node_w.n.expression_w.n.value))
+                        case "float":
+                            result = FloatLiteral(float(node_w.n.expression_w.n.value))
+                        case "char":
+                            result = CharLiteral(int(node_w.n.expression_w.n.value))
+                        case _:
+                            raise Exception("Critical error: unknown cast passed type checks")
+                    result.type = node_w.n.target_type
+                    node_w.n = result
+

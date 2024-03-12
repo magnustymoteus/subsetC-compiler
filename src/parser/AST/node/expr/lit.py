@@ -20,4 +20,4 @@ class Literal(Expression):
         super().append_to_graph(graph, parent_id)
 
     def __repr__(self) -> str:
-        return self.get_typed_str(self.value)
+        return f"{self.get_typed_str(self.value)}"
