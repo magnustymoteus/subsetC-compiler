@@ -5,7 +5,6 @@ from pathlib import Path
 from src.parser.visitor.CST_visitor.cst_to_ast_visitor import CSTToASTVisitor
 from src.parser.visitor.CST_visitor.visualization_visitor import VisualizationVisitor
 
-from src.parser.AST.ast import Ast
 from src.parser import optimizations as optim
 from src.antlr_files.C_GrammarLexer import *
 from src.antlr_files.C_GrammarParser import *
@@ -86,7 +85,15 @@ def main(argv):
         #visualizeAST(ast, os.path.basename(path) + ".gv")
         cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
         TACVisitor(cfg)
+        llvm = LLVMVisitor(cfg, os.path.basename(path))
         visualizeCFG(cfg, "cfg-viz/" + str(os.path.basename(path)) + ".gv")
+
+        llvm_file = Path(f"src/llvm_target/output/{str(os.path.basename(path))}.ll")
+        llvm_file.parent.mkdir(parents=True, exist_ok=True)
+        f = open(f"src/llvm_target/output/{str(os.path.basename(path))}.ll", "w")
+        f.write(str(llvm.module))
+        f.close()
+
 
 
 
