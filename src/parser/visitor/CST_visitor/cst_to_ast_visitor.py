@@ -74,7 +74,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
     def visitAssignmentExpr(self, ctx:C_GrammarParser.AssignmentOpContext):
         if ctx.getChildCount() == 1:
             return self.visitChildren(ctx)
-        node: Wrapper[Assignment] = wrap(Assignment())
+        node: Wrapper[Assignment] = wrap(Assignment(ctx.getChild(1).getText()))
         node.n.set_line_col_nr(ctx.start.line, ctx.start.column)
         left = self.visit(ctx.getChild(0))
         right = self.visit(ctx.getChild(2))

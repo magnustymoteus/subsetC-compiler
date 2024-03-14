@@ -29,10 +29,8 @@ class OptimizationVisitor(ASTVisitor):
         if isinstance(node_w.n.operand_w.n, AddressOfOp):
             node_w.n = node_w.n.operand_w.n.operand_w.n
             self.visit(node_w)
-        elif node_w.n.type.ptr_count == 0:
-            node_w.n = node_w.n.operand_w.n
-            self.visit(node_w)
-
+        else:
+            super().deref_op(node_w)
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
         if not isinstance(node_w.n.operand_w.n, Identifier):
             self.visit(node_w.n.operand_w)

@@ -1,0 +1,29 @@
+from llvmlite.ir import IRBuilder
+def get_float_binary_op_mapping(operator: str, builder: IRBuilder) -> IRBuilder.function:
+    match operator:
+        case "+":
+            return builder.fadd
+        case "-":
+            return builder.fsub
+        case "*":
+            return builder.fmul
+        case "/":
+            return builder.fdiv
+        case "%":
+            return builder.frem
+        case "<<":
+            return builder.ashr
+        case ">>":
+            return builder.shl
+        case "|":
+            return builder.or_
+        case "||":
+            return builder.or_
+        case "^":
+            return builder.xor
+        case "&":
+            return builder.and_
+        case "&&":
+            return builder.and_
+        case _:
+            return builder.fcmp_ordered

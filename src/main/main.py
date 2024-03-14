@@ -84,9 +84,11 @@ def main(argv):
         applyConstantFolding(ast)
         #visualizeAST(ast, os.path.basename(path) + ".gv")
         cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
+        visualizeCFG(cfg, "viz/cfg-processed/" + str(os.path.basename(path)) + ".gv")
         TACVisitor(cfg)
+        visualizeCFG(cfg, "viz/tac-processed/" + str(os.path.basename(path)) + ".gv")
         llvm = LLVMVisitor(cfg, os.path.basename(path))
-        visualizeCFG(cfg, "cfg-viz/" + str(os.path.basename(path)) + ".gv")
+        visualizeCFG(cfg, "viz/llvm-processed/" + str(os.path.basename(path)) + ".gv")
 
         llvm_file = Path(f"src/llvm_target/output/{str(os.path.basename(path))}.ll")
         llvm_file.parent.mkdir(parents=True, exist_ok=True)

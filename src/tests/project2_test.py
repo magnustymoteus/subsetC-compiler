@@ -18,20 +18,23 @@ def compile(path, cfold: bool = True, cprog: bool = True):
     parser = C_GrammarParser(tokens)
     parser.addErrorListener(MyErrorListener())
     tree = parser.program()
-    visualizeCST(tree, parser.ruleNames, "cst-viz/"+str(os.path.basename(path)))
+    visualizeCST(tree, parser.ruleNames, "viz/cst/"+str(os.path.basename(path)))
     ast = getAST(tree)
     #visualizeAST(ast, "ast-viz/" + str(os.path.basename(path)) + ".gv")
     SymbolTableVisitor(ast)
     TypeCheckerVisitor(ast)
+    visualizeAST(ast, "viz/type-checked-ast/" + str(os.path.basename(path)) + ".gv")
     if cprog:
         OptimizationVisitor(ast)
+        visualizeAST(ast, "viz/cprogged-ast/" + str(os.path.basename(path)) + ".gv")
     if cfold:
         applyConstantFolding(ast)
-    visualizeAST(ast, "ast-viz/" + str(os.path.basename(path)) + ".gv")
+    visualizeAST(ast, "viz/optimized-ast/" + str(os.path.basename(path)) + ".gv")
     cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
-    visualizeCFG(cfg, "cfg-viz/" + str(os.path.basename(path)) + ".gv")
     TACVisitor(cfg)
-    SSAVisitor(cfg)
+    visualizeCFG(cfg, "viz/tac-cfg/" + str(os.path.basename(path)) + ".gv")
+    llvm = LLVMVisitor(cfg, os.path.basename(path))
+    visualizeCFG(cfg, "viz/llvm-cfg/" + str(os.path.basename(path)) + ".gv")
     return ast
 
 def test_pass():

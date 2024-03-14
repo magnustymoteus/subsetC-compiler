@@ -7,7 +7,7 @@ class Assignment(Expression):
     Assignment node. Indicates an assignment to a value.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, operator: str) -> None:
         self.assignee_w: Wrapper = wrap()  # TODO ensure gets set
         """
         Wrapper for the variable node assigned to.
@@ -17,6 +17,7 @@ class Assignment(Expression):
         """
         Wrapper for the assigned value node.
         """
+        self.operator: str = operator
 
         super().__init__()
 
@@ -48,4 +49,4 @@ class Assignment(Expression):
         self.value.append_to_graph(graph, self.id)
 
     def __repr__(self) -> str:
-        return self.get_typed_str("=")
+        return self.get_typed_str(self.operator)
