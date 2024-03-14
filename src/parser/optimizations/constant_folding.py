@@ -62,6 +62,7 @@ def constant_folding(ast: Ast):
             case UnaryOp():
                 if isinstance(node_w.n.operand, Literal) and not node_w.n.is_postfix:
                     result = node_w.n
+                    new_type = node_w.n.operand_w.n.type
                     match node_w.n.operator:
                         case "+":
                             result = node_w.n.operand.value
@@ -77,6 +78,7 @@ def constant_folding(ast: Ast):
                             result = ~node_w.n.operand.value
                     literal_type = type(node_w.n.operand)
                     node_w.n = literal_type(result)
+                    node_w.n.type = new_type
             case CastOp():
                 if isinstance(node_w.n.expression_w.n, Literal):
                     result = node_w.n

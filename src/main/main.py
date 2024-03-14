@@ -63,7 +63,7 @@ TODO:
     * AST node has a line and a column
 '''
 def main(argv):
-    pass_tests = Path("example_source_files").glob('proj2_*_pass_arithmetic*.c')
+    pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')
     #syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
     for path in pass_tests:
         path_in_str = str(path)

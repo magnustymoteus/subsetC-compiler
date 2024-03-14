@@ -5,6 +5,7 @@ from .mapping import *
 '''This visitor assumes that the AST/CFG is in TAC form'''
 
 class LLVMVisitor(CFGVisitor):
+
     def _create_reg(self) -> str:
         result: str = str(self.reg_counter)
         self.reg_counter += 1
@@ -12,7 +13,7 @@ class LLVMVisitor(CFGVisitor):
 
     def __init__(self, cfg: ControlFlowGraph, name: str):
         self.regs = {}
-
+        self.postfix_function = None
         self.module: ir.Module = ir.Module(name=name)
         self.reg_counter: int = 0
         void_type = ir.VoidType()
@@ -23,7 +24,19 @@ class LLVMVisitor(CFGVisitor):
         super().__init__(cfg)
         self.builder.ret_void()
 
+    def _load_if_pointer(self, value: ir.Instruction):
+        if isinstance(value.type, ir.PointerType):
+            return self.builder.load(value, self._create_reg(), 4)
+        return value
+
+    def _apply_inc_or_dec(self, add_or_sub, operand, operand_value):
+        added = add_or_sub(operand_value, operand_value.type(1), self._create_reg())
+        self.builder.store(added, operand, 4)
+
     def visit(self, node_w: Wrapper[CFGNode]):
+        if self.postfix_function is not None:
+            self.postfix_function()
+            self.postfix_function = None
         match node_w.n:
             case BasicBlockList():
                 return self.basic_block_list(node_w)
@@ -74,11 +87,6 @@ class LLVMVisitor(CFGVisitor):
     def identifier(self, node_w: Wrapper[Identifier]) -> ir.Instruction:
         return self.regs[node_w.n.name]
 
-    def _load_if_pointer(self, value: ir.Instruction):
-        if isinstance(value.type, ir.PointerType):
-            return self.builder.load(value, self._create_reg())
-        return value
-
 
     def bin_op(self, node_w: Wrapper[BinaryOp]):
         lhs_value = self._load_if_pointer(self.visit(node_w.n.lhs_w))
@@ -93,7 +101,8 @@ class LLVMVisitor(CFGVisitor):
             case _:
                 raise ValueError(f"Critical Error: unrecognized type")
     def un_op(self, node_w: Wrapper[UnaryOp]):
-        operand_value = self._load_if_pointer(self.visit(node_w.n.operand_w))
+        operand = self.visit(node_w.n.operand_w)
+        operand_value = self._load_if_pointer(operand)
         match node_w.n.operator:
             case "+":
                 return self.builder.add(operand_value.type(0), operand_value, self._create_reg())
@@ -104,10 +113,19 @@ class LLVMVisitor(CFGVisitor):
             case "~":
                 return self.builder.not_(operand_value, self._create_reg())
             case "++":
-                pass
-            case "--":
-                pass
+                if not node_w.n.is_postfix:
+                    self._apply_inc_or_dec(self.builder.add, operand, operand_value)
+                else:
+                    self.postfix_function = lambda : self._apply_inc_or_dec(self.builder.add, operand, operand_value)
+                return operand_value
 
+
+            case "--":
+                if not node_w.n.is_postfix:
+                    self._apply_inc_or_dec(self.builder.sub, operand, operand_value)
+                else:
+                    self.postfix_function = lambda : self._apply_inc_or_dec(self.builder.sub, operand, operand_value)
+                return operand_value
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         decl_ir_type = self._get_type(node_w.n.type)
@@ -120,7 +138,7 @@ class LLVMVisitor(CFGVisitor):
     def assign(self, node_w: Wrapper[Assignment]):
         value = self.visit(node_w.n.value_w)
         assignee = self.visit(node_w.n.assignee_w)
-        self.builder.store(value, assignee)
+        self.builder.store(value, assignee, 4)
 
 
 
