@@ -59,8 +59,6 @@ def visualizeCFG(cfg: ControlFlowGraph, filename: str):
 TODO: 
     * Documentation
     * Add constant propagation in adherence to const casting
-    * AST to Control Flow Graph (useful for dead code analysis, constant propagation, ...)
-    * AST node has a line and a column
 '''
 def main(argv):
     pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')

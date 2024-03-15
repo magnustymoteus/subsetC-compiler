@@ -100,6 +100,16 @@ class LLVMVisitor(CFGVisitor):
                                                                                     self._create_reg())
             case _:
                 raise ValueError(f"Critical Error: unrecognized type")
+
+    def addressof_op(self, node_w: Wrapper[AddressOfOp]):
+        return self.visit(node_w.n.operand_w)
+
+    def deref_op(self, node_w: Wrapper[DerefOp]):
+        return self.builder.load(self.visit(node_w.n.operand_w), self._create_reg(), 4)
+
+    def cast_op(self, node_w: Wrapper[CastOp]):
+        pass
+
     def un_op(self, node_w: Wrapper[UnaryOp]):
         operand = self.visit(node_w.n.operand_w)
         operand_value = self._load_if_pointer(operand)
@@ -118,14 +128,14 @@ class LLVMVisitor(CFGVisitor):
                 else:
                     self.postfix_function = lambda : self._apply_inc_or_dec(self.builder.add, operand, operand_value)
                 return operand_value
-
-
             case "--":
                 if not node_w.n.is_postfix:
                     self._apply_inc_or_dec(self.builder.sub, operand, operand_value)
                 else:
                     self.postfix_function = lambda : self._apply_inc_or_dec(self.builder.sub, operand, operand_value)
                 return operand_value
+            case _:
+                raise ValueError(f"Unrecognized unary operator")
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         decl_ir_type = self._get_type(node_w.n.type)
