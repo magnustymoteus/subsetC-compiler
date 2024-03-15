@@ -12,6 +12,7 @@ class LLVMVisitor(CFGVisitor):
         return result
 
     def __init__(self, cfg: ControlFlowGraph, name: str):
+        self.in_lhs_assignment: bool = False
         self.regs = {}
         self.postfix_function = None
         self.module: ir.Module = ir.Module(name=name)
@@ -85,12 +86,12 @@ class LLVMVisitor(CFGVisitor):
         return self._get_type(node_w.n.type)[0](node_w.n.value)
 
     def identifier(self, node_w: Wrapper[Identifier]) -> ir.Instruction:
-        return self.regs[node_w.n.name]
+        return self._load_if_pointer(self.regs[node_w.n.name]) if not self.in_lhs_assignment else self.regs[node_w.n.name]
 
 
     def bin_op(self, node_w: Wrapper[BinaryOp]):
-        lhs_value = self._load_if_pointer(self.visit(node_w.n.lhs_w))
-        rhs_value = self._load_if_pointer(self.visit(node_w.n.rhs_w))
+        lhs_value = self.visit(node_w.n.lhs_w)
+        rhs_value = self.visit(node_w.n.rhs_w)
         match node_w.n.type.type:
             case "int":
                 return get_signed_int_binary_op_mapping(node_w.n.operator, self.builder)(lhs_value, rhs_value,
@@ -102,17 +103,19 @@ class LLVMVisitor(CFGVisitor):
                 raise ValueError(f"Critical Error: unrecognized type")
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
-        return self.visit(node_w.n.operand_w)
-
+        self.in_lhs_assignment = True
+        result = self.visit(node_w.n.operand_w)
+        self.in_rhs_assignment = False
+        return result
     def deref_op(self, node_w: Wrapper[DerefOp]):
-        return self.builder.load(self.visit(node_w.n.operand_w), self._create_reg(), 4)
+        return self._load_if_pointer(self.visit(node_w.n.operand_w))
 
     def cast_op(self, node_w: Wrapper[CastOp]):
         pass
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
         operand = self.visit(node_w.n.operand_w)
-        operand_value = self._load_if_pointer(operand)
+        operand_value = operand
         match node_w.n.operator:
             case "+":
                 return self.builder.add(operand_value.type(0), operand_value, self._create_reg())
@@ -123,16 +126,16 @@ class LLVMVisitor(CFGVisitor):
             case "~":
                 return self.builder.not_(operand_value, self._create_reg())
             case "++":
-                if not node_w.n.is_postfix:
+                '''if not node_w.n.is_postfix:
                     self._apply_inc_or_dec(self.builder.add, operand, operand_value)
                 else:
-                    self.postfix_function = lambda : self._apply_inc_or_dec(self.builder.add, operand, operand_value)
+                    self.postfix_function = lambda : self._apply_inc_or_dec(self.builder.add, operand, operand_value)'''
                 return operand_value
             case "--":
-                if not node_w.n.is_postfix:
+                '''if not node_w.n.is_postfix:
                     self._apply_inc_or_dec(self.builder.sub, operand, operand_value)
                 else:
-                    self.postfix_function = lambda : self._apply_inc_or_dec(self.builder.sub, operand, operand_value)
+                    self.postfix_function = lambda : self._apply_inc_or_dec(self.builder.sub, operand, operand_value)'''
                 return operand_value
             case _:
                 raise ValueError(f"Unrecognized unary operator")
@@ -146,9 +149,11 @@ class LLVMVisitor(CFGVisitor):
             self.regs[node_w.n.identifier] = allocaInstr
 
     def assign(self, node_w: Wrapper[Assignment]):
-        value = self.visit(node_w.n.value_w)
+        self.in_lhs_assignment = True
         assignee = self.visit(node_w.n.assignee_w)
-        self.builder.store(value, assignee, 4)
+        self.in_lhs_assignment = False
+        value = self.visit(node_w.n.value_w)
+        self.builder.store(value, assignee, self._get_type(node_w.n.type)[1])
 
 
 
