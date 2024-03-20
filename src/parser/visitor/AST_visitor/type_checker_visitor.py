@@ -3,21 +3,22 @@ from copy import deepcopy
 import warnings
 '''Here we traverse in post order and assign for almost each node a type. We then check for incompatible types or constant assignment.'''
 class TypeCheckerVisitor(ASTVisitor):
+    type_ranks: list[str] = ["char", "int", "float"]
     def __init__(self, ast: Ast):
-        self.type_ranks: list[str] = ["char", "int", "float"]
         super().__init__(ast)
 
 
-    def typeCoercion(self, primitive_types : list[str], is_constant: bool) -> PrimitiveType:
+    @staticmethod
+    def typeCoercion(primitive_types : list[str], is_constant: bool) -> PrimitiveType:
         current_rank = 0
         for current_type in primitive_types:
-            index = self.type_ranks.index(current_type)
+            index = TypeCheckerVisitor.type_ranks.index(current_type)
             if index > current_rank:
                 current_rank = index
-        return PrimitiveType(self.type_ranks[current_rank], is_constant)
+        return PrimitiveType(TypeCheckerVisitor.type_ranks[current_rank], is_constant)
 
     def checkImplicitDemotion(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
-        if self.type_ranks.index(assignee_type.type) < self.type_ranks.index(value_type.type):
+        if TypeCheckerVisitor.type_ranks.index(assignee_type.type) < TypeCheckerVisitor.type_ranks.index(value_type.type):
             warnings.warn(f"Type warning: implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
 
     def checkDiscardedPointerQualifier(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
@@ -52,7 +53,7 @@ class TypeCheckerVisitor(ASTVisitor):
     def bin_op(self, node_w: Wrapper[BinaryOp]):
         super().bin_op(node_w)
         self.checkPointerTypes(node_w.n.lhs_w.n.type, node_w.n.rhs_w.n.type)
-        node_w.n.type = self.typeCoercion([node_w.n.lhs_w.n.type.type, node_w.n.rhs_w.n.type.type], True)
+        node_w.n.type = TypeCheckerVisitor.typeCoercion([node_w.n.lhs_w.n.type.type, node_w.n.rhs_w.n.type.type], True)
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
         super().un_op(node_w)

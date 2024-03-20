@@ -55,13 +55,9 @@ def visualizeCFG(cfg: ControlFlowGraph, filename: str):
     graph.save(filename=filename)
 
 
-'''
-TODO: 
-    * Documentation
-    * Add constant propagation in adherence to const casting
-'''
+
 def main(argv):
-    pass_tests = Path("example_source_files").glob('proj2_*_pass*.c')
+    pass_tests = Path("example_source_files").glob('proj2_*_pass_advancedPointerOperations.c')
     #syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
     for path in pass_tests:
         path_in_str = str(path)

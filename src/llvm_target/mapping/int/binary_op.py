@@ -1,25 +1,25 @@
 from llvmlite import ir
 from typing import Callable
 
-def get_float_boolean_binary_op(left_value: ir.Instruction | ir.Constant, right_value: ir.Instruction | ir.Constant,
+def get_int_boolean_binary_op(left_value: ir.Instruction | ir.Constant, right_value: ir.Instruction | ir.Constant,
                           operator: str,
                           builder: ir.IRBuilder, create_reg: Callable, boolean_op: Callable) -> ir.Instruction:
     boolean_op_instr = boolean_op()
-    return builder.zext(boolean_op_instr, ir.FloatType(), create_reg())
+    return builder.zext(boolean_op_instr, ir.IntType(32), create_reg())
 
-def get_float_binary_op(left_value: ir.Instruction | ir.Constant, right_value: ir.Instruction | ir.Constant, operator: str,
-                        builder: ir.IRBuilder, create_reg: Callable) -> Callable:
+def get_int_binary_op(left_value: ir.Instruction | ir.Constant, right_value: ir.Instruction | ir.Constant, operator: str,
+                             builder: ir.IRBuilder, create_reg: Callable) -> Callable:
     match operator:
         case "+":
-            return lambda: builder.fadd(left_value, right_value, create_reg())
+            return lambda: builder.add(left_value, right_value, create_reg())
         case "-":
-            return lambda: builder.fsub(left_value, right_value, create_reg())
+            return lambda: builder.sub(left_value, right_value, create_reg())
         case "*":
-            return lambda: builder.fmul(left_value, right_value, create_reg())
+            return lambda: builder.mul(left_value, right_value, create_reg())
         case "/":
-            return lambda: builder.fdiv(left_value, right_value, create_reg())
+            return lambda: builder.sdiv(left_value, right_value, create_reg())
         case "%":
-            return lambda: builder.frem(left_value, right_value, create_reg())
+            return lambda: builder.srem(left_value, right_value, create_reg())
         case "<<":
             return lambda: builder.ashr(left_value, right_value, create_reg())
         case ">>":
@@ -35,5 +35,5 @@ def get_float_binary_op(left_value: ir.Instruction | ir.Constant, right_value: i
         case "&&":
             return lambda: builder.and_(left_value, right_value, create_reg())
         case _:
-            comp_op: Callable = lambda: builder.fcmp_ordered(operator, left_value, right_value, create_reg())
-            return lambda: get_float_boolean_binary_op(left_value, right_value, operator, builder, create_reg, comp_op)
+            comp_op: Callable = lambda: builder.icmp_signed(operator, left_value, right_value, create_reg())
+            return lambda: get_int_boolean_binary_op(left_value, right_value, operator, builder, create_reg, comp_op)

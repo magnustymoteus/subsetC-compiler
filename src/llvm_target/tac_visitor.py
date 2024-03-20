@@ -67,7 +67,7 @@ class TACVisitor(CFGVisitor):
             assign_node = Assignment("=")
             assign_node.assignee_w.n = Identifier(deepcopy(node_w.n.identifier))
             assign_node.value_w.n = deepcopy(node_w.n.definition_w.n)
-            assign_node.type = deepcopy(node_w.n.definition_w.n.type)
+            assign_node.type = deepcopy(node_w.n.type)
             assign_node.assignee_w.n.type = node_w.n.type
             node_w.n.definition_w.n = None
 

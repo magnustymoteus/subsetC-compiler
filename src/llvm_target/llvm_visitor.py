@@ -1,15 +1,18 @@
 from llvmlite import ir
 from src.parser.visitor.CFG_visitor.cfg_visitor import *
 from .mapping import *
+from src.parser.visitor.AST_visitor.type_checker_visitor import *
 
+
+# TODO: getelementptr, type checker visitor maybe change type of binary op if there is operation between non pointer and pointer
 '''This visitor assumes that the AST/CFG is in TAC form'''
-
 class LLVMVisitor(CFGVisitor):
 
     def _create_reg(self) -> str:
         result: str = str(self.reg_counter)
         self.reg_counter += 1
         return result
+
 
     def __init__(self, cfg: ControlFlowGraph, name: str):
         self.in_lhs_assignment: bool = False
@@ -88,19 +91,24 @@ class LLVMVisitor(CFGVisitor):
     def identifier(self, node_w: Wrapper[Identifier]) -> ir.Instruction:
         return self._load_if_pointer(self.regs[node_w.n.name]) if not self.in_lhs_assignment else self.regs[node_w.n.name]
 
+    def _cast(self, value, from_type: PrimitiveType, to_type: PrimitiveType):
+        cast_function: IRBuilder.function = get_casts(self.builder)[(from_type.type, to_type.type)]
+        return cast_function(value, self._get_type(to_type)[0], self._create_reg())
 
     def bin_op(self, node_w: Wrapper[BinaryOp]):
         lhs_value = self.visit(node_w.n.lhs_w)
         rhs_value = self.visit(node_w.n.rhs_w)
-        match node_w.n.type.type:
-            case "int":
-                return get_signed_int_binary_op_mapping(node_w.n.operator, self.builder)(lhs_value, rhs_value,
-                                                                                         self._create_reg())
-            case "float":
-                return get_float_binary_op_mapping(node_w.n.operator, self.builder)(lhs_value, rhs_value,
-                                                                                    self._create_reg())
-            case _:
-                raise ValueError(f"Critical Error: unrecognized type")
+
+        lhs_type: PrimitiveType = node_w.n.lhs_w.n.type
+        rhs_type: PrimitiveType = node_w.n.rhs_w.n.type
+
+        if lhs_type.type != rhs_type.type:
+            coerced_type: PrimitiveType = TypeCheckerVisitor.typeCoercion([lhs_type.type, rhs_type.type], True)
+            if lhs_type.type != coerced_type:
+                lhs_value = self._cast(self._load_if_pointer(lhs_value), lhs_type, rhs_type)
+            else:
+                rhs_value = self._cast(self._load_if_pointer(rhs_value), rhs_type, lhs_type)
+        return get_binary_op(lhs_value, rhs_value, node_w.n.operator, self.builder, self._create_reg)()
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
         self.in_lhs_assignment = True
@@ -112,6 +120,9 @@ class LLVMVisitor(CFGVisitor):
 
     def cast_op(self, node_w: Wrapper[CastOp]):
         pass
+        '''match node_w.n.target_type.type:
+            case "int":
+                self.builder.'''
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
         operand = self.visit(node_w.n.operand_w)
@@ -125,6 +136,7 @@ class LLVMVisitor(CFGVisitor):
                 return self.builder.not_(operand_value, self._create_reg())
             case "~":
                 return self.builder.not_(operand_value, self._create_reg())
+            # TODO: prefix, postfix for both non pointers and pointers
             case "++":
                 '''if not node_w.n.is_postfix:
                     self._apply_inc_or_dec(self.builder.add, operand, operand_value)
@@ -153,6 +165,8 @@ class LLVMVisitor(CFGVisitor):
         assignee = self.visit(node_w.n.assignee_w)
         self.in_lhs_assignment = False
         value = self.visit(node_w.n.value_w)
+        if node_w.n.type.type != node_w.n.value_w.n.type.type:
+            value = self._cast(self._load_if_pointer(value), node_w.n.value_w.n.type, node_w.n.type)
         self.builder.store(value, assignee, self._get_type(node_w.n.type)[1])
 
 
