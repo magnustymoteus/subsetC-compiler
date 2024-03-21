@@ -57,7 +57,7 @@ def visualizeCFG(cfg: ControlFlowGraph, filename: str):
 
 
 def main(argv):
-    pass_tests = Path("example_source_files").glob('proj2_*_pass_advancedPointerOperations.c')
+    pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')
     #syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
     for path in pass_tests:
         path_in_str = str(path)

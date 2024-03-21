@@ -1,6 +1,7 @@
 from src.parser.AST import *
 from src.symbol_table import *
 from src.parser.AST.ast import *
+import warnings
 
 class SemanticError(Exception):
     def __init__(self, message):
@@ -9,8 +10,18 @@ class SemanticError(Exception):
 class ASTVisitor():
     def __init__(self, ast: Ast):
         self.visit(ast.root_w)
+        self.current_line_nr: int = 0
+        self.current_col_nr: int = 0
+
+    def raiseSemanticErr(self, message: str):
+        raise SemanticError(f"{self.current_line_nr},{self.current_col_nr}: {message}")
+
+    def raiseWarning(self, message: str):
+        warnings.warn(f"{self.current_line_nr},{self.current_col_nr}: {message}")
 
     def visit(self, node_w: Wrapper[Basic]):
+        self.current_col_nr = node_w.n.col_nr
+        self.current_line_nr = node_w.n.line_nr
         match node_w.n:
             case Program():
                 self.program(node_w)

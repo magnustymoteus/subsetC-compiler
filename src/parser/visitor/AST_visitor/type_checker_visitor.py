@@ -1,12 +1,10 @@
 from src.parser.visitor.AST_visitor.ast_visitor import *
 from copy import deepcopy
-import warnings
 '''Here we traverse in post order and assign for almost each node a type. We then check for incompatible types or constant assignment.'''
 class TypeCheckerVisitor(ASTVisitor):
     type_ranks: list[str] = ["char", "int", "float"]
     def __init__(self, ast: Ast):
         super().__init__(ast)
-
 
     @staticmethod
     def typeCoercion(primitive_types : list[str], is_constant: bool) -> PrimitiveType:
@@ -19,12 +17,12 @@ class TypeCheckerVisitor(ASTVisitor):
 
     def checkImplicitDemotion(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
         if TypeCheckerVisitor.type_ranks.index(assignee_type.type) < TypeCheckerVisitor.type_ranks.index(value_type.type):
-            warnings.warn(f"Type warning: implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
+            self.raiseWarning(f"Type warning: implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
 
     def checkDiscardedPointerQualifier(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
         if assignee_type.ptr_count > 0 and value_type.ptr_count > 0:
             if (not assignee_type.is_constant and value_type.is_constant):
-                warnings.warn(f"Type warning: assignment of {assignee_type} to {value_type} discards const qualifier")
+                self.raiseWarning(f"Type warning: assignment of {assignee_type} to {value_type} discards const qualifier")
 
 
     def checkAssignee(self, assignee_w: Wrapper):
@@ -34,20 +32,20 @@ class TypeCheckerVisitor(ASTVisitor):
             symtype = assignee_w.n.type
             # TODO: with constant pointers?
             if symtype.ptr_count == 0 and symtype.is_constant:
-                raise SemanticError(f"{assignee_w.n.line_nr}:{assignee_w.n.col_nr} assignment of readonly variable {symtype}")
+                self.raiseSemanticErr(f"assignment of readonly variable {symtype}")
         else:
-            raise SemanticError("lvalue required as left operand of assignment")
+            self.raiseSemanticErr("lvalue required as left operand of assignment")
     def checkPointerTypes(self, left_type: PrimitiveType, right_type: PrimitiveType):
         left_copy = deepcopy(left_type)
         right_copy = deepcopy(right_type)
         if left_copy.ptr_count > 0 and right_copy.ptr_count == 0:
             if right_copy.type != 'int':
                 # case where a pointer gets assigned to a non integer non pointer
-                raise SemanticError(f"Cannot assign pointer {left_copy} to {right_copy}")
+                self.raiseSemanticErr(f"Cannot assign pointer {left_copy} to {right_copy}")
             # case where a pointer gets assigned to a non pointer integer
         elif left_copy.ptr_count != right_copy.ptr_count:
             # case where two pointers dont match
-            raise SemanticError(f"Incompatible pointer types {left_copy} and {right_copy}")
+            self.raiseSemanticErr(f"Incompatible pointer types {left_copy} and {right_copy}")
     def program(self, node_w: Wrapper[Program]):
         super().program(node_w)
     def bin_op(self, node_w: Wrapper[BinaryOp]):
@@ -65,15 +63,16 @@ class TypeCheckerVisitor(ASTVisitor):
         super().deref_op(node_w)
         new_type: PrimitiveType = deepcopy(node_w.n.operand_w.n.type)
         if new_type.ptr_count == 0:
-            raise SemanticError(f"Error on {node_w.n.line_nr}:{node_w.n.col_nr}: Cannot dereference non pointer")
+            self.raiseSemanticErr(f"Cannot dereference non pointer")
         new_type.decrease_ptr_count()
         node_w.n.type = new_type
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
         super().addressof_op(node_w)
+        if not (isinstance(node_w.n.operand_w.n, Identifier) or isinstance(node_w.n.operand_w.n, DerefOp)):
+            self.raiseSemanticErr(f"Cannot get the address of an rvalue")
         new_type: PrimitiveType = deepcopy(node_w.n.operand_w.n.type)
         new_type.increase_ptr_count()
         node_w.n.type = new_type
-        # TODO: check if its getting address of an lvalue
 
     def lit(self, node_w: Wrapper[Literal]):
         type_str: str = ""

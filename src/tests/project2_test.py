@@ -33,7 +33,7 @@ def compile(path, cfold: bool = True, cprog: bool = True):
     cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
     TACVisitor(cfg)
     visualizeCFG(cfg, "viz/tac-cfg/" + str(os.path.basename(path)) + ".gv")
-    llvm = LLVMVisitor(cfg, os.path.basename(path))
+    LLVMVisitor(cfg, os.path.basename(path))
     visualizeCFG(cfg, "viz/llvm-cfg/" + str(os.path.basename(path)) + ".gv")
     return ast
 
