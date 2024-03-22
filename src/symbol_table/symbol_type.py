@@ -13,7 +13,7 @@ class PrimitiveType(SymbolType):
         for const_ptr_index in self.const_ptrs:
             ptr_str = ptr_str[:const_ptr_index+1] + "const" + ptr_str[const_ptr_index+1:]
         result = f"{self.type}" if not self.is_constant else f"const {self.type}"
-        return result+ptr_str
+        return f"{result}{ptr_str}"
     def decrease_ptr_count(self):
         if self.ptr_count-1 in self.const_ptrs:
             self.const_ptrs.remove(self.ptr_count-1)

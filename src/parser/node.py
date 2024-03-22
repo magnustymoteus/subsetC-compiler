@@ -7,6 +7,7 @@ from graphviz import Digraph
 class AbstractNode(ABC):
     def __init__(self) -> None:
         self.id: UUID = uuid4()
+
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
         graph.node(str(self.id), str(self))
         if parent_id is not None:

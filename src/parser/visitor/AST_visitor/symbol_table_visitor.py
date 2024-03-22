@@ -35,7 +35,7 @@ class SymbolTableVisitor(ASTVisitor):
 
     def identifier(self, node_w: Wrapper[Identifier]):
         node_w.n.local_symtab_w = self._getMostLocalSymTab()
-        if node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name) is None:
+        if not node_w.n.local_symtab_w.n.symbol_exists(node_w.n.name):
             self.raiseSemanticErr(f"Undeclared variable {node_w.n.name}")
 
 
@@ -58,7 +58,7 @@ class SymbolTableVisitor(ASTVisitor):
         node_w.n.local_symtab_w = self._getMostLocalSymTab()
         super().variable_decl(node_w)
         symbol_name = node_w.n.identifier
-        if node_w.n.local_symtab_w.n.symbol_exists(symbol_name):
+        if node_w.n.local_symtab_w.n.lookup_table.get(symbol_name, False):
             decl_or_def : str = "Redeclaration" if not node_w.n.definition_w.n else "Redefinition"
             self.raiseSemanticErr(f"{decl_or_def} of symbol {symbol_name}")
         symtab_entry = SymbolTableEntry(symbol_name, node_w.n.type)

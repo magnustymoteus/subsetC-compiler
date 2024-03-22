@@ -83,6 +83,8 @@ class TypeCheckerVisitor(ASTVisitor):
                 type_str = "float"
             case CharLiteral():
                 type_str = "char"
+            case _:
+                raise ValueError("unrecognized literal type")
         node_w.n.type = PrimitiveType(type_str, True)
 
     def cast_op(self, node_w: Wrapper[CastOp]):
@@ -103,7 +105,7 @@ class TypeCheckerVisitor(ASTVisitor):
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         super().variable_decl(node_w)
-        if node_w.n.definition_w is not None:
+        if node_w.n.definition_w.n is not None:
             self.checkPointerTypes(node_w.n.type, node_w.n.definition_w.n.type)
             self.checkImplicitDemotion(node_w.n.type, node_w.n.definition_w.n.type)
             self.checkDiscardedPointerQualifier(node_w.n.type, node_w.n.definition_w.n.type)

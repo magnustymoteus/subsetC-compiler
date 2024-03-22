@@ -8,33 +8,41 @@ from src.parser.visitor.CST_visitor.visualization_visitor import *
 from src.parser.optimizations import *
 from src.llvm_target import *
 
-pass_tests = Path("../../example_source_files").glob('proj2_*_pass_*.c')
-syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
-semanticErr_tests = Path("../../example_source_files").glob('proj2_*_semanticErr_*.c')
+pass_tests = Path("../../example_source_files").glob('*pass*.c')
+syntaxErr_tests = Path("../../example_source_files").glob('*syntaxErr*.c')
+semanticErr_tests = Path("../../example_source_files").glob('*semanticErr*.c')
 
-def compile(path, cfold: bool = True, cprog: bool = True):
+
+def compile(path, cfold: bool = True, cprop: bool = True):
     path_in_str = str(path)
     tokens = getTokens(path_in_str)
     parser = C_GrammarParser(tokens)
     parser.addErrorListener(MyErrorListener())
     tree = parser.program()
-    visualizeCST(tree, parser.ruleNames, "viz/cst/"+str(os.path.basename(path)))
-    ast = getAST(tree)
-    #visualizeAST(ast, "ast-viz/" + str(os.path.basename(path)) + ".gv")
+    #visualizeCST(tree, parser.ruleNames, "./viz/cst/"+str(os.path.basename(path)))
+    ast = getAST(tree, tokens)
+    #visualizeAST(ast, "./viz/ast/ast-viz/" + str(os.path.basename(path)) + ".gv")
     SymbolTableVisitor(ast)
+    #visualizeAST(ast, "./viz/ast/symtab-ast/" + str(os.path.basename(path)) + ".gv")
     TypeCheckerVisitor(ast)
-    visualizeAST(ast, "viz/type-checked-ast/" + str(os.path.basename(path)) + ".gv")
-    if cprog:
+    #visualizeAST(ast, "viz/ast/type-checked-ast/" + str(os.path.basename(path)) + ".gv")
+    if cprop:
         OptimizationVisitor(ast)
-        visualizeAST(ast, "viz/cprogged-ast/" + str(os.path.basename(path)) + ".gv")
+        #visualizeAST(ast, "viz/ast/cpropped-ast/" + str(os.path.basename(path)) + ".gv")
     if cfold:
         applyConstantFolding(ast)
-    visualizeAST(ast, "viz/optimized-ast/" + str(os.path.basename(path)) + ".gv")
+    visualizeAST(ast, "viz/ast/optimized-ast/" + str(os.path.basename(path)) + ".gv")
     cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
     TACVisitor(cfg)
-    visualizeCFG(cfg, "viz/tac-cfg/" + str(os.path.basename(path)) + ".gv")
-    LLVMVisitor(cfg, os.path.basename(path))
-    visualizeCFG(cfg, "viz/llvm-cfg/" + str(os.path.basename(path)) + ".gv")
+    #visualizeCFG(cfg, "viz/cfg/tac-cfg/" + str(os.path.basename(path)) + ".gv")
+    llvm = LLVMVisitor(cfg, os.path.basename(path))
+
+    llvm_file = Path(f"llvm_output/{str(os.path.basename(path))}.ll")
+    llvm_file.parent.mkdir(parents=True, exist_ok=True)
+    f = open(f"llvm_output/{str(os.path.basename(path))}.ll", "w")
+    f.write(str(llvm.module))
+    f.close()
+
     return ast
 
 def test_pass():

@@ -36,7 +36,7 @@ class SymbolTable(AbstractNode):
 
 
     def symbol_exists(self, name: str) -> bool:
-        return True if self.lookup_table.get(name, False) else False
+        return True if self.lookup_symbol(name) is not None else False
 
     def add_symbol(self, entry: SymbolTableEntry):
         self.lookup_table[entry.name] = entry

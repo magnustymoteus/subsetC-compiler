@@ -4,7 +4,6 @@ from .mapping import *
 from src.parser.visitor.AST_visitor.type_checker_visitor import *
 
 
-# TODO: getelementptr, type checker visitor maybe change type of binary op if there is operation between non pointer and pointer
 '''This visitor assumes that the AST/CFG is in TAC form'''
 class LLVMVisitor(CFGVisitor):
 
@@ -37,10 +36,14 @@ class LLVMVisitor(CFGVisitor):
         added = add_or_sub(operand_value, operand_value.type(1), self._create_reg())
         self.builder.store(added, operand, 4)
 
-    def visit(self, node_w: Wrapper[CFGNode]):
+    def visit(self, node_w: Wrapper[AbstractNode]):
         if self.postfix_function is not None:
             self.postfix_function()
             self.postfix_function = None
+        if isinstance(node_w.n, Basic):
+            for comment in node_w.n.comments:
+                for subcomment in comment.split("\n"):
+                    self.builder.comment(subcomment)
         match node_w.n:
             case BasicBlockList():
                 return self.basic_block_list(node_w)

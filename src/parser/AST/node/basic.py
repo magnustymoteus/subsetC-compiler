@@ -11,6 +11,7 @@ class Basic(AbstractNode):
         self.line_nr: int | None = None
         self.col_nr: int | None = None
         self.local_symtab_w: Wrapper[SymbolTable] = wrap()
+        self.comments = []
 
 
     def set_line_col_nr(self, line_nr: int, col_nr: int):

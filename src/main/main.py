@@ -34,9 +34,9 @@ def visualizeCST(tree, rules, filename):
     visualizationVisitor.visualize(tree, rules, filename)
 
 
-def getAST(tree) -> Ast:
+def getAST(tree, tokens) -> Ast:
     ast = Ast()
-    converterVisitor = CSTToASTVisitor()
+    converterVisitor = CSTToASTVisitor(tokens)
     root = converterVisitor.visit(tree)
     ast.set_root(root)
     return ast
@@ -55,9 +55,14 @@ def visualizeCFG(cfg: ControlFlowGraph, filename: str):
     graph.save(filename=filename)
 
 
-
+'''
+fix typedef in ast => make alias type as derived symboltype class
+make a lot of helper functions that remove repetitive code
+add comments
+add postfix/prefix operations to llvm ir codegen among other small things
+'''
 def main(argv):
-    pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')
+    pass_tests = Path("example_source_files").glob('*pass*.c')
     #syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
     for path in pass_tests:
         path_in_str = str(path)
@@ -68,12 +73,9 @@ def main(argv):
 
         #visualizeCST(tree, parser.ruleNames, os.path.basename(path))
 
-        ast = getAST(tree)
-        try:
-            SymbolTableVisitor(ast)
-            TypeCheckerVisitor(ast)
-        except SemanticError as e:
-            print(f"{e}")
+        ast = getAST(tree, tokens)
+        SymbolTableVisitor(ast)
+        TypeCheckerVisitor(ast)
         OptimizationVisitor(ast)
         applyConstantFolding(ast)
         #visualizeAST(ast, os.path.basename(path) + ".gv")

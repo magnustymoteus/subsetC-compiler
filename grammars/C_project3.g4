@@ -8,60 +8,50 @@ grammar C_project3;
 */
 // Parser rules
 
-/* TODO:
-    - Store comments in AST
-    - Add original C code after LLVM instruction in comment
-    - Do the same for MIPS
-    - Implement something so just the typedef types can be used
-*/
+program: (functionDef | declaration)* EOF;
 
-program: (comment* (functionDef | declaration | typeDef) comment*)* EOF;
-
-comment: BLOCKCMT | LINECMT;
-
-functionDef: declarationSpec identifier LPAREN (parameterList)? RPAREN compoundStmt; // int func() {...}
-typeSpec: 'char' | 'int' | 'float';
+functionDef: declarationSpec identifier LPAREN (parameterList)? RPAREN compoundStmt;
+typeSpec: 'char' | 'int' | 'float' | typedefName;
 typeQual: 'const';
+storageClassSpec: 'typedef';
 
-declarationSpec: typeQual? typeSpec pointer*; //e.g const char *
-declaration: (declarationSpec | ID) declarator ';'; //e.g const int * num;
+declarationSpec: storageClassSpec? typeQual? typeSpec pointer*;
+declaration: declarationSpec declarator ';'; //(',' declarator)*;
 declarator: identifier LPAREN (parameterList)? RPAREN | identifier | identifier EQ assignmentExpr;
-//e.g func(5,2) | num | num = 5
 
-typeDef: TYPEDEF typeSpec ID ';'; //e.g typedef float speed;
+typedefName: identifier;
 
-pointer: ARISK typeQual*; // * const
+pointer: ARISK typeQual*;
 initializer: assignmentExpr;
 
-parameterList: parameterDeclaration | parameterList ',' parameterDeclaration; // e.g int num | int num, char ch,...
-parameterDeclaration: declarationSpec declarator?; //e.g int num
+parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
+parameterDeclaration: declarationSpec declarator?;
 
-printf: PRINTF LPAREN '"' FORMATTING* '",' (ID | literal)* RPAREN ';'; // printf("%d", 5);
 stmt: exprStmt | compoundStmt;
-compoundStmt: LBRACE blockItem* RBRACE; // {...}
-blockItem: (declaration | stmt | printf) comment*; // ... /*...*/
+compoundStmt: LBRACE blockItem* RBRACE;
+blockItem: declaration | stmt;
 exprStmt: expr ';';
-expr: constantExpr | assignmentExpr | expr ',' assignmentExpr; // ... | ... | a = 1, b = 2
+expr: constantExpr | assignmentExpr | expr ',' assignmentExpr;
 
 assignmentExpr: conditionalExpr | unaryExpr assignmentOp assignmentExpr;
 assignmentOp: EQ | '*=' | '/=' | '%=' | '+=' | '-=' | '>>=' | '<<=' | '&=' | '^=' | '|=';
 
 constantExpr: conditionalExpr;
 conditionalExpr: logicalOrExpr;
-logicalOrExpr: logicalAndExpr | logicalOrExpr OR logicalAndExpr; // ... | (x < y) || (y > z)
-logicalAndExpr: bitwiseOrExpr | logicalAndExpr AND bitwiseOrExpr; // ... | (x < y) && (y | z)
-bitwiseOrExpr: logicalXorExpr | bitwiseOrExpr BITOR logicalXorExpr; // ... | (x | y) | (x != y)
-logicalXorExpr: bitwiseAndExpr | logicalXorExpr BITXOR bitwiseAndExpr; // ... | (x != y) ^ (x & y)
-bitwiseAndExpr: equalityExpr | bitwiseAndExpr AMP equalityExpr; // ... | (x & y) & (x == y)
-equalityExpr: relationalExpr | equalityExpr (ISEQ | ISNEQ) relationalExpr; // ... | (x == y) == (x < y)
-relationalExpr: shiftExpr | relationalExpr (GT | LT | GTEQ | LTEQ) shiftExpr; // ... | (x < y) < (x << y)
+logicalOrExpr: logicalAndExpr | logicalOrExpr OR logicalAndExpr;
+logicalAndExpr: bitwiseOrExpr | logicalAndExpr AND bitwiseOrExpr;
+bitwiseOrExpr: logicalXorExpr | bitwiseOrExpr BITOR logicalXorExpr;
+logicalXorExpr: bitwiseAndExpr | logicalXorExpr BITXOR bitwiseAndExpr;
+bitwiseAndExpr: equalityExpr | bitwiseAndExpr AMP equalityExpr;
+equalityExpr: relationalExpr | equalityExpr (ISEQ | ISNEQ) relationalExpr;
+relationalExpr: shiftExpr | relationalExpr (GT | LT | GTEQ | LTEQ) shiftExpr;
 
-shiftExpr: addExpr | shiftExpr (SL | SR) addExpr; // ... | (x << y) << (x + y)
-addExpr: multExpr | addExpr (PLUS | MINUS) multExpr; // ... | (x + y) + (x * y)
-multExpr: castExpr | multExpr (ARISK | DIV | MOD) castExpr; // ... | (x * y) * (int)(y + z)
-castExpr: unaryExpr | LPAREN typeSpec RPAREN castExpr; // ... | (int) x
-unaryExpr: postfixExpr | unaryOp castExpr; // ... | -((double)x)
-postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr postfixOp; // ... | person->name | ...
+shiftExpr: addExpr | shiftExpr (SL | SR) addExpr;
+addExpr: multExpr | addExpr (PLUS | MINUS) multExpr;
+multExpr: castExpr | multExpr (ARISK | DIV | MOD) castExpr;
+castExpr: unaryExpr | LPAREN typeSpec RPAREN castExpr;
+unaryExpr: postfixExpr | unaryOp expr;
+postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr postfixOp;
 postfixOp: DPLUS | DMINUS;
 primaryExpr: identifier | literal | parenExpr;
 parenExpr: LPAREN expr RPAREN;
@@ -111,11 +101,6 @@ BITXOR: '^';
 SL: '<<';
 SR: '>>';
 
-PRINTF: 'printf';
-FORMATTING: '%s' | '%d' | '%x' | '%f' | '%c';
-
-TYPEDEF: 'typedef';
-
 ID: [a-zA-Z_] [a-zA-Z_0-9]*;
 
 INT: '0' | [1-9][0-9]*;
@@ -125,6 +110,5 @@ CHAR: '\'' . '\'' | '\'' '\\' ([abefnrtv0]|'\\'|'\''|'"'|'?') '\'';
 // the space in [] is important
 WS: [ \t\r\n]+ -> skip;
 
-// comments
-BLOCKCMT: '/*' .*? '*/';
-LINECMT: '//' ~[\r\n]*;
+BLOCKCMT: '/*' .*? '*/' -> channel(HIDDEN);
+LINECMT: '//' ~[\r\n]* -> channel(HIDDEN);
