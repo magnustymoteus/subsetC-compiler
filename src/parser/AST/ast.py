@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Generator
 from src.parser.AST.node import *
 
@@ -39,6 +40,7 @@ class Stack:
     ]
     ```
     """
+
     class FrameQueue:
         """Frame queue. Each frames has a number of items which are popped FIFO order."""
 
@@ -123,13 +125,9 @@ class Stack:
     def __repr__(self) -> str:
         repr: str = "Stack: [\n"
         for frame in range(len(self.frame_stack), 0, -1):
-            repr += f"  {self.frame_stack[frame-1]}\n"
+            repr += f"  {self.frame_stack[frame - 1]}\n"
         repr += "]"
         return repr
-
-
-class Ast:
-    pass
 
 
 class AstIter:
@@ -183,7 +181,6 @@ class AstIter:
         """Method called when encountering a UnOp node."""
         self.stack.new_frame(node_w.n.operand_w)
 
-
     def expand_cast_op(self, node_w: Wrapper[CastOp]):
         self.stack.new_frame([node_w.n.expression_w])
 
@@ -194,14 +191,15 @@ class AstIter:
     def expand_compound_stmt(self, node_w: Wrapper[CompoundStatement]):
         """Method called when encountering a Compound Statement node."""
         self.stack.new_frame([stmt for stmt in node_w.n.statements])
+
     def expand_func_def(self, node_w: Wrapper[FunctionDefinition]):
         """Method called when encountering a Function Definition node."""
         self.stack.new_frame([node_w.n.body_w])
+
     def expand_variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         """Method called when encountering a Variable Declaration node."""
         if node_w.n.definition_w.n is not None:
             self.stack.new_frame([node_w.n.definition_w])
-
 
 
 class AstVisit(ABC):
@@ -215,6 +213,7 @@ class AstVisit(ABC):
 
     def visit(self):
         self.__iter__()
+
     def __init__(self, ast: Ast) -> None:
         self.ast = ast
 
@@ -293,9 +292,11 @@ class AstVisit(ABC):
     def expand_compound_stmt(self, node_w: Wrapper[CompoundStatement]):
         """Method called when encountering a Compound Statement node."""
         self.stack.new_frame([stmt for stmt in node_w.n.statements])
+
     def expand_func_def(self, node_w: Wrapper[FunctionDefinition]):
         """Method called when encountering a Function Definition node."""
         self.stack.new_frame([node_w.n.body_w])
+
     def expand_variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         """Method called when encountering a Variable Declaration node."""
         self.stack.new_frame([node_w.n.definition_w])
@@ -348,7 +349,6 @@ class AstVisit(ABC):
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         """Method called when encountering a Assign node."""
         raise Exception  # TODO proper exception type
-
 
 
 class Ast:

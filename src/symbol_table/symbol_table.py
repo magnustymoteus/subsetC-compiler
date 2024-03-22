@@ -2,6 +2,8 @@ from __future__ import annotations
 from src.symbol_table import SymbolType
 from src.parser.AST.node import *
 from src.parser.node import *
+
+
 class SymbolTableEntry:
     def __init__(self, name: str, symbolType: SymbolType):
         self.name = name
@@ -9,24 +11,30 @@ class SymbolTableEntry:
         self.definition_w: Wrapper = wrap()
         self.has_changed: bool = False
         self.value_w: Wrapper = wrap()
-    @property
+
     def __repr__(self):
         return f"symbol: {self.name}, type: {self.type}"
 
 
 class SymbolTable(AbstractNode):
     def __init__(self, parent: Wrapper[SymbolTable] | None = None):
+        # [a, SymbolTableEntry]
         self.lookup_table: dict[str, SymbolTableEntry] = dict()  # identifier (symbol) mapped to symbol table entry
-        self.parent: None | Wrapper[SymbolTable] = parent
+        self.parent: Wrapper[SymbolTable] | None = parent
         super().__init__()
 
     def __repr__(self):
         result: str = str()
         for symbol in self.lookup_table:
-            result += "\n"+self.lookup_table[symbol].__repr__()
-        return "Symbol Table:"+result
+            result += "\n" + self.lookup_table[symbol].__repr__()
+        return "Symbol Table:" + result
 
     def lookup_symbol(self, name: str) -> SymbolTableEntry | None:
+        """
+        Look up a symbol in the symbol table. If the symbol is not found in the current symbol table, look in the parent.
+        :param name: the name of the symbol to look up
+        :return: the symbol table entry if found, None otherwise
+        """
         if self.lookup_table.get(name, None) is None:
             if self.parent is not None:
                 return self.parent.n.lookup_symbol(name)
@@ -34,8 +42,12 @@ class SymbolTable(AbstractNode):
             return self.lookup_table.get(name)
         return None
 
-
     def symbol_exists(self, name: str) -> bool:
+        """
+        Check if a symbol exists in the symbol table. Only checks most local scope.
+        :param name: the name of the symbol to check
+        :return: True if the symbol exists, False otherwise
+        """
         return True if self.lookup_table.get(name, False) else False
 
     def add_symbol(self, entry: SymbolTableEntry):
@@ -51,4 +63,3 @@ class SymbolTable(AbstractNode):
             subgraph.node(str(self.id), label=table_str, shape='plain')
             if self.parent is not None:
                 subgraph.edge(str(self.id), str(self.parent.n.id), dir="back")
-

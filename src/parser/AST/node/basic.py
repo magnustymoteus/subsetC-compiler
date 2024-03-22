@@ -1,6 +1,7 @@
 from src.parser.node import *
 from src.symbol_table.symbol_table import SymbolTable
 
+
 class Basic(AbstractNode):
     """
     Basic node. Contains attributes shared by all nodes.
@@ -11,7 +12,6 @@ class Basic(AbstractNode):
         self.line_nr: int | None = None
         self.col_nr: int | None = None
         self.local_symtab_w: Wrapper[SymbolTable] = wrap()
-
 
     def set_line_col_nr(self, line_nr: int, col_nr: int):
         self.line_nr = line_nr
@@ -24,10 +24,3 @@ class Basic(AbstractNode):
         super().append_to_graph(graph, parent_id)
         if self.local_symtab_w.n is not None:
             self.local_symtab_w.n.append_to_graph(graph, self.id)
-
-
-
-
-
-
-

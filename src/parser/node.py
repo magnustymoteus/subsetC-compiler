@@ -22,11 +22,11 @@ class Wrapper(Generic[NodeType]):
     Wrapper for AST node. This allows for editing the tree in-place by reassigning the contained node.
     """
 
-    def __init__(self, node: AbstractNode = None) -> None:
+    def __init__(self, node: NodeType = None) -> None:
         self.n = node
 
 
-def wrap(node: AbstractNode = None):
+def wrap(node: NodeType = None):
     """
     Return a wrapper of the provided node.
     """

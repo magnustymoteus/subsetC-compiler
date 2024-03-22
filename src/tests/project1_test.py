@@ -2,6 +2,7 @@ import os.path
 
 import pytest
 from src.parser import *
+from src.main.main import *
 from pathlib import Path
 from src.parser.listener.error_listener import MyErrorListener
 
@@ -11,12 +12,15 @@ syntaxErr_tests = Path("../../example_source_files").glob('proj1_*_syntaxErr_*.c
 
 def compile(path: str):
     tokens = getTokens(path)
-    parser = C_ExpressionsParser(tokens)
+    parser = C_GrammarParser(tokens)
     parser.addErrorListener(MyErrorListener())
+    # Generates the code associated with the program node(the root node of the AST)
     tree = parser.program()
     ast = getAST(tree)
     applyConstantFolding(ast)
     return ast
+
+
 def test_pass():
     for path in pass_tests:
         path_in_str = str(path)
@@ -25,6 +29,7 @@ def test_pass():
             visualizeAST(result, os.path.basename(path)+".gv")
         except Exception as e:
             pytest.fail(e)
+
 
 def test_syntaxErr():
     for path in syntaxErr_tests:

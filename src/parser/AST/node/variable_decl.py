@@ -2,11 +2,15 @@ from .basic import Digraph, Wrapper, wrap
 from .block_item import BlockItem
 from uuid import UUID
 from src.symbol_table import SymbolType
+
+
 class VariableDeclaration(BlockItem):
 
     def __init__(self, identifier: str, type: SymbolType):
+        # TODO why is identifier a string and not an Identifier node?
         self.identifier: str = identifier
         self.type: SymbolType = type
+        # TODO what is this ?
         self.definition_w: Wrapper = wrap()
         super().__init__()
 
@@ -14,11 +18,10 @@ class VariableDeclaration(BlockItem):
         super().append_to_graph(graph, parent_id)
         if self.definition_w.n is not None:
             self.definition_w.n.append_to_graph(graph, self.id)
-        #if self.local_symtab_w.n is not None:
+        # if self.local_symtab_w.n is not None:
         #    self.local_symtab_w.n.append_to_graph(graph, self.id)
-
 
     def __repr__(self) -> str:
         str1 = f"definition: {self.identifier}" if self.definition_w.n is not None \
             else f"declaration: {self.identifier}"
-        return str1+f" ({self.type.__repr__()})"
+        return str1 + f" ({self.type.__repr__()})"
