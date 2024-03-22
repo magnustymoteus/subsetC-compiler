@@ -69,6 +69,8 @@ class LLVMVisitor(CFGVisitor):
                 return self.lit(node_w)
             case Identifier():
                 return self.identifier(node_w)
+            case PrintStatement():
+                return self.print(node_w)
             case _:
                 raise Exception
 

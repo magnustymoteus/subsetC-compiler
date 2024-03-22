@@ -47,6 +47,8 @@ class ASTVisitor():
                 self.lit(node_w)
             case Identifier():
                 self.identifier(node_w)
+            case PrintStatement():
+                self.print(node_w)
             case _:
                 raise Exception
 
@@ -104,6 +106,9 @@ class ASTVisitor():
         """Method called when encountering a Assign node."""
         if node_w.n.definition_w.n is not None:
             self.visit(node_w.n.definition_w)
+
+    def print(self, node_w: Wrapper[PrintStatement]):
+        self.visit(node_w.n.argument_w)
 
 
 

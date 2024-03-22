@@ -26,7 +26,11 @@ initializer: assignmentExpr;
 parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
 parameterDeclaration: declarationSpec declarator?;
 
-stmt: exprStmt | compoundStmt;
+stmt: exprStmt | compoundStmt | printfStmt;
+// temporary, remove when introducing function calls
+printfStmt: 'printf' LPAREN '"' printfFormat '"' ',' (identifier | literal) RPAREN ';';
+printfFormat: PRINTF_FORMATTING;
+
 compoundStmt: LBRACE blockItem* RBRACE;
 blockItem: declaration | stmt;
 exprStmt: expr? ';';
@@ -111,3 +115,5 @@ WS: [ \t\r\n]+ -> skip;
 
 BLOCKCMT: '/*' .*? '*/' -> channel(HIDDEN);
 LINECMT: '//' ~[\r\n]* -> channel(HIDDEN);
+
+PRINTF_FORMATTING: '%' [sdxfc];

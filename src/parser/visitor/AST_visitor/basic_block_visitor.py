@@ -10,6 +10,7 @@ class BasicBlockVisitor(ASTVisitor):
 
     def program(self, node_w: Wrapper[Program]):
         for statement_w in node_w.n.children:
+            self.current_basic_block_w.n.local_symtab_w = statement_w.n.local_symtab_w
             if not isinstance(statement_w.n, CompoundStatement):
                 self.current_basic_block_w.n.ast_items.append(statement_w)
             self.visit(statement_w)

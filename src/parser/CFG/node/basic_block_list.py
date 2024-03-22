@@ -9,5 +9,6 @@ class BasicBlockList(CFGNode):
         for block_w in self.basic_blocks:
             block_w.n.append_to_graph(graph, self.id)
 
+
     def __repr__(self):
         return "basic block list"

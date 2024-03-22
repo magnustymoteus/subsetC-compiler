@@ -74,15 +74,20 @@ def main(argv):
         #visualizeCST(tree, parser.ruleNames, os.path.basename(path))
 
         ast = getAST(tree, tokens)
+        #visualizeAST(ast, "viz/ast/"+str(os.path.basename(path)) + ".gv")
         SymbolTableVisitor(ast)
+        #visualizeAST(ast, "viz/symtabbed/"+str(os.path.basename(path)) + ".gv")
         TypeCheckerVisitor(ast)
+        #visualizeAST(ast, "viz/typed/"+str(os.path.basename(path)) + ".gv")
         OptimizationVisitor(ast)
+        #visualizeAST(ast, "viz/propped/"+str(os.path.basename(path)) + ".gv")
         applyConstantFolding(ast)
+        #visualizeAST(ast, "viz/cfolded/"+str(os.path.basename(path)) + ".gv")
         #visualizeAST(ast, os.path.basename(path) + ".gv")
         cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
-        visualizeCFG(cfg, "viz/cfg-processed/" + str(os.path.basename(path)) + ".gv")
+        #visualizeCFG(cfg, "viz/cfg-processed/" + str(os.path.basename(path)) + ".gv")
         TACVisitor(cfg)
-        visualizeCFG(cfg, "viz/tac-processed/" + str(os.path.basename(path)) + ".gv")
+        #visualizeCFG(cfg, "viz/tac-processed/" + str(os.path.basename(path)) + ".gv")
         llvm = LLVMVisitor(cfg, os.path.basename(path))
         visualizeCFG(cfg, "viz/llvm-processed/" + str(os.path.basename(path)) + ".gv")
 

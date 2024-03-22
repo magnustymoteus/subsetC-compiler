@@ -31,6 +31,8 @@ class CFGVisitor(ASTVisitor):
                 self.lit(node_w)
             case Identifier():
                 self.identifier(node_w)
+            case PrintStatement():
+                self.print(node_w)
             case _:
                 raise Exception
 

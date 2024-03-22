@@ -161,6 +161,8 @@ class AstIter:
                         self.expand_func_def(self.stack.top.front)
                     case VariableDeclaration():
                         self.expand_variable_decl(self.stack.top.front)
+                    case PrintStatement():
+                        self.expand_print_stmt(self.stack.top.front)
                     case Literal():
                         pass
                     case Identifier():
@@ -183,6 +185,8 @@ class AstIter:
         """Method called when encountering a UnOp node."""
         self.stack.new_frame(node_w.n.operand_w)
 
+    def expand_print_stmt(self, node_w: Wrapper[PrintStatement]):
+        self.stack.new_frame(node_w.n.argument_w)
 
     def expand_cast_op(self, node_w: Wrapper[CastOp]):
         self.stack.new_frame([node_w.n.expression_w])
@@ -241,6 +245,8 @@ class AstVisit(ABC):
                         self.expand_func_def(self.stack.top.front)
                     case VariableDeclaration():
                         self.expand_variable_decl(self.stack.top.front)
+                    case PrintStatement():
+                        self.expand_print_stmt(self.stack.top.front)
                     case Literal():
                         pass
                     case Identifier():
@@ -268,6 +274,8 @@ class AstVisit(ABC):
                         self.lit(next)
                     case Identifier():
                         self.identifier(next)
+                    case PrintStatement():
+                        self.print_stmt(next)
                     case _:
                         raise Exception  # TODO proper exception type
 
@@ -299,11 +307,17 @@ class AstVisit(ABC):
     def expand_variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         """Method called when encountering a Variable Declaration node."""
         self.stack.new_frame([node_w.n.definition_w])
+    def expand_print_stmt(self, node_w: Wrapper[PrintStatement]):
+        self.stack.new_frame([node_w.n.argument_w])
 
     @abstractmethod
     def program(self, node_w: Wrapper[Program]):
         """Method called when encountering a Program node."""
         raise Exception  # TODO proper exception type
+
+    @abstractmethod
+    def print_stmt(self, node_w: Wrapper[PrintStatement]):
+        raise Exception
 
     @abstractmethod
     def bin_op(self, node_w: Wrapper[BinaryOp]):

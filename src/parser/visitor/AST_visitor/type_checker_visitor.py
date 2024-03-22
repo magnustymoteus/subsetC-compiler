@@ -75,7 +75,6 @@ class TypeCheckerVisitor(ASTVisitor):
         node_w.n.type = new_type
 
     def lit(self, node_w: Wrapper[Literal]):
-        type_str: str = ""
         match node_w.n:
             case IntLiteral():
                 type_str = "int"

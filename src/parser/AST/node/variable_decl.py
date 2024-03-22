@@ -20,8 +20,9 @@ class VariableDeclaration(BlockItem):
 
     @property
     def type(self) -> SymbolType:
-        if self.local_symtab_w.n is not None and self.local_symtab_w.n.symbol_exists(self._type.type):
-            return self.local_symtab_w.n.lookup_symbol(self._type.type).type
+        if self._type is not None:
+            if self.local_symtab_w.n is not None and self.local_symtab_w.n.symbol_exists(self._type.type):
+                return self.local_symtab_w.n.lookup_symbol(self._type.type).type
         return self._type
     @type.setter
     def type(self, value: SymbolType):
