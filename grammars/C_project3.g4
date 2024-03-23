@@ -14,7 +14,6 @@ functionDef: declarationSpec identifier LPAREN (parameterList)? RPAREN compoundS
 typeSpec: 'char' | 'int' | 'float' | typedefName;
 typeQual: 'const';
 storageClassSpec: 'typedef';
-
 declarationSpec: storageClassSpec? typeQual? typeSpec pointer*;
 declaration: declarationSpec declarator ';'; //(',' declarator)*;
 declarator: identifier LPAREN (parameterList)? RPAREN | identifier | identifier EQ assignmentExpr;
@@ -27,10 +26,14 @@ initializer: assignmentExpr;
 parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
 parameterDeclaration: declarationSpec declarator?;
 
-stmt: exprStmt | compoundStmt;
+stmt: exprStmt | compoundStmt | printfStmt;
+// temporary, remove when introducing function calls
+printfStmt: 'printf' LPAREN '"' printfFormat '"' ',' (identifier | literal) RPAREN ';';
+printfFormat: PRINTF_FORMATTING;
+
 compoundStmt: LBRACE blockItem* RBRACE;
 blockItem: declaration | stmt;
-exprStmt: expr ';';
+exprStmt: expr? ';';
 expr: constantExpr | assignmentExpr | expr ',' assignmentExpr;
 
 assignmentExpr: conditionalExpr | unaryExpr assignmentOp assignmentExpr;
@@ -50,7 +53,7 @@ shiftExpr: addExpr | shiftExpr (SL | SR) addExpr;
 addExpr: multExpr | addExpr (PLUS | MINUS) multExpr;
 multExpr: castExpr | multExpr (ARISK | DIV | MOD) castExpr;
 castExpr: unaryExpr | LPAREN typeSpec RPAREN castExpr;
-unaryExpr: postfixExpr | unaryOp expr;
+unaryExpr: postfixExpr | unaryOp castExpr;
 postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr postfixOp;
 postfixOp: DPLUS | DMINUS;
 primaryExpr: identifier | literal | parenExpr;
@@ -112,3 +115,5 @@ WS: [ \t\r\n]+ -> skip;
 
 BLOCKCMT: '/*' .*? '*/' -> channel(HIDDEN);
 LINECMT: '//' ~[\r\n]* -> channel(HIDDEN);
+
+PRINTF_FORMATTING: '%' [sdxfc];
