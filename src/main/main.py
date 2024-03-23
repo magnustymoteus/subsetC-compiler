@@ -56,7 +56,6 @@ def visualizeCFG(cfg: ControlFlowGraph, filename: str):
 
 
 '''
-fix typedef in ast => make alias type as derived symboltype class
 make a lot of helper functions that remove repetitive code
 add comments
 add postfix/prefix operations to llvm ir codegen among other small things

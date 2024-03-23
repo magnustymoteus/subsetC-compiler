@@ -17,6 +17,7 @@ class LLVMVisitor(CFGVisitor):
         self.in_lhs_assignment: bool = False
         self.regs = {}
         self.postfix_function = None
+
         self.module: ir.Module = ir.Module(name=name)
         self.reg_counter: int = 0
         void_type = ir.VoidType()
@@ -24,6 +25,10 @@ class LLVMVisitor(CFGVisitor):
         func = ir.Function(self.module, fnty, name="main")
         block = func.append_basic_block(name="entry")
         self.builder: ir.IRBuilder = ir.IRBuilder(block)
+
+        printf_type = ir.FunctionType(ir.IntType(32), [ir.IntType(8).as_pointer()], var_arg=True)
+        self.printf = ir.Function(self.module, printf_type, name="printf")
+
         super().__init__(cfg)
         self.builder.ret_void()
 
@@ -89,6 +94,19 @@ class LLVMVisitor(CFGVisitor):
             result[0] = ir.PointerType(result[0])
             result[1] = 8
         return result[0], result[1]
+
+    # probably here until proper function calls get implemented
+    def print(self, node_w: Wrapper[PrintStatement]):
+        format_string = ir.GlobalVariable(self.module, ir.ArrayType(ir.IntType(8), len(node_w.n.format) + 1),
+                                          name="str")
+        format_string.global_constant = True
+        format_string.initializer = ir.Constant(ir.ArrayType(ir.IntType(8), len(node_w.n.format) + 1),
+                                                [ir.IntType(8)(ord(c)) for c in f"{node_w.n.format}\00"])
+
+        # Get a pointer to the first element of the array
+        format_string_ptr = self.builder.gep(format_string,
+                                             [ir.Constant(ir.IntType(64), 0), ir.Constant(ir.IntType(64), 0)])
+        return self.builder.call(self.printf, [format_string_ptr, self.visit(node_w.n.argument_w)])
 
     def lit(self, node_w: Wrapper[Literal]) -> ir.Constant:
         return self._get_type(node_w.n.type)[0](node_w.n.value)
