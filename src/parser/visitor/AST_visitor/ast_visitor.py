@@ -24,6 +24,7 @@ class ASTVisitor():
         self.current_line_nr = node_w.n.line_nr
         match node_w.n:
             case Program():
+                # Recursive call to visit the children of the node
                 self.program(node_w)
             case Assignment():
                 self.assign(node_w)

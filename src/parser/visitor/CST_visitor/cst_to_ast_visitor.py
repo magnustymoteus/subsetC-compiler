@@ -25,9 +25,12 @@ class CSTToASTVisitor(C_GrammarVisitor):
         return result
 
     def visitTypeSpec(self, ctx:C_GrammarParser.TypeSpecContext):
+        # returns for example "int"
         return ctx.getChild(0).getText()
     def visitFunctionDef(self, ctx: C_GrammarParser.FunctionDefContext):
         # TODO complete this in the future: patryk
+        # visits the last child node of the current context
+        # ctx.getChild(ctx.getChildCount()-1) e.g. compoundStmtContext
         return self.visit(ctx.getChild(ctx.getChildCount()-1))
 
     def visitPrintfStmt(self, ctx:C_GrammarParser.PrintfStmtContext):
@@ -138,7 +141,9 @@ class CSTToASTVisitor(C_GrammarVisitor):
         return node
 
     def visitProgram(self, ctx: C_GrammarParser.ProgramContext):
+        # remove EOF token
         ctx.removeLastChild()
+        # iterates over every context(=child) and visits it
         children = [self.visit(child) for child in ctx.getChildren()]
         program_node = wrap(Program())
 

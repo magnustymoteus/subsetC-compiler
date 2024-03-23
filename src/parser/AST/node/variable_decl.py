@@ -5,8 +5,10 @@ from src.symbol_table import SymbolType
 class VariableDeclaration(BlockItem):
 
     def __init__(self, identifier: str, type: SymbolType, storage_class_specifier = None):
+        # TODO why is identifier a string and not an Identifier node?
         self.identifier: str = identifier
         self._type: SymbolType = type
+        # TODO what is this ?
         self.definition_w: Wrapper = wrap()
         self.storage_class_specifier: str | None = storage_class_specifier
         super().__init__()

@@ -27,9 +27,9 @@ def visualizeCST(tree, rules, filename):
     visualizationVisitor.visualize(tree, rules, filename)
 
 
-def getAST(tree) -> Ast:
+def getAST(tree, tokens) -> Ast:
     ast = Ast()
-    converterVisitor = CSTToASTVisitor()
+    converterVisitor = CSTToASTVisitor(tokens)
     root = converterVisitor.visit(tree)
     ast.set_root(root)
     return ast
@@ -67,7 +67,7 @@ def main(argv):
     args = arg_parser.parse_args(argv[1:])
 
     # pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')
-    pass_tests = Path("example_source_files").glob('proj2_man_pass_arithmetic.c')
+    pass_tests = Path("example_source_files").glob('*pass*.c')
     # syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
     for path in pass_tests:
         path_in_str = str(path)
@@ -85,7 +85,7 @@ def main(argv):
             visualizeCST(tree, parser.ruleNames, os.path.basename(path))
 
         # conversion from CST to AST
-        ast = getAST(tree)
+        ast = getAST(tree, tokens)
 
         try:
             # Makes symbol table entries of the ast nodes
