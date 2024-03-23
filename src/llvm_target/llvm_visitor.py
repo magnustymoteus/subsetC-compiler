@@ -37,16 +37,10 @@ class LLVMVisitor(CFGVisitor):
             return self.builder.load(value, self._create_reg(), 4)
         return value
 
-    def _apply_inc_or_dec(self, add_or_sub, operand, operand_value):
-        added = add_or_sub(operand_value, operand_value.type(1), self._create_reg())
-        self.builder.store(added, operand, 4)
-
     def visit(self, node_w: Wrapper[AbstractNode]):
-        if self.postfix_function is not None:
-            self.postfix_function()
-            self.postfix_function = None
         if isinstance(node_w.n, Basic):
-            for comment in node_w.n.comments:
+            comments = node_w.n.comments + ([node_w.n.source_code_line] if node_w.n.source_code_line is not None else [])
+            for comment in comments:
                 for subcomment in comment.split("\n"):
                     self.builder.comment(subcomment)
         match node_w.n:
@@ -118,20 +112,20 @@ class LLVMVisitor(CFGVisitor):
         cast_function: IRBuilder.function = get_casts(self.builder)[(from_type.type, to_type.type)]
         return cast_function(value, self._get_type(to_type)[0], self._create_reg())
 
-    def bin_op(self, node_w: Wrapper[BinaryOp]):
-        lhs_value = self.visit(node_w.n.lhs_w)
-        rhs_value = self.visit(node_w.n.rhs_w)
-
-        lhs_type: PrimitiveType = node_w.n.lhs_w.n.type
-        rhs_type: PrimitiveType = node_w.n.rhs_w.n.type
-
+    def _get_bin_op_func(self, lhs_value, lhs_type, rhs_value, rhs_type, operator) -> Callable:
         if lhs_type.type != rhs_type.type:
             coerced_type: PrimitiveType = TypeCheckerVisitor.typeCoercion([lhs_type.type, rhs_type.type], True)
             if lhs_type.type != coerced_type:
                 lhs_value = self._cast(self._load_if_pointer(lhs_value), lhs_type, rhs_type)
             else:
                 rhs_value = self._cast(self._load_if_pointer(rhs_value), rhs_type, lhs_type)
-        return get_binary_op(lhs_value, rhs_value, node_w.n.operator, self.builder, self._create_reg)()
+        return get_binary_op(lhs_value, rhs_value, operator, self.builder, self._create_reg)
+
+    def bin_op(self, node_w: Wrapper[BinaryOp]):
+        return self._get_bin_op_func(self.visit(node_w.n.lhs_w), node_w.n.lhs_w.n.type,
+                                self.visit(node_w.n.rhs_w), node_w.n.rhs_w.n.type,
+                                node_w.n.operator)()
+
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
         self.in_lhs_assignment = True
@@ -142,13 +136,12 @@ class LLVMVisitor(CFGVisitor):
         return self._load_if_pointer(self.visit(node_w.n.operand_w))
 
     def cast_op(self, node_w: Wrapper[CastOp]):
-        pass
-        '''match node_w.n.target_type.type:
-            case "int":
-                self.builder.'''
+        return self._cast(self.visit(node_w.n.expression_w), node_w.n.expression_w.n.type, node_w.n.target_type)
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
+        self.in_lhs_assignment = node_w.n.operator in ["++", "--"]
         operand = self.visit(node_w.n.operand_w)
+        self.in_lhs_assignment = False if node_w.n.operator in ["++", "--"] else self.in_lhs_assignment
         operand_value = operand
         match node_w.n.operator:
             case "+":
@@ -159,19 +152,24 @@ class LLVMVisitor(CFGVisitor):
                 return self.builder.not_(operand_value, self._create_reg())
             case "~":
                 return self.builder.not_(operand_value, self._create_reg())
-            # TODO: prefix, postfix for both non pointers and pointers
             case "++":
-                '''if not node_w.n.is_postfix:
-                    self._apply_inc_or_dec(self.builder.add, operand, operand_value)
-                else:
-                    self.postfix_function = lambda : self._apply_inc_or_dec(self.builder.add, operand, operand_value)'''
-                return operand_value
+                loaded_operand = self._load_if_pointer(operand_value)
+                increment = self._get_bin_op_func(loaded_operand, node_w.n.operand_w.n.type,
+                                         ir.Constant(ir.IntType(32), 1),
+                                         PrimitiveType("int", True), "+")()
+                self.builder.store(increment, operand_value, self._get_type(node_w.n.operand_w.n.type)[1])
+                if not node_w.n.is_postfix:
+                    return increment
+                return loaded_operand
             case "--":
-                '''if not node_w.n.is_postfix:
-                    self._apply_inc_or_dec(self.builder.sub, operand, operand_value)
-                else:
-                    self.postfix_function = lambda : self._apply_inc_or_dec(self.builder.sub, operand, operand_value)'''
-                return operand_value
+                loaded_operand = self._load_if_pointer(operand_value)
+                decrement = self._get_bin_op_func(loaded_operand, node_w.n.operand_w.n.type,
+                                          ir.Constant(ir.IntType(32), 1),
+                                          PrimitiveType("int", True), "-")()
+                self.builder.store(decrement, operand_value, self._get_type(node_w.n.operand_w.n.type)[1])
+                if not node_w.n.is_postfix:
+                    return decrement
+                return loaded_operand
             case _:
                 raise ValueError(f"Unrecognized unary operator")
 

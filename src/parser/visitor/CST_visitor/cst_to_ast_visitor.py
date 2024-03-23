@@ -1,11 +1,14 @@
 from src.antlr_files.C_GrammarVisitor import *
 from src.antlr_files.C_GrammarParser import *
 from src.parser.AST import *
+
+
 class CSTToASTVisitor(C_GrammarVisitor):
     def __init__(self, tokens):
         super().__init__()
         self.tokens = tokens
         self.processed_indices = set()
+
     def get_comments_for_ctx(self, ctx):
         token_stream = self.tokens.getHiddenTokensToLeft(ctx.start.tokenIndex)
         if token_stream:
@@ -16,6 +19,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
 
     def attach_comments(self, ast_node_w, ctx):
         ast_node_w.n.comments += self.get_comments_for_ctx(ctx)
+        ast_node_w.n.source_code_line = ctx.getText()
 
     def visit(self, tree):
         result = super().visit(tree)
@@ -24,16 +28,17 @@ class CSTToASTVisitor(C_GrammarVisitor):
             result.n.set_line_col_nr(tree.start.line, tree.start.column)
         return result
 
-    def visitTypeSpec(self, ctx:C_GrammarParser.TypeSpecContext):
+    def visitTypeSpec(self, ctx: C_GrammarParser.TypeSpecContext):
         # returns for example "int"
         return ctx.getChild(0).getText()
+
     def visitFunctionDef(self, ctx: C_GrammarParser.FunctionDefContext):
         # TODO complete this in the future: patryk
         # visits the last child node of the current context
         # ctx.getChild(ctx.getChildCount()-1) e.g. compoundStmtContext
-        return self.visit(ctx.getChild(ctx.getChildCount()-1))
+        return self.visit(ctx.getChild(ctx.getChildCount() - 1))
 
-    def visitPrintfStmt(self, ctx:C_GrammarParser.PrintfStmtContext):
+    def visitPrintfStmt(self, ctx: C_GrammarParser.PrintfStmtContext):
         format: str = ""
         argument: Wrapper[Basic] | None = None
         for child in ctx.getChildren():
@@ -45,14 +50,16 @@ class CSTToASTVisitor(C_GrammarVisitor):
                 case C_GrammarParser.LiteralContext():
                     argument = self.visit(child)
         return wrap(PrintStatement(format, argument))
-    def visitPostfixExpr(self, ctx:C_GrammarParser.PostfixExprContext):
+
+    def visitPostfixExpr(self, ctx: C_GrammarParser.PostfixExprContext):
         if ctx.getChildCount() > 1:
             result = wrap(UnaryOp(ctx.getChild(1).getChild(0).getText(), True))
 
             result.n.operand_w = self.visit(ctx.getChild(0))
             return result
         return self.visit(ctx.getChild(0))
-    def visitDeclaration(self, ctx:C_GrammarParser.DeclarationContext):
+
+    def visitDeclaration(self, ctx: C_GrammarParser.DeclarationContext):
         declaration_spec = self.visit(ctx.getChild(0))
         storage_class_specifier = declaration_spec[0]
         type_specifier = declaration_spec[1]
@@ -63,11 +70,13 @@ class CSTToASTVisitor(C_GrammarVisitor):
 
         result.n.definition_w = declarator_result[1]
         return result
-    def visitDeclarator(self, ctx:C_GrammarParser.DeclaratorContext):
+
+    def visitDeclarator(self, ctx: C_GrammarParser.DeclaratorContext):
         if ctx.getChildCount() > 1:
             return self.visit(ctx.getChild(0)), self.visit(ctx.getChild(2))
         return self.visit(ctx.getChild(0)), wrap()
-    def visitCastExpr(self, ctx:C_GrammarParser.CastExprContext):
+
+    def visitCastExpr(self, ctx: C_GrammarParser.CastExprContext):
         if ctx.getChildCount() > 1:
             target_type: PrimitiveType | None = None
             expr_w: Wrapper | None = None
@@ -81,7 +90,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
             result.n.expression_w = expr_w
             return result
         return self.visitChildren(ctx)
-    def visitDeclarationSpec(self, ctx:C_GrammarParser.DeclarationSpecContext):
+
+    def visitDeclarationSpec(self, ctx: C_GrammarParser.DeclarationSpecContext):
         type_specifier = None
         is_constant = False
         ptr_count = 0
@@ -103,11 +113,10 @@ class CSTToASTVisitor(C_GrammarVisitor):
                     storage_class_specifier = child.getChild(0).getText()
         return storage_class_specifier, PrimitiveType(type_specifier, is_constant, ptr_count, const_ptrs)
 
-
-    def visitExprStmt(self, ctx:C_GrammarParser.ExprStmtContext):
+    def visitExprStmt(self, ctx: C_GrammarParser.ExprStmtContext):
         return self.visit(ctx.getChild(0))
 
-    def visitCompoundStmt(self, ctx:C_GrammarParser.CompoundStmtContext):
+    def visitCompoundStmt(self, ctx: C_GrammarParser.CompoundStmtContext):
         statement_list = []
         for child in ctx.children:
             if not (child.getText() in ['{', '}']):
@@ -117,7 +126,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
         result.n.statements = statement_list
         return result
 
-    def visitAssignmentExpr(self, ctx:C_GrammarParser.AssignmentOpContext):
+    def visitAssignmentExpr(self, ctx: C_GrammarParser.AssignmentOpContext):
         if ctx.getChildCount() == 1:
             return self.visitChildren(ctx)
         node: Wrapper[Assignment] = wrap(Assignment(ctx.getChild(1).getText()))
@@ -149,7 +158,6 @@ class CSTToASTVisitor(C_GrammarVisitor):
 
         program_node.n.children = children
         return program_node
-
 
     # Visit a parse tree produced by C_GrammarParser#logicalOrExpr.
     def visitLogicalOrExpr(self, ctx: C_GrammarParser.LogicalOrExprContext):
@@ -217,13 +225,14 @@ class CSTToASTVisitor(C_GrammarVisitor):
         node.n.line_nr = ctx.start.line
         node.n.col_nr = ctx.start.column
         return node
-    def visitFloatLiteral(self, ctx:C_GrammarParser.FloatLiteralContext):
+
+    def visitFloatLiteral(self, ctx: C_GrammarParser.FloatLiteralContext):
         node: Wrapper[FloatLiteral] = wrap(FloatLiteral(
             float(ctx.getChild(0).getText())))
 
         return node
 
-    def visitIdentifier(self, ctx:C_GrammarParser.IdentifierContext):
+    def visitIdentifier(self, ctx: C_GrammarParser.IdentifierContext):
         node: Wrapper[Identifier] = wrap(Identifier(ctx.getChild(0).getText()))
 
         return node

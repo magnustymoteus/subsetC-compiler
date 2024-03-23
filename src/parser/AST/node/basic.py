@@ -12,6 +12,7 @@ class Basic(AbstractNode):
         self.line_nr: int | None = None
         self.col_nr: int | None = None
         self.comments = []
+        self.source_code_line: str | None = None
         self.local_symtab_w: Wrapper[SymbolTable] = wrap()
 
 

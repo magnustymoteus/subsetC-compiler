@@ -48,7 +48,7 @@ def visualizeCFG(cfg: ControlFlowGraph, filename: str):
     graph = cfg.to_dot_graph()
     graph.save(filename=filename)
 
-
+# TODO: stop load for icmp with pointers
 def main(argv):
     # Flags
     """
