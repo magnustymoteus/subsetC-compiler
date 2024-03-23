@@ -2,16 +2,17 @@ from src.parser.visitor.AST_visitor.ast_visitor import *
 from src.parser.visitor.AST_visitor.copy_visitor import *
 from copy import deepcopy
 
-'''Traverses the AST tree in pre-order to perform constant propagation along other small optimizations (operator assignments)'''
+
 class OptimizationVisitor(ASTVisitor):
+    """Traverses the AST tree in pre-order to perform constant propagation along other small optimizations (operator
+    assignments)"""
+
     def __init__(self, ast: Ast):
         super().__init__(ast)
-
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         if node_w.n.definition_w.n is not None:
             self.visit(node_w.n.definition_w)
-
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
         if node_w.n.operator in ["++", "--"]:
@@ -19,7 +20,6 @@ class OptimizationVisitor(ASTVisitor):
                 symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.operand_w.n.name)
                 symbol.has_changed = True
         super().un_op(node_w)
-
 
     def assign(self, node_w: Wrapper[Assignment]):
         if len(node_w.n.operator) > 1:
@@ -50,9 +50,11 @@ class OptimizationVisitor(ASTVisitor):
             self.visit(node_w)
         else:
             super().deref_op(node_w)
+
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
         if not isinstance(node_w.n.operand_w.n, Identifier):
             self.visit(node_w.n.operand_w)
+
     def identifier(self, node_w: Wrapper[Identifier]):
         symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name)
         if symbol.type.ptr_count == 0 and not symbol.has_changed:

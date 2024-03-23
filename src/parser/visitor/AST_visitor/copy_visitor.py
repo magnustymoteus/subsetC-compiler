@@ -1,6 +1,7 @@
 from src.parser.visitor.AST_visitor.ast_visitor import *
 from copy import deepcopy
 
+
 class CopyVisitor(ASTVisitor):
     def __init__(self):
         pass
