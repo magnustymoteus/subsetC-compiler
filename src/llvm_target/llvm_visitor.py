@@ -14,8 +14,9 @@ class LLVMVisitor(CFGVisitor):
 
 
     def __init__(self, cfg: ControlFlowGraph, name: str):
-        self.in_lhs_assignment: bool = False
+        self.no_load: bool = False
         self.regs = {}
+        self.refs: set[str] = set()
         self.postfix_function = None
 
         self.module: ir.Module = ir.Module(name=name)
@@ -106,7 +107,7 @@ class LLVMVisitor(CFGVisitor):
         return self._get_type(node_w.n.type)[0](node_w.n.value)
 
     def identifier(self, node_w: Wrapper[Identifier]) -> ir.Instruction:
-        return self._load_if_pointer(self.regs[node_w.n.name]) if not self.in_lhs_assignment else self.regs[node_w.n.name]
+        return self._load_if_pointer(self.regs[node_w.n.name]) if not (self.no_load or node_w.n.name in self.refs) else self.regs[node_w.n.name]
 
     def _cast(self, value, from_type: PrimitiveType, to_type: PrimitiveType):
         cast_function: IRBuilder.function = get_casts(self.builder)[(from_type.type, to_type.type)]
@@ -128,20 +129,21 @@ class LLVMVisitor(CFGVisitor):
 
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
-        self.in_lhs_assignment = True
+        self.no_load = True
         result = self.visit(node_w.n.operand_w)
-        self.in_rhs_assignment = False
+        self.no_load = False
         return result
     def deref_op(self, node_w: Wrapper[DerefOp]):
-        return self._load_if_pointer(self.visit(node_w.n.operand_w))
+        result = self._load_if_pointer(self.visit(node_w.n.operand_w))
+        return result
 
     def cast_op(self, node_w: Wrapper[CastOp]):
         return self._cast(self.visit(node_w.n.expression_w), node_w.n.expression_w.n.type, node_w.n.target_type)
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
-        self.in_lhs_assignment = node_w.n.operator in ["++", "--"]
+        self.no_load = node_w.n.operator in ["++", "--"]
         operand = self.visit(node_w.n.operand_w)
-        self.in_lhs_assignment = False if node_w.n.operator in ["++", "--"] else self.in_lhs_assignment
+        self.no_load = False if node_w.n.operator in ["++", "--"] else self.no_load
         operand_value = operand
         match node_w.n.operator:
             case "+":
@@ -176,15 +178,21 @@ class LLVMVisitor(CFGVisitor):
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         decl_ir_type = self._get_type(node_w.n.type)
         if node_w.n.definition_w.n is not None:
+            if isinstance(node_w.n.definition_w.n, DerefOp):
+                self.no_load = True
             self.regs[node_w.n.identifier] = self.visit(node_w.n.definition_w)
+            if isinstance(node_w.n.definition_w.n, AddressOfOp):
+                self.refs.add(node_w.n.identifier)
+            self.no_load = False
         else:
             allocaInstr = self.builder.alloca(decl_ir_type[0], decl_ir_type[1], node_w.n.identifier)
             self.regs[node_w.n.identifier] = allocaInstr
 
     def assign(self, node_w: Wrapper[Assignment]):
-        self.in_lhs_assignment = True
+        self.no_load = True
         assignee = self.visit(node_w.n.assignee_w)
-        self.in_lhs_assignment = False
+        self.no_load = False
+
         value = self.visit(node_w.n.value_w)
         if node_w.n.type.type != node_w.n.value_w.n.type.type:
             value = self._cast(self._load_if_pointer(value), node_w.n.value_w.n.type, node_w.n.type)

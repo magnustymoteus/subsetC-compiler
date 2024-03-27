@@ -53,22 +53,21 @@ def main(argv):
     # Flags
     """
     disable-cfold : disable constant folding (should be enabled by default)
-    disable-cprog: disable constant propagation (should be enabled by default)
+    disable-cprop: disable constant propagation (should be enabled by default)
     viz-cst: visualize CST
     viz-ast: visualize AST and symbol tables
     """
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('--disable-cfold', action='store_true',
                             help='disable constant folding (enabled by default)')
-    arg_parser.add_argument('--disable-cprog', action='store_true',
+    arg_parser.add_argument('--disable-cprop', action='store_true',
                             help='disable constant propagation (enabled by default)')
     arg_parser.add_argument('--viz-cst', action='store_true', help='visualize CST')
     arg_parser.add_argument('--viz-ast', action='store_true', help='visualize AST and symbol tables')
     args = arg_parser.parse_args(argv[1:])
 
-    # pass_tests = Path("example_source_files").glob('proj2_*_pass_*.c')
     pass_tests = Path("example_source_files").glob('*pass*.c')
-    # syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
+    syntaxErr_tests = Path("../../example_source_files").glob('proj2_*_syntaxErr_*.c')
     for path in pass_tests:
         path_in_str = str(path)
         # Lexes the input file
@@ -95,7 +94,7 @@ def main(argv):
         except SemanticError as e:
             print(f"{e}")
 
-        if not args.disable_cprog:
+        if not args.disable_cprop:
             OptimizationVisitor(ast)
 
         if not args.disable_cfold:
