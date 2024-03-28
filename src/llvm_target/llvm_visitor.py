@@ -110,16 +110,13 @@ class LLVMVisitor(CFGVisitor):
         return self._load_if_pointer(self.regs[node_w.n.name]) if not (self.no_load or node_w.n.name in self.refs) else self.regs[node_w.n.name]
 
     def _cast(self, value, from_type: PrimitiveType, to_type: PrimitiveType):
-        cast_function: IRBuilder.function = get_casts(self.builder)[(from_type.type, to_type.type)]
-        return cast_function(value, self._get_type(to_type)[0], self._create_reg())
+        return do_cast(self.builder, self._get_type(from_type)[0], self._get_type(to_type)[0], value, self._create_reg)
 
     def _get_bin_op_func(self, lhs_value, lhs_type, rhs_value, rhs_type, operator) -> Callable:
-        if lhs_type.type != rhs_type.type:
-            coerced_type: PrimitiveType = TypeCheckerVisitor.typeCoercion([lhs_type.type, rhs_type.type], True)
-            if lhs_type.type != coerced_type:
-                lhs_value = self._cast(self._load_if_pointer(lhs_value), lhs_type, rhs_type)
-            else:
-                rhs_value = self._cast(self._load_if_pointer(rhs_value), rhs_type, lhs_type)
+        if lhs_type != rhs_type:
+            #coerced_type: PrimitiveType = TypeCheckerVisitor.typeCoercion([lhs_type.type, rhs_type.type], True)
+            lhs_value = self._cast(lhs_value, lhs_type, rhs_type)
+            rhs_value = self._cast(rhs_value, rhs_type, lhs_type)
         return get_binary_op(lhs_value, rhs_value, operator, self.builder, self._create_reg)
 
     def bin_op(self, node_w: Wrapper[BinaryOp]):
