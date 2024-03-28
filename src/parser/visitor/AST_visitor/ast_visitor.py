@@ -14,10 +14,10 @@ class ASTVisitor():
         self.current_col_nr: int = 0
 
     def raiseSemanticErr(self, message: str):
-        raise SemanticError(f"{self.current_line_nr},{self.current_col_nr}: {message}")
+        raise SemanticError(f"{self.current_line_nr}:{self.current_col_nr}:error: {message}")
 
     def raiseWarning(self, message: str):
-        warnings.warn(f"{self.current_line_nr},{self.current_col_nr}: {message}")
+        warnings.warn(f"{self.current_line_nr}:{self.current_col_nr}:error: {message}")
 
     def visit(self, node_w: Wrapper[Basic]):
         self.current_col_nr = node_w.n.col_nr

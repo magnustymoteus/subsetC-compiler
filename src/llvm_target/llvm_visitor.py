@@ -1,4 +1,4 @@
-from llvmlite import ir
+from llvmlite import ir, binding
 from src.parser.visitor.CFG_visitor.cfg_visitor import *
 from .mapping import *
 from src.parser.visitor.AST_visitor.type_checker_visitor import *
@@ -21,6 +21,7 @@ class LLVMVisitor(CFGVisitor):
 
         self.module: ir.Module = ir.Module(name=name)
         self.reg_counter: int = 0
+        self.module.triple = binding.get_default_triple()
         void_type = ir.VoidType()
         fnty = ir.FunctionType(void_type, ())
         func = ir.Function(self.module, fnty, name="main")

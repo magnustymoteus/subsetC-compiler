@@ -17,12 +17,12 @@ class TypeCheckerVisitor(ASTVisitor):
 
     def checkImplicitDemotion(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
         if TypeCheckerVisitor.type_ranks.index(assignee_type.type) < TypeCheckerVisitor.type_ranks.index(value_type.type):
-            self.raiseWarning(f"Type warning: implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
+            self.raiseWarning(f"Implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
 
     def checkDiscardedPointerQualifier(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
         if assignee_type.ptr_count > 0 and value_type.ptr_count > 0:
             if (not assignee_type.is_constant and value_type.is_constant):
-                self.raiseWarning(f"Type warning: assignment of {assignee_type} to {value_type} discards const qualifier")
+                self.raiseWarning(f"Assignment of {assignee_type} to {value_type} discards const qualifier")
 
 
     def checkAssignee(self, assignee_w: Wrapper):

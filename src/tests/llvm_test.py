@@ -1,12 +1,12 @@
 import os.path
 
 import pytest
-from src.main.main import *
 from pathlib import Path
 from src.parser.listener.error_listener import MyErrorListener
 from src.parser.visitor.CST_visitor.visualization_visitor import *
 from src.parser.optimizations import *
 from src.llvm_target import *
+from src.__main__ import *
 
 pass_tests = Path("../../example_source_files").glob('*pass*.c')
 syntaxErr_tests = Path("../../example_source_files").glob('*syntaxErr*.c')
@@ -31,18 +31,11 @@ def compile(path, cfold: bool = True, cprop: bool = True):
         #visualizeAST(ast, "viz/ast/cpropped-ast/" + str(os.path.basename(path)) + ".gv")
     if cfold:
         applyConstantFolding(ast)
-    visualizeAST(ast, "viz/ast/optimized-ast/" + str(os.path.basename(path)) + ".gv")
+    #visualizeAST(ast, "viz/ast/optimized-ast/" + str(os.path.basename(path)) + ".gv")
     cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
     TACVisitor(cfg)
     #visualizeCFG(cfg, "viz/cfg/tac-cfg/" + str(os.path.basename(path)) + ".gv")
-    llvm = LLVMVisitor(cfg, os.path.basename(path))
-
-    llvm_file = Path(f"llvm_output/{str(os.path.basename(path))}.ll")
-    llvm_file.parent.mkdir(parents=True, exist_ok=True)
-    f = open(f"llvm_output/{str(os.path.basename(path))}.ll", "w")
-    f.write(str(llvm.module))
-    f.close()
-
+    LLVMVisitor(cfg, os.path.basename(path))
     return ast
 
 def test_pass():

@@ -4,6 +4,3 @@
 __pycache__
 *.png
 *.gv
-src/antlr_files/*.py
-src/antlr_files/*.tokens
-src/antlr_files/*.interp
