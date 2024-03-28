@@ -4,8 +4,7 @@ from typing import Callable
 def get_float_boolean_binary_op(left_value: ir.Instruction | ir.Constant, right_value: ir.Instruction | ir.Constant,
                           operator: str,
                           builder: ir.IRBuilder, create_reg: Callable, boolean_op: Callable) -> ir.Instruction:
-    boolean_op_instr = boolean_op()
-    return builder.zext(boolean_op_instr, ir.FloatType(), create_reg())
+    return builder.zext(boolean_op(), ir.FloatType(), create_reg())
 
 def get_float_binary_op(left_value: ir.Instruction | ir.Constant, right_value: ir.Instruction | ir.Constant, operator: str,
                         builder: ir.IRBuilder, create_reg: Callable) -> Callable:

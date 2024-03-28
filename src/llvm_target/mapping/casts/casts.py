@@ -1,22 +1,25 @@
 from llvmlite import ir
-from typing import Callable
+from typing import Callable, Optional
+from src.symbol_table.symbol_type import PrimitiveType
 
 def do_cast(builder: ir.IRBuilder,
-              from_type: ir.Type, to_type: ir.Type, value: ir.Instruction | ir.Constant, create_reg: Callable) \
-        -> ir.Instruction:
-    if from_type == to_type:
-        return value
-    if not isinstance(from_type, ir.PointerType) and isinstance(to_type, ir.PointerType):
-        return builder.inttoptr(value, to_type, create_reg())
-    if isinstance(from_type, ir.PointerType) and isinstance(to_type, ir.PointerType):
-        return builder.bitcast(value, to_type, create_reg())
+              from_type: PrimitiveType, to_type: PrimitiveType) \
+        -> Optional[Callable]:
+    if from_type.ptr_count > 0 and to_type.ptr_count > 0:
+        return builder.bitcast
+    if from_type.ptr_count > 0 and to_type.ptr_count == 0:
+        return builder.ptrtoint
+    if from_type.ptr_count == 0 and to_type.ptr_count > 0:
+        return builder.inttoptr
+    if from_type.type == to_type.type:
+        return None
     # {("from_type", "to_type"): llvmlite_castfunc}
-    casts: dict[tuple[ir.Type, ir.Type], ir.IRBuilder.function] = {
-        (ir.FloatType(), ir.IntType(32)): builder.fptosi,
-        (ir.FloatType(), ir.IntType(8)): builder.fptosi,
-        (ir.IntType(32), ir.FloatType()): builder.sitofp,
-        (ir.IntType(32), ir.IntType(8)): builder.sext,
-        (ir.IntType(8), ir.FloatType()): builder.sitofp,
-        (ir.IntType(8), ir.IntType(32)): builder.sext,
+    casts: dict[tuple[str, str], ir.IRBuilder.function] = {
+        ("float", "int"): builder.fptosi,
+        ("float", "char"): builder.fptosi,
+        ("int", "float"): builder.sitofp,
+        ("int", "char"): builder.sext,
+        ("char", "float"): builder.sitofp,
+        ("char", "int"): builder.sext,
     }
-    return casts[from_type, to_type](value, to_type, create_reg())
+    return casts[from_type.type, to_type.type]

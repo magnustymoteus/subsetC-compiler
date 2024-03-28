@@ -34,7 +34,7 @@ class LLVMVisitor(CFGVisitor):
         self.builder.ret_void()
 
     def _load_if_pointer(self, value: ir.Instruction):
-        if isinstance(value.type, ir.PointerType):
+        if value.type.is_pointer:
             return self.builder.load(value, self._create_reg(), 4)
         return value
 
@@ -110,13 +110,22 @@ class LLVMVisitor(CFGVisitor):
         return self._load_if_pointer(self.regs[node_w.n.name]) if not (self.no_load or node_w.n.name in self.refs) else self.regs[node_w.n.name]
 
     def _cast(self, value, from_type: PrimitiveType, to_type: PrimitiveType):
-        return do_cast(self.builder, self._get_type(from_type)[0], self._get_type(to_type)[0], value, self._create_reg)
+        result = do_cast(self.builder, from_type, to_type)
+        return result(value, self._get_type(to_type)[0], self._create_reg()) if result is not None else value
 
     def _get_bin_op_func(self, lhs_value, lhs_type, rhs_value, rhs_type, operator) -> Callable:
-        if lhs_type != rhs_type:
-            #coerced_type: PrimitiveType = TypeCheckerVisitor.typeCoercion([lhs_type.type, rhs_type.type], True)
-            lhs_value = self._cast(lhs_value, lhs_type, rhs_type)
-            rhs_value = self._cast(rhs_value, rhs_type, lhs_type)
+        coerced_type: PrimitiveType = TypeCheckerVisitor.typeCoercion([lhs_type.type, rhs_type.type], True)
+        lhs_is_pointer: bool = lhs_type.ptr_count > 0
+        rhs_is_pointer: bool = rhs_type.ptr_count > 0
+        if lhs_type != rhs_type and not (lhs_is_pointer ^ rhs_is_pointer):
+
+            cast_choice = ((not lhs_is_pointer and rhs_is_pointer)
+                           or (rhs_type.type == coerced_type.type and rhs_is_pointer)
+                           or (rhs_type.type == coerced_type.type and not lhs_is_pointer))
+            if cast_choice:
+                lhs_value = self._cast(lhs_value, lhs_type, rhs_type)
+            else:
+                rhs_value = self._cast(rhs_value, rhs_type, lhs_type)
         return get_binary_op(lhs_value, rhs_value, operator, self.builder, self._create_reg)
 
     def bin_op(self, node_w: Wrapper[BinaryOp]):

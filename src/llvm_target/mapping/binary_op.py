@@ -8,7 +8,7 @@ from llvmlite import ir
 
 def get_binary_op(left_value: ir.Instruction | ir.Constant, right_value: ir.Instruction | ir.Constant, operator: str,
                   builder: ir.IRBuilder, create_reg: Callable) -> Callable:
-    if isinstance(left_value.type, ir.PointerType) or isinstance(right_value.type, ir.PointerType):
+    if left_value.type.is_pointer or right_value.type.is_pointer:
         return get_pointer_binary_op(left_value, right_value, operator, builder, create_reg)
     else:
         match left_value.type:
