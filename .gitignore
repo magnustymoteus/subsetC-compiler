@@ -4,3 +4,6 @@
 __pycache__
 *.png
 *.gv
+src/antlr_files/*.interp
+src/antlr_files/*.py
+src/antlr_files/*.tokens

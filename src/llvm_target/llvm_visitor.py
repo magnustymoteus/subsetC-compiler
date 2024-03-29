@@ -102,7 +102,10 @@ class LLVMVisitor(CFGVisitor):
         # Get a pointer to the first element of the array
         format_string_ptr = self.builder.gep(format_string,
                                              [ir.Constant(ir.IntType(64), 0), ir.Constant(ir.IntType(64), 0)])
-        return self.builder.call(self.printf, [format_string_ptr, self.visit(node_w.n.argument_w)])
+        argument = self.visit(node_w.n.argument_w)
+        if isinstance(argument.type, ir.FloatType):
+            argument = self.builder.fpext(argument, ir.DoubleType(), self._create_reg())
+        return self.builder.call(self.printf, [format_string_ptr, argument])
 
     def lit(self, node_w: Wrapper[Literal]) -> ir.Constant:
         return self._get_type(node_w.n.type)[0](node_w.n.value)
