@@ -8,9 +8,9 @@ from src.parser.optimizations import *
 from src.llvm_target import *
 from src.__main__ import *
 
-pass_tests = Path("../../example_source_files").glob('*pass*.c')
-syntaxErr_tests = Path("../../example_source_files").glob('*syntaxErr*.c')
-semanticErr_tests = Path("../../example_source_files").glob('*semanticErr*.c')
+pass_tests = Path("../../example_source_files/CorrectCode").glob('*.c')
+syntaxErr_tests = Path("../../example_source_files/SyntaxError").glob('*.c')
+semanticErr_tests = Path("../../example_source_files/SemanticError").glob('*.c')
 
 
 def compile(path, cfold: bool = True, cprop: bool = True):
