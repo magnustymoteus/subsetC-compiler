@@ -14,16 +14,16 @@ functionDef: declarationSpec identifier LPAREN (parameterList)? RPAREN compoundS
 typeSpec: 'char' | 'int' | 'float' | typedefName | enumSpec;
 typeQual: 'const';
 storageClassSpec: 'typedef';
-declarationSpec: storageClassSpec? typeQual? typeSpec pointer*;
-declaration: declarationSpec+ declarator* SEMICOL; //(',' declarator)*;
-declarator: identifier LPAREN (parameterList)? RPAREN | identifier | identifier EQ assignmentExpr;
+declarationSpec: storageClassSpec? typeQual? typeSpec pointer?;
+declaration: declarationSpec declarator? SEMICOL; //(',' declarator)*;
+declarator: identifier | identifier EQ assignmentExpr | LPAREN parameterList? RPAREN;
 
-enumSpec: 'enum' identifier LBRACE enum (',' enum)* RBRACE;
+enumSpec: 'enum' identifier (LBRACE enum (',' enum)* RBRACE)?;
 enum: identifier;
 
 typedefName: identifier;
 
-pointer: ARISK typeQual*;
+pointer: (ARISK typeQual?)+;
 initializer: assignmentExpr;
 
 parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
@@ -33,7 +33,9 @@ stmt: exprStmt | compoundStmt | printfStmt | iterationStmt | jumpStmt | selectio
 
 selectionStmt: 'if' LPAREN expr RPAREN stmt ('else' stmt)? | 'switch' LPAREN expr RPAREN stmt;
 
-iterationStmt: 'while' LPAREN expr RPAREN stmt | 'for' LPAREN expr? SEMICOL expr? SEMICOL expr? RPAREN stmt;
+iterationStmt: 'while' LPAREN expr RPAREN stmt | 'for' LPAREN forCondition RPAREN stmt;
+forCondition: (declaration | expr? SEMICOL) expr? SEMICOL expr?;
+
 
 labeledStmt: identifier COL stmt | 'case' constantExpr COL stmt | 'default' COL stmt;
 

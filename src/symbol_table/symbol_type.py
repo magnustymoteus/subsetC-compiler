@@ -10,8 +10,10 @@ class PrimitiveType(SymbolType):
         super().__init__(is_constant)
     def __repr__(self):
         ptr_str = '*'*self.ptr_count
+        added = 0
         for const_ptr_index in self.const_ptrs:
-            ptr_str = ptr_str[:const_ptr_index+1] + "const" + ptr_str[const_ptr_index+1:]
+            ptr_str = ptr_str[:const_ptr_index+1+added] + "const" + ptr_str[const_ptr_index+1+added:]
+            added += 5
         result = f"{self.type}" if not self.is_constant else f"const {self.type}"
         return f"{result}{ptr_str}"
     def decrease_ptr_count(self):

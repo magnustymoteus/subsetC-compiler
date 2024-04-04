@@ -1,5 +1,5 @@
-from .statement import Statement
-from .basic import Basic, Wrapper
+from src.parser.AST.node.stmt.statement import Statement
+from src.parser.AST.node.basic import Basic, Wrapper
 
 
 class PrintStatement(Statement):

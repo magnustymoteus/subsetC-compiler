@@ -34,5 +34,7 @@ class CopyVisitor(ASTVisitor):
                 self.lit(node_w)
             case Identifier():
                 self.identifier(node_w)
+            case Enumeration():
+                self.enum(node_w)
             case _:
                 raise Exception

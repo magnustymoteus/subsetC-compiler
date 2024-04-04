@@ -8,11 +8,6 @@ from src.parser.optimizations import *
 from src.llvm_target import *
 from src.__main__ import *
 
-pass_tests = Path("../../example_source_files/CorrectCode").glob('*.c')
-syntaxErr_tests = Path("../../example_source_files/SyntaxError").glob('*.c')
-semanticErr_tests = Path("../../example_source_files/SemanticError").glob('*.c')
-
-
 def compile(path, cfold: bool = True, cprop: bool = True):
     path_in_str = str(path)
     tokens = getTokens(path_in_str)
@@ -37,10 +32,9 @@ def compile(path, cfold: bool = True, cprop: bool = True):
     #visualizeCFG(cfg, "viz/cfg/tac-cfg/" + str(os.path.basename(path)) + ".gv")
     LLVMVisitor(cfg, os.path.basename(path))
     return ast
-
-def test_pass():
+def success(glob_path):
     failed = False
-    for path in pass_tests:
+    for path in glob_path:
         try:
             compile(path)
             print(f"\n✔ {str(os.path.basename(path))} passed", end='')
@@ -50,9 +44,9 @@ def test_pass():
     if failed:
         pytest.fail("Expected to have no errors")
 
-def test_syntaxErr():
+def syntaxErr(glob_path):
     failed = False
-    for path in syntaxErr_tests:
+    for path in glob_path:
         try:
             compile(path)
         except SyntaxError as e:
@@ -63,9 +57,9 @@ def test_syntaxErr():
     if failed:
         pytest.fail("Expected to have syntax error")
 
-def test_semanticErr():
+def semanticErr(glob_path):
     failed = False
-    for path in semanticErr_tests:
+    for path in glob_path:
         try:
             compile(path)
         except SemanticError as e:
@@ -76,4 +70,22 @@ def test_semanticErr():
     if failed:
         pytest.fail("Expected to have semantic errors for a test")
 
+pass_tests_all = Path("../../example_source_files/CorrectCode").glob('*.c')
+syntaxErr_tests_all = Path("../../example_source_files/SyntaxError").glob('*.c')
+semanticErr_tests_all = Path("../../example_source_files/SemanticError").glob('*.c')
 
+pass_tests_fundamental = Path("../../example_source_files/CorrectCode/").glob('*pass*.c')
+syntaxErr_tests_fundamental = Path("../../example_source_files/SyntaxError").glob('*syntaxErr*.c')
+semanticErr_tests_fundamental = Path("../../example_source_files/SemanticError").glob('*semanticErr*.c')
+def test_pass_fundamentals():
+    success(pass_tests_fundamental)
+def test_syntaxErr_fundamentals():
+    syntaxErr(syntaxErr_tests_fundamental)
+def test_semanticErr_fundamentals():
+    semanticErr(semanticErr_tests_fundamental)
+def test_pass_all():
+    success(pass_tests_all)
+def test_syntaxErr_all():
+    syntaxErr(syntaxErr_tests_all)
+def test_semanticErr_all():
+    semanticErr(semanticErr_tests_all)

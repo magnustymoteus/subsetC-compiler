@@ -1,6 +1,6 @@
-from .basic import Wrapper, AbstractNode, Digraph, wrap, Basic
+from src.parser.AST.node.basic import Wrapper, AbstractNode, Digraph
 from uuid import UUID
-from .statement import Statement
+from src.parser.AST.node.stmt.statement import Statement
 
 
 class CompoundStatement(Statement):

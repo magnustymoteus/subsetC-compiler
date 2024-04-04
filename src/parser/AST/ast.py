@@ -167,6 +167,8 @@ class AstIter:
                         pass
                     case Identifier():
                         pass
+                    case Enumeration():
+                        pass
                     case _:
                         # TODO proper exception type
                         raise Exception("Unhandled node type")
@@ -197,7 +199,8 @@ class AstIter:
 
     def expand_compound_stmt(self, node_w: Wrapper[CompoundStatement]):
         """Method called when encountering a Compound Statement node."""
-        self.stack.new_frame([stmt for stmt in node_w.n.statements])
+        if len(node_w.n.statements) > 0:
+            self.stack.new_frame([stmt for stmt in node_w.n.statements])
     def expand_func_def(self, node_w: Wrapper[FunctionDefinition]):
         """Method called when encountering a Function Definition node."""
         self.stack.new_frame([node_w.n.body_w])

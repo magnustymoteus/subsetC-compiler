@@ -72,6 +72,8 @@ class LLVMVisitor(CFGVisitor):
                 return self.identifier(node_w)
             case PrintStatement():
                 return self.print(node_w)
+            case Enumeration():
+                return self.enum(node_w)
             case _:
                 raise Exception
 
@@ -94,7 +96,7 @@ class LLVMVisitor(CFGVisitor):
     # probably here until proper function calls get implemented
     def print(self, node_w: Wrapper[PrintStatement]):
         format_string = ir.GlobalVariable(self.module, ir.ArrayType(ir.IntType(8), len(node_w.n.format) + 1),
-                                          name="str")
+                                          self._create_reg())
         format_string.global_constant = True
         format_string.initializer = ir.Constant(ir.ArrayType(ir.IntType(8), len(node_w.n.format) + 1),
                                                 [ir.IntType(8)(ord(c)) for c in f"{node_w.n.format}\00"])

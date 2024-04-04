@@ -2,8 +2,9 @@ from src.antlr_files.C_GrammarVisitor import *
 from src.antlr_files.C_GrammarParser import *
 from src.parser.AST import *
 
-
 class CSTToASTVisitor(C_GrammarVisitor):
+    def visitFirstMatch(self, ctx, type):
+        return next((self.visit(child) for child in ctx.getChildren() if isinstance(child, type)), None)
     def __init__(self, tokens):
         super().__init__()
         self.tokens = tokens
@@ -27,10 +28,6 @@ class CSTToASTVisitor(C_GrammarVisitor):
             self.attach_comments(result, tree)
             result.n.set_line_col_nr(tree.start.line, tree.start.column)
         return result
-
-    def visitTypeSpec(self, ctx: C_GrammarParser.TypeSpecContext):
-        # returns for example "int"
-        return ctx.getChild(0).getText()
 
     def visitFunctionDef(self, ctx: C_GrammarParser.FunctionDefContext):
         # TODO complete this in the future: patryk
@@ -58,18 +55,72 @@ class CSTToASTVisitor(C_GrammarVisitor):
             result.n.operand_w = self.visit(ctx.getChild(0))
             return result
         return self.visit(ctx.getChild(0))
+    def visitEnumSpec(self, ctx:C_GrammarParser.EnumSpecContext):
+        is_enum_definition: bool = False
+        labels: list[Wrapper[Identifier]] = []
+        identifier = None
+        for child in ctx.getChildren():
+            visitedChild = self.visit(child)
+            match child:
+                case C_GrammarParser.IdentifierContext():
+                    identifier = visitedChild
+                case C_GrammarParser.EnumContext():
+                    is_enum_definition = True
+                    labels.append(visitedChild.n.name)
+        if is_enum_definition:
+            return wrap(Enumeration(identifier.n.name, labels))
+        return identifier.n.name
+    def visitPointer(self, ctx:C_GrammarParser.PointerContext):
+        ptr_count: int = 0
+        const_ptrs: list[int] = []
+        for child in ctx.getChildren():
+            match child.getText():
+                case '*':
+                    ptr_count += 1
+                case 'const':
+                    const_ptrs.append(ptr_count-1)
+        return ptr_count, const_ptrs
 
-    def visitDeclaration(self, ctx: C_GrammarParser.DeclarationContext):
+    def visitDeclaration(self, ctx:C_GrammarParser.DeclarationContext):
         declaration_spec = self.visit(ctx.getChild(0))
+        declarator_result = self.visitFirstMatch(ctx, C_GrammarParser.DeclaratorContext)
         storage_class_specifier = declaration_spec[0]
         type_specifier = declaration_spec[1]
+        if declarator_result is not None:
+            identifier_node = declarator_result[0]
+            result = VariableDeclaration(identifier_node.n.name, type_specifier, storage_class_specifier)
+            result.definition_w = declarator_result[1]
+            return wrap(result)
+        elif isinstance(type_specifier.n, Enumeration):
+            return type_specifier
+    def visitDeclarationSpec(self, ctx: C_GrammarParser.DeclarationSpecContext):
+        type_specifier = None
+        is_constant = False
+        ptr_count = 0
+        const_ptrs = []
+        storage_class_specifier: str | None = None
+        for child in ctx.getChildren():
+            visitedChild = self.visit(child)
+            match child:
+                case C_GrammarParser.TypeQualContext():
+                    # assume its const (temporarily)
+                    is_constant = True
+                case C_GrammarParser.TypeSpecContext():
+                    type_specifier = visitedChild
+                    if isinstance(type_specifier, Wrapper):
+                        return None, type_specifier
+                case C_GrammarParser.PointerContext():
+                    ptr_count = visitedChild[0]
+                    const_ptrs = visitedChild[1]
+                case C_GrammarParser.StorageClassSpecContext():
+                    # assume its typedef (temporarily)
+                    storage_class_specifier = child.getChild(0).getText()
+        return storage_class_specifier, PrimitiveType(type_specifier, is_constant, ptr_count, const_ptrs)
 
-        declarator_result = self.visit(ctx.getChild(1))
-        identifier_node = declarator_result[0]
-        result = wrap(VariableDeclaration(identifier_node.n.name, type_specifier, storage_class_specifier))
-
-        result.n.definition_w = declarator_result[1]
-        return result
+    def visitTypeSpec(self, ctx:C_GrammarParser.TypeSpecContext):
+        visitedChild = self.visit(ctx.getChild(0))
+        is_enum: bool = isinstance(ctx.getChild(0), C_GrammarParser.EnumSpecContext)
+        return visitedChild if is_enum else ctx.getText()
 
     def visitDeclarator(self, ctx: C_GrammarParser.DeclaratorContext):
         if ctx.getChildCount() > 1:
@@ -91,27 +142,6 @@ class CSTToASTVisitor(C_GrammarVisitor):
             return result
         return self.visitChildren(ctx)
 
-    def visitDeclarationSpec(self, ctx: C_GrammarParser.DeclarationSpecContext):
-        type_specifier = None
-        is_constant = False
-        ptr_count = 0
-        const_ptrs = []
-        storage_class_specifier: str | None = None
-        for child in ctx.getChildren():
-            match child:
-                case C_GrammarParser.TypeQualContext():
-                    # assume its const (temporarily)
-                    is_constant = True
-                case C_GrammarParser.TypeSpecContext():
-                    type_specifier = self.visit(child)
-                case C_GrammarParser.PointerContext():
-                    if child.getChildCount() > 1:
-                        const_ptrs.append(ptr_count)
-                    ptr_count += 1
-                case C_GrammarParser.StorageClassSpecContext():
-                    # assume its typedef (temporarily)
-                    storage_class_specifier = child.getChild(0).getText()
-        return storage_class_specifier, PrimitiveType(type_specifier, is_constant, ptr_count, const_ptrs)
 
     def visitExprStmt(self, ctx: C_GrammarParser.ExprStmtContext):
         return self.visit(ctx.getChild(0))
@@ -237,8 +267,10 @@ class CSTToASTVisitor(C_GrammarVisitor):
 
         return node
 
-    def visitParenExpr(self, ctx: C_GrammarParser.ParenExprContext):
-        return self.visit(ctx.getChild(1))
-
     def visitBlockItem(self, ctx: C_GrammarParser.StmtContext):
         return self.visit(ctx.getChild(0))
+
+    def visitPrimaryExpr(self, ctx:C_GrammarParser.PrimaryExprContext):
+        for child in ctx.getChildren():
+            if not isinstance(child, TerminalNode):
+                return self.visit(child)

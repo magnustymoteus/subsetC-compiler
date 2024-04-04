@@ -56,7 +56,7 @@ class OptimizationVisitor(ASTVisitor):
             self.visit(node_w.n.operand_w)
 
     def identifier(self, node_w: Wrapper[Identifier]):
-        symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name)
+        symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_cpropagated_symbol(node_w.n.name)
         if symbol.type.ptr_count == 0 and not symbol.has_changed:
             value = symbol.value_w
             CopyVisitor().visit(value)

@@ -1,5 +1,5 @@
 from uuid import UUID
-from ..basic import Basic, Digraph
+from ..basic import Digraph
 from .expr import Expression
 
 

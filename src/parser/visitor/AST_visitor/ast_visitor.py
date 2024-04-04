@@ -50,6 +50,8 @@ class ASTVisitor():
                 self.identifier(node_w)
             case PrintStatement():
                 self.print(node_w)
+            case Enumeration():
+                self.enum(node_w)
             case _:
                 raise Exception
 
@@ -58,7 +60,8 @@ class ASTVisitor():
         """Method called when encountering a Program node."""
         for child in node_w.n.children:
             self.visit(child)
-    
+    def enum(self, node_w: Wrapper[Enumeration]):
+        pass
     def bin_op(self, node_w: Wrapper[BinaryOp]):
         """Method called when encountering a BinOp node."""
         self.visit(node_w.n.lhs_w)

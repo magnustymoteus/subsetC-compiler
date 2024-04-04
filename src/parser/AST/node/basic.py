@@ -1,5 +1,4 @@
 from src.parser.node import *
-from src.symbol_table.symbol_table import SymbolTable
 
 
 class Basic(AbstractNode):
@@ -32,6 +31,7 @@ class Basic(AbstractNode):
 
 
 
+from src.symbol_table.symbol_table import SymbolTable
 
 
 

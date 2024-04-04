@@ -2,9 +2,8 @@ from src.parser.AST.node.basic import *
 from src.parser.AST.node.str_lit import *
 from src.parser.AST.node.program import *
 from src.parser.AST.node.func_def import *
-from src.parser.AST.node.compound_stmt import *
 from src.parser.AST.node.variable_decl import *
 from src.parser.AST.node.expr import *
 from src.parser.AST.node.block_item import *
-from src.parser.AST.node.statement import *
-from src.parser.AST.node.print_stmt import *
+from src.parser.AST.node.stmt import *
+from src.parser.AST.node.enum import *

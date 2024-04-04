@@ -11,30 +11,45 @@ grammar C_Grammar;
 program: (functionDef | declaration)* EOF;
 
 functionDef: declarationSpec identifier LPAREN (parameterList)? RPAREN compoundStmt;
-typeSpec: 'char' | 'int' | 'float' | typedefName;
+typeSpec: 'char' | 'int' | 'float' | typedefName | enumSpec;
 typeQual: 'const';
 storageClassSpec: 'typedef';
-declarationSpec: storageClassSpec? typeQual? typeSpec pointer*;
-declaration: declarationSpec declarator ';'; //(',' declarator)*;
-declarator: identifier LPAREN (parameterList)? RPAREN | identifier | identifier EQ assignmentExpr;
+declarationSpec: storageClassSpec? typeQual? typeSpec pointer?;
+declaration: declarationSpec declarator? SEMICOL; //(',' declarator)*;
+declarator: identifier | identifier EQ assignmentExpr | LPAREN parameterList? RPAREN;
+
+enumSpec: 'enum' identifier (LBRACE enum (',' enum)* RBRACE)?;
+enum: identifier;
 
 typedefName: identifier;
 
-pointer: ARISK typeQual*;
+pointer: (ARISK typeQual?)+;
 initializer: assignmentExpr;
 
 parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
 parameterDeclaration: declarationSpec declarator?;
 
-stmt: exprStmt | compoundStmt | printfStmt;
-// temporary, remove when introducing function calls
-printfStmt: 'printf' LPAREN '"' printfFormat '"' ',' (identifier | literal) RPAREN ';';
+stmt: exprStmt | compoundStmt | printfStmt | iterationStmt | jumpStmt | selectionStmt | labeledStmt;
+
+selectionStmt: 'if' LPAREN expr RPAREN stmt ('else' stmt)? | 'switch' LPAREN expr RPAREN stmt;
+
+iterationStmt: 'while' LPAREN expr RPAREN stmt | 'for' LPAREN forCondition RPAREN stmt;
+forCondition: (declaration | expr? SEMICOL) expr? SEMICOL expr?;
+
+
+labeledStmt: identifier COL stmt | 'case' constantExpr COL stmt | 'default' COL stmt;
+
+jumpStmt: 'continue' SEMICOL | 'break' SEMICOL;
+
+// temporary, remove when introducing function calls (?)
+printfStmt: 'printf' LPAREN '"' printfFormat '"' ',' (identifier | literal) RPAREN SEMICOL;
 printfFormat: PRINTF_FORMATTING;
+//
 
 compoundStmt: LBRACE blockItem* RBRACE;
 blockItem: declaration | stmt;
-exprStmt: expr? ';';
-expr: constantExpr | assignmentExpr | expr ',' assignmentExpr;
+exprStmt: expr? SEMICOL;
+expr: assignmentExpr | expr ',' assignmentExpr;
 
 assignmentExpr: conditionalExpr | unaryExpr assignmentOp assignmentExpr;
 assignmentOp: EQ | '*=' | '/=' | '%=' | '+=' | '-=' | '>>=' | '<<=' | '&=' | '^=' | '|=';
@@ -56,8 +71,7 @@ castExpr: unaryExpr | LPAREN typeSpec RPAREN castExpr;
 unaryExpr: postfixExpr | unaryOp castExpr;
 postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr postfixOp;
 postfixOp: DPLUS | DMINUS;
-primaryExpr: identifier | literal | parenExpr;
-parenExpr: LPAREN expr RPAREN;
+primaryExpr: identifier | literal | LPAREN expr RPAREN;
 unaryOp: PLUS | MINUS | NOT | BITNOT | DPLUS | DMINUS | AMP | ARISK;
 
 identifier: ID;
@@ -67,6 +81,9 @@ charLiteral: CHAR;
 floatLiteral: FLOAT;
 
 // Lexer rules
+SEMICOL: ';';
+COL: ':';
+
 LPAREN: '(';
 RPAREN: ')';
 

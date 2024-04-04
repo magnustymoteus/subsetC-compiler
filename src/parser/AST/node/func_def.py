@@ -1,5 +1,6 @@
 from src.symbol_table import SymbolType
-from src.parser.AST.node.compound_stmt import *
+from src.parser.AST.node.stmt.compound_stmt import *
+from .basic import *
 
 class FunctionDefinition(Basic):
 

@@ -33,6 +33,8 @@ class CFGVisitor(ASTVisitor):
                 self.identifier(node_w)
             case PrintStatement():
                 self.print(node_w)
+            case Enumeration():
+                self.enum(node_w)
             case _:
                 raise Exception
 

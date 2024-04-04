@@ -1,6 +1,7 @@
 from ..basic import Digraph
 from .lit import Literal
 from uuid import UUID
+from src.symbol_table.symbol_type import PrimitiveType
 
 
 class CharLiteral(Literal):
@@ -20,6 +21,7 @@ class CharLiteral(Literal):
             assert len(value) == 1
             self.value: int = ord(value)
         assert self.value < 128  # basic ascii only
+        self.type = PrimitiveType('char', True)
 
 
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:

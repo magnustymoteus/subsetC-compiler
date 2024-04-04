@@ -74,18 +74,6 @@ class TypeCheckerVisitor(ASTVisitor):
         new_type.increase_ptr_count()
         node_w.n.type = new_type
 
-    def lit(self, node_w: Wrapper[Literal]):
-        match node_w.n:
-            case IntLiteral():
-                type_str = "int"
-            case FloatLiteral():
-                type_str = "float"
-            case CharLiteral():
-                type_str = "char"
-            case _:
-                raise ValueError("unrecognized literal type")
-        node_w.n.type = PrimitiveType(type_str, True)
-
     def cast_op(self, node_w: Wrapper[CastOp]):
         super().cast_op(node_w)
         node_w.n.type = node_w.n.target_type

@@ -1,12 +1,11 @@
 from __future__ import annotations
 from src.symbol_table import SymbolType
-from src.parser.AST.node import *
+from src.parser.AST.node.expr.identifier import Identifier
 from src.parser.node import *
 class SymbolTableEntry:
     def __init__(self, name: str, symbolType: SymbolType):
         self.name = name
         self.type = symbolType
-        self.definition_w: Wrapper = wrap()
         self.has_changed: bool = False
         self.value_w: Wrapper = wrap()
     @property
@@ -27,20 +26,31 @@ class SymbolTable(AbstractNode):
             result += "\n"+self.lookup_table[symbol].__repr__()
         return "Symbol Table:"+result
 
-    def lookup_symbol(self, name: str) -> SymbolTableEntry | None:
+    def get_corresponding_table(self, symbol: str) -> SymbolTable | None:
+        """
+        Get the symbol table that contains the given symbol
+        :param name: the name of the symbol to look up
+        :return: the symbol table if found, None otherwise
+        """
+        if self.lookup_table.get(symbol, None) is None:
+            if self.parent is not None:
+                return self.parent.n.get_corresponding_table(symbol)
+        else:
+            return self
+        return None
+    def lookup_symbol(self, symbol: str) -> SymbolTableEntry | None:
         """
         Look up a symbol in the symbol table. If the symbol is not found in the current symbol table, look in the parent.
         :param name: the name of the symbol to look up
         :return: the symbol table entry if found, None otherwise
         """
-        if self.lookup_table.get(name, None) is None:
-            if self.parent is not None:
-                return self.parent.n.lookup_symbol(name)
-        else:
-            return self.lookup_table.get(name)
-        return None
-
-
+        table = self.get_corresponding_table(symbol)
+        return table.lookup_table[symbol] if table is not None else None
+    def lookup_cpropagated_symbol(self, symbol: str):
+        entry = self.lookup_symbol(symbol)
+        while not entry.has_changed and isinstance(entry.value_w.n, Identifier):
+            return self.lookup_cpropagated_symbol(entry.value_w.n.name)
+        return entry
     def symbol_exists(self, name: str) -> bool:
         """
                Check if a symbol exists in the symbol table. Only checks most local scope.
@@ -54,9 +64,9 @@ class SymbolTable(AbstractNode):
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None):
         table_contents_str = ''
         for symbol_entry in self.lookup_table.values():
-            table_contents_str += f'<tr><td>{symbol_entry.name}</td><td>{symbol_entry.type}</td></tr>'
+            table_contents_str += f'<tr><td>{symbol_entry.name}</td><td>{symbol_entry.type}</td><td>{symbol_entry.value_w.n}</td></tr>'
         table_str = (f'<<table border="0" cellborder="1" cellspacing="0"><tr>  '
-                     f'<td><i>Symbol</i></td><td><i>Type</i></td></tr>{table_contents_str}</table>>')
+                     f'<td><i>Symbol</i></td><td><i>Type</i></td><td><i>Value</i></td></tr>{table_contents_str}</table>>')
         with graph.subgraph(name="symtab", graph_attr={"rank": "same"}) as subgraph:
             subgraph.node(str(self.id), label=table_str, shape='plain')
             if self.parent is not None:
