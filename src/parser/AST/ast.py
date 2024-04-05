@@ -163,6 +163,16 @@ class AstIter:
                         self.expand_variable_decl(self.stack.top.front)
                     case PrintStatement():
                         self.expand_print_stmt(self.stack.top.front)
+                    case SwitchStatement():
+                        return self.expand_switch_stmt(self.stack.top.front)
+                    case ConditionalStatement():
+                        return self.expand_conditional_stmt(self.stack.top.front)
+                    case JumpStatement():
+                        return self.expand_jump_stmt(self.stack.top.front)
+                    case IterationStatement():
+                        return self.expand_iteration_stmt(self.stack.top.front)
+                    case LabeledStatement():
+                        return self.expand_labeled_stmt(self.stack.top.front)
                     case Literal():
                         pass
                     case Identifier():
@@ -178,6 +188,28 @@ class AstIter:
     def expand_program(self, node_w: Wrapper[Program]):
         """Method called when encountering a BinOp node."""
         self.stack.new_frame([stmt for stmt in node_w.n.children])
+    def expand_switch_stmt(self, node_w: Wrapper[SwitchStatement]):
+        l: list[Wrapper] = node_w.n.cases
+        if node_w.n.default_w is not None:
+            l.append(node_w.n.default_w)
+        l.append(node_w.n.expr_w)
+        self.stack.new_frame(l)
+    def expand_conditional_stmt(self, node_w: Wrapper[ConditionalStatement]):
+        l: list[Wrapper] = [node_w.n.true_branch_w, node_w.n.condition_w]
+        if node_w.n.false_branch_w is not None:
+            l.append(node_w.n.false_branch_w)
+        self.stack.new_frame(l)
+    def expand_jump_stmt(self, node_w: Wrapper[JumpStatement]):
+        if node_w.n.value_w is not None:
+            self.stack.new_frame([node_w.n.value_w])
+    def expand_iteration_stmt(self, node_w: Wrapper[IterationStatement]):
+        self.stack.new_frame([node_w.n.condition_w, node_w.n.body_w])
+    def expand_labeled_stmt(self, node_w: Wrapper[LabeledStatement]):
+        l: list[Wrapper] = node_w.n.body
+        if node_w.n.expr_w is not None:
+            l.append(node_w.n.expr_w)
+        self.stack.new_frame(l)
+
 
     def expand_bin_op(self, node_w: Wrapper[BinaryOp]):
         """Method called when encountering a BinOp node."""

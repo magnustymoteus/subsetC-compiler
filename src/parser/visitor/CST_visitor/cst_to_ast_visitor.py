@@ -3,8 +3,14 @@ from src.antlr_files.C_GrammarParser import *
 from src.parser.AST import *
 
 class CSTToASTVisitor(C_GrammarVisitor):
-    def visitFirstMatch(self, ctx, type):
-        return next((self.visit(child) for child in ctx.getChildren() if isinstance(child, type)), None)
+    def visitFirstMatch(self, ctx, match_type):
+        if isinstance(match_type, list):
+            return next((self.visit(child) for child in ctx.getChildren() if type(child) in match_type), None)
+        return next((self.visit(child) for child in ctx.getChildren() if isinstance(child, match_type)), None)
+    def visitAllMatches(self, ctx, match_type):
+        if isinstance(match_type, list):
+            return [self.visit(child) for child in ctx.getChildren() if type(child) in match_type]
+        return [self.visit(child) for child in ctx.getChildren() if isinstance(child, match_type)]
     def __init__(self, tokens):
         super().__init__()
         self.tokens = tokens
@@ -28,6 +34,29 @@ class CSTToASTVisitor(C_GrammarVisitor):
             self.attach_comments(result, tree)
             result.n.set_line_col_nr(tree.start.line, tree.start.column)
         return result
+
+    def visitSelectionStmt(self, ctx:C_GrammarParser.SelectionStmtContext):
+        expr_w: Wrapper[Expression] = self.visitFirstMatch(ctx, C_GrammarParser.ExprContext)
+        compound_or_selection_stmts = self.visitAllMatches(ctx, [C_GrammarParser.CompoundStmtContext, C_GrammarParser.SelectionStmtContext])
+        match ctx.getChild(0).getText():
+            case 'if':
+                false_branch_w = compound_or_selection_stmts[1] if len(compound_or_selection_stmts) == 2 else None
+                return wrap(ConditionalStatement(expr_w, compound_or_selection_stmts[0], false_branch_w))
+            case 'switch':
+                labeled_stmts: list[Wrapper[LabeledStatement]] = self.visitAllMatches(ctx, C_GrammarParser.LabeledStmtContext)
+                defaults = [child for child in labeled_stmts if child.n.label == "default"]
+                cases = [child for child in labeled_stmts if child.n.label == "case"]
+                return wrap(SwitchStatement(expr_w, cases, None if not len(defaults) else defaults[0]))
+            case _:
+                raise ValueError("Unexpected selection statement")
+
+    def visitJumpStmt(self, ctx:C_GrammarParser.JumpStmtContext):
+        pass
+    def visitLabeledStmt(self, ctx:C_GrammarParser.LabeledStmtContext):
+        return wrap(LabeledStatement(ctx.getChild(0).getText(), self.visitAllMatches(ctx, C_GrammarParser.BlockItemContext),
+                                self.visitFirstMatch(ctx, C_GrammarParser.ConstantExprContext)))
+    def visitIterationStmt(self, ctx:C_GrammarParser.IterationStmtContext):
+        pass
 
     def visitFunctionDef(self, ctx: C_GrammarParser.FunctionDefContext):
         # TODO complete this in the future: patryk
@@ -121,6 +150,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
         visitedChild = self.visit(ctx.getChild(0))
         is_enum: bool = isinstance(ctx.getChild(0), C_GrammarParser.EnumSpecContext)
         return visitedChild if is_enum else ctx.getText()
+
+
 
     def visitDeclarator(self, ctx: C_GrammarParser.DeclaratorContext):
         if ctx.getChildCount() > 1:

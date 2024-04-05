@@ -29,15 +29,14 @@ initializer: assignmentExpr;
 parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
 parameterDeclaration: declarationSpec declarator?;
 
-stmt: exprStmt | compoundStmt | printfStmt | iterationStmt | jumpStmt | selectionStmt | labeledStmt;
+stmt: exprStmt | compoundStmt | printfStmt | iterationStmt | jumpStmt | selectionStmt;
 
-selectionStmt: 'if' LPAREN expr RPAREN stmt ('else' stmt)? | 'switch' LPAREN expr RPAREN stmt;
+selectionStmt: 'if' LPAREN expr RPAREN compoundStmt ('else' (compoundStmt | selectionStmt))? | 'switch' LPAREN expr RPAREN LBRACE labeledStmt* RBRACE;
 
 iterationStmt: 'while' LPAREN expr RPAREN stmt | 'for' LPAREN forCondition RPAREN stmt;
 forCondition: (declaration | expr? SEMICOL) expr? SEMICOL expr?;
 
-
-labeledStmt: identifier COL stmt | 'case' constantExpr COL stmt | 'default' COL stmt;
+labeledStmt: 'case' constantExpr COL blockItem* | 'default' COL blockItem*;
 
 jumpStmt: 'continue' SEMICOL | 'break' SEMICOL;
 

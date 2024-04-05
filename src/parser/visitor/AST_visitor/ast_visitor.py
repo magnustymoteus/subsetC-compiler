@@ -25,33 +25,44 @@ class ASTVisitor():
         match node_w.n:
             case Program():
                 # Recursive call to visit the children of the node
-                self.program(node_w)
+                return self.program(node_w)
             case Assignment():
-                self.assign(node_w)
+                return self.assign(node_w)
             case BinaryOp():
-                self.bin_op(node_w)
+                return self.bin_op(node_w)
             case DerefOp():
-                self.deref_op(node_w)
+                return self.deref_op(node_w)
             case AddressOfOp():
-                self.addressof_op(node_w)
+                return self.addressof_op(node_w)
             case UnaryOp():
-                self.un_op(node_w)
+                return self.un_op(node_w)
             case CastOp():
-                self.cast_op(node_w)
+                return self.cast_op(node_w)
             case CompoundStatement():
-                self.compound_stmt(node_w)
+                return self.compound_stmt(node_w)
             case FunctionDefinition():
-                self.func_def(node_w)
+                return self.func_def(node_w)
             case VariableDeclaration():
-                self.variable_decl(node_w)
+                return self.variable_decl(node_w)
             case Literal():
-                self.lit(node_w)
+                return self.lit(node_w)
             case Identifier():
-                self.identifier(node_w)
+                return self.identifier(node_w)
             case PrintStatement():
-                self.print(node_w)
+                return self.print(node_w)
             case Enumeration():
-                self.enum(node_w)
+                return self.enum(node_w)
+            case SwitchStatement():
+                return self.switch(node_w)
+            case ConditionalStatement():
+                return self.conditional(node_w)
+            case JumpStatement():
+                return self.jump(node_w)
+            case IterationStatement():
+                return self.iteration(node_w)
+            case LabeledStatement():
+                return self.labeled(node_w)
+
             case _:
                 raise Exception
 
@@ -60,6 +71,17 @@ class ASTVisitor():
         """Method called when encountering a Program node."""
         for child in node_w.n.children:
             self.visit(child)
+    def labeled(self, node_w: Wrapper[LabeledStatement]):
+        pass
+    def iteration(self, node_w: Wrapper[IterationStatement]):
+        pass
+    def jump(self, node_w: Wrapper[JumpStatement]):
+        pass
+
+    def conditional(self, node_w: Wrapper[ConditionalStatement]):
+        pass
+    def switch(self, node_w: Wrapper[SwitchStatement]):
+        pass
     def enum(self, node_w: Wrapper[Enumeration]):
         pass
     def bin_op(self, node_w: Wrapper[BinaryOp]):

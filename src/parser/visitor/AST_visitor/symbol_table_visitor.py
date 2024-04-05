@@ -7,7 +7,7 @@ class SymbolTableVisitor(ASTVisitor):
     def visit(self, node_w: Wrapper[Basic]):
         if len(self.stack) > 0:
             node_w.n.local_symtab_w = self._get_most_local_sym_tab()
-        super().visit(node_w)
+        return super().visit(node_w)
     def __init__(self, ast: Ast):
         self.stack: list[Wrapper[SymbolTable]] = list()
         super().__init__(ast)

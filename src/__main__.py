@@ -54,7 +54,7 @@ def c_file(param):
         raise argparse.ArgumentTypeError('File must be a .c file')
     return param
 
-
+# TODO: put visit() in node classes themselves instead of in visitors
 def main(argv):
     # Flags
     """

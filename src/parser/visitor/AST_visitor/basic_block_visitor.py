@@ -8,6 +8,7 @@ class BasicBlockVisitor(ASTVisitor):
         self.cfg.bblock_list.n.basic_blocks.append(self.current_basic_block_w)
         super().__init__(ast)
 
+
     def program(self, node_w: Wrapper[Program]):
         for statement_w in node_w.n.children:
             self.current_basic_block_w.n.local_symtab_w = statement_w.n.local_symtab_w

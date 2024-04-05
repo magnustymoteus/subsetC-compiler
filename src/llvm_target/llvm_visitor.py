@@ -45,37 +45,7 @@ class LLVMVisitor(CFGVisitor):
             for comment in comments:
                 for subcomment in comment.split("\n"):
                     self.builder.comment(subcomment)
-        match node_w.n:
-            case BasicBlockList():
-                return self.basic_block_list(node_w)
-            case BasicBlock():
-                return self.basic_block(node_w)
-            case Assignment():
-                return self.assign(node_w)
-            case BinaryOp():
-                return self.bin_op(node_w)
-            case DerefOp():
-                return self.deref_op(node_w)
-            case AddressOfOp():
-                return self.addressof_op(node_w)
-            case UnaryOp():
-                return self.un_op(node_w)
-            case CastOp():
-                return self.cast_op(node_w)
-            case FunctionDefinition():
-                return self.func_def(node_w)
-            case VariableDeclaration():
-                return self.variable_decl(node_w)
-            case Literal():
-                return self.lit(node_w)
-            case Identifier():
-                return self.identifier(node_w)
-            case PrintStatement():
-                return self.print(node_w)
-            case Enumeration():
-                return self.enum(node_w)
-            case _:
-                raise Exception
+        return super().visit(node_w)
 
     def _get_type(self, type: PrimitiveType) -> tuple[ir.Type, int]:
         result: list[ir.Type, int] = []
