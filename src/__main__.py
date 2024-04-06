@@ -108,7 +108,7 @@ def main(argv):
                 OptimizationVisitor(ast)
 
             if not args.disable_cfold:
-                applyConstantFolding(ast)
+                ConstantFoldingVisitor(ast)
 
             if args.viz:
                 visualizeAST(ast, f"./{filename}-viz/ast.gv")

@@ -33,8 +33,9 @@ stmt: exprStmt | compoundStmt | printfStmt | iterationStmt | jumpStmt | selectio
 
 selectionStmt: 'if' LPAREN expr RPAREN compoundStmt ('else' (compoundStmt | selectionStmt))? | 'switch' LPAREN expr RPAREN LBRACE labeledStmt* RBRACE;
 
-iterationStmt: 'while' LPAREN expr RPAREN stmt | 'for' LPAREN forCondition RPAREN stmt;
-forCondition: (declaration | expr? SEMICOL) expr? SEMICOL expr?;
+iterationStmt: 'while' LPAREN expr RPAREN compoundStmt | 'for' LPAREN forCondition RPAREN compoundStmt;
+forCondition: (forDeclaration | expr?) SEMICOL expr? SEMICOL expr?;
+forDeclaration: declarationSpec declarator?;
 
 labeledStmt: 'case' constantExpr COL blockItem* | 'default' COL blockItem*;
 
@@ -127,7 +128,7 @@ FLOAT: INT* '.' [0-9]*;
 CHAR: '\'' . '\'' | '\'' '\\' ([abefnrtv0]|'\\'|'\''|'"'|'?') '\'';
 
 // the space in [] is important
-WS: [ \t\r\n]+ -> skip;
+WS: [ \t\r\n]+ -> channel(HIDDEN);
 
 BLOCKCMT: '/*' .*? '*/' -> channel(HIDDEN);
 LINECMT: '//' ~[\r\n]* -> channel(HIDDEN);

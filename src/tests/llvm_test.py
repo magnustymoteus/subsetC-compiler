@@ -1,11 +1,6 @@
 import os.path
 
 import pytest
-from pathlib import Path
-from src.parser.listener.error_listener import MyErrorListener
-from src.parser.visitor.CST_visitor.visualization_visitor import *
-from src.parser.optimizations import *
-from src.llvm_target import *
 from src.__main__ import *
 
 def compile(path, cfold: bool = True, cprop: bool = True):
@@ -25,7 +20,7 @@ def compile(path, cfold: bool = True, cprop: bool = True):
         OptimizationVisitor(ast)
         #visualizeAST(ast, "viz/ast/cpropped-ast/" + str(os.path.basename(path)) + ".gv")
     if cfold:
-        applyConstantFolding(ast)
+        ConstantFoldingVisitor(ast)
     #visualizeAST(ast, "viz/ast/optimized-ast/" + str(os.path.basename(path)) + ".gv")
     cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
     TACVisitor(cfg)

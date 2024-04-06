@@ -51,12 +51,38 @@ class CSTToASTVisitor(C_GrammarVisitor):
                 raise ValueError("Unexpected selection statement")
 
     def visitJumpStmt(self, ctx:C_GrammarParser.JumpStmtContext):
-        pass
+        return wrap(JumpStatement(ctx.getChild(0).getText()))
     def visitLabeledStmt(self, ctx:C_GrammarParser.LabeledStmtContext):
         return wrap(LabeledStatement(ctx.getChild(0).getText(), self.visitAllMatches(ctx, C_GrammarParser.BlockItemContext),
                                 self.visitFirstMatch(ctx, C_GrammarParser.ConstantExprContext)))
     def visitIterationStmt(self, ctx:C_GrammarParser.IterationStmtContext):
-        pass
+        body_w: Wrapper[CompoundStatement] = self.visitFirstMatch(ctx, C_GrammarParser.CompoundStmtContext)
+        match ctx.getChild(0).getText():
+            case 'for':
+                elements = self.visitFirstMatch(ctx, C_GrammarParser.ForConditionContext)
+                result: CompoundStatement = CompoundStatement()
+                if elements[0] is not None:
+                    result.statements.append(elements[0])
+                condition_w: Wrapper[Expression] = elements[1] if elements[1] is not None else wrap(IntLiteral(1))
+                if elements[2] is not None:
+                    body_w.n.statements.append(elements[2])
+                result.statements.append(wrap(IterationStatement(condition_w, body_w)))
+                return wrap(result)
+            case 'while':
+                condition_w: Wrapper[Expression] = self.visitFirstMatch(ctx, C_GrammarParser.ExprContext)
+                return wrap(IterationStatement(condition_w, body_w))
+            case _:
+                raise ValueError("Unexpected iteration statement")
+
+    def visitForCondition(self, ctx:C_GrammarParser.ForConditionContext):
+        elements: list[Wrapper[Expression | VariableDeclaration] | None] = [None, None, None] # [initialization, condition, advancement]
+        i: int = 0
+        for child in ctx.getChildren():
+            if isinstance(child, TerminalNode):
+                i += 1
+            else:
+                elements[i] = self.visit(child)
+        return elements
 
     def visitFunctionDef(self, ctx: C_GrammarParser.FunctionDefContext):
         # TODO complete this in the future: patryk
@@ -122,6 +148,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
             return wrap(result)
         elif isinstance(type_specifier.n, Enumeration):
             return type_specifier
+    def visitForDeclaration(self, ctx:C_GrammarParser.ForDeclarationContext):
+        return self.visitDeclaration(ctx)
     def visitDeclarationSpec(self, ctx: C_GrammarParser.DeclarationSpecContext):
         type_specifier = None
         is_constant = False

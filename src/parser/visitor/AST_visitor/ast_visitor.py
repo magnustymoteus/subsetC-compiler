@@ -72,16 +72,28 @@ class ASTVisitor():
         for child in node_w.n.children:
             self.visit(child)
     def labeled(self, node_w: Wrapper[LabeledStatement]):
-        pass
+        if node_w.n.expr_w is not None:
+            self.visit(node_w.n.expr_w)
+        for statement_w in node_w.n.body:
+            self.visit(statement_w)
     def iteration(self, node_w: Wrapper[IterationStatement]):
-        pass
+        self.visit(node_w.n.condition_w)
+        self.visit(node_w.n.body_w)
     def jump(self, node_w: Wrapper[JumpStatement]):
-        pass
+        if node_w.n.value_w is not None:
+            self.visit(node_w.n.value_w)
 
     def conditional(self, node_w: Wrapper[ConditionalStatement]):
-        pass
+        self.visit(node_w.n.condition_w)
+        self.visit(node_w.n.true_branch_w)
+        if node_w.n.false_branch_w is not None:
+            self.visit(node_w.n.false_branch_w)
     def switch(self, node_w: Wrapper[SwitchStatement]):
-        pass
+        self.visit(node_w.n.expr_w)
+        for case_w in node_w.n.cases:
+            self.visit(case_w)
+        if node_w.n.default_w is not None:
+            self.visit(node_w.n.default_w)
     def enum(self, node_w: Wrapper[Enumeration]):
         pass
     def bin_op(self, node_w: Wrapper[BinaryOp]):

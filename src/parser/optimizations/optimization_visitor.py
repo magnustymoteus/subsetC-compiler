@@ -61,3 +61,5 @@ class OptimizationVisitor(ASTVisitor):
             value = symbol.value_w
             CopyVisitor().visit(value)
             node_w.n = value.n
+
+
