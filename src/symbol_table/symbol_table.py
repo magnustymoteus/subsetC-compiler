@@ -58,6 +58,9 @@ class SymbolTable(AbstractNode):
                :return: True if the symbol exists, False otherwise
                """
         return True if self.lookup_symbol(name) is not None else False
+    def symbol_exists_in_scope(self, name: str) -> bool:
+        return True if self.lookup_table.get(name, None) is not None else False
+
     def add_symbol(self, entry: SymbolTableEntry):
         self.lookup_table[entry.name] = entry
 

@@ -34,19 +34,19 @@ class CSTToASTVisitor(C_GrammarVisitor):
             self.attach_comments(result, tree)
             result.n.set_line_col_nr(tree.start.line, tree.start.column)
         return result
-
     def visitSelectionStmt(self, ctx:C_GrammarParser.SelectionStmtContext):
         expr_w: Wrapper[Expression] = self.visitFirstMatch(ctx, C_GrammarParser.ExprContext)
         compound_or_selection_stmts = self.visitAllMatches(ctx, [C_GrammarParser.CompoundStmtContext, C_GrammarParser.SelectionStmtContext])
         match ctx.getChild(0).getText():
             case 'if':
                 false_branch_w = compound_or_selection_stmts[1] if len(compound_or_selection_stmts) == 2 else None
-                return wrap(ConditionalStatement(expr_w, compound_or_selection_stmts[0], false_branch_w))
+                return wrap(SelectionStatement([expr_w], [compound_or_selection_stmts[0]], false_branch_w))
             case 'switch':
                 labeled_stmts: list[Wrapper[LabeledStatement]] = self.visitAllMatches(ctx, C_GrammarParser.LabeledStmtContext)
-                defaults = [child for child in labeled_stmts if child.n.label == "default"]
-                cases = [child for child in labeled_stmts if child.n.label == "case"]
-                return wrap(SwitchStatement(expr_w, cases, None if not len(defaults) else defaults[0]))
+                conditions = [wrap(BinaryOp('==', expr_w, child.n.expr_w)) for child in labeled_stmts if child.n.label == "case"]
+                defaults = [wrap(CompoundStatement(child.n.body)) for child in labeled_stmts if child.n.label == "default"]
+                cases = [wrap(CompoundStatement(child.n.body)) for child in labeled_stmts if child.n.label == "case"]
+                return wrap(SelectionStatement(conditions, cases, None if not len(defaults) else defaults[0]))
             case _:
                 raise ValueError("Unexpected selection statement")
 
@@ -55,7 +55,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
     def visitLabeledStmt(self, ctx:C_GrammarParser.LabeledStmtContext):
         return wrap(LabeledStatement(ctx.getChild(0).getText(), self.visitAllMatches(ctx, C_GrammarParser.BlockItemContext),
                                 self.visitFirstMatch(ctx, C_GrammarParser.ConstantExprContext)))
-    def visitIterationStmt(self, ctx:C_GrammarParser.IterationStmtContext):
+
+    def visitIterationStmt(self, ctx: C_GrammarParser.IterationStmtContext):
         body_w: Wrapper[CompoundStatement] = self.visitFirstMatch(ctx, C_GrammarParser.CompoundStmtContext)
         match ctx.getChild(0).getText():
             case 'for':

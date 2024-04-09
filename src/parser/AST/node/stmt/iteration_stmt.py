@@ -10,10 +10,14 @@ class IterationStatement(Statement, Terminator):
         super().__init__()
         self.condition_w: Wrapper[Expression] = condition_w
         self.body_w: Wrapper[CompoundStatement | BasicBlock] = body_w
+        self.end_branch_w: Wrapper[Statement] | None = None
+
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
         super().append_to_graph(graph, parent_id)
-        self.condition_w.n.append_to_graph(graph, self.id)
-        self.body_w.n.append_to_graph(graph, self.id)
+        self.condition_w.n.append_to_graph(graph, self.id, "condition")
+        self.body_w.n.append_to_graph(graph, self.id, "body")
+        if self.end_branch_w is not None:
+            graph.edge(str(self.id), str(self.end_branch_w.n.id), label="end")
 
     def __repr__(self):
         return f"iteration statement"

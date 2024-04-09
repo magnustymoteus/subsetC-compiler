@@ -13,6 +13,6 @@ class IntLiteral(Literal):
         super().__init__(value)
         self.type = PrimitiveType('int', True)
 
-    def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
-        super().append_to_graph(graph, parent_id)
+    def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
+        super().append_to_graph(graph, parent_id, label)
 

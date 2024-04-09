@@ -12,7 +12,7 @@ class Ast:
         """
         Export the AST to a dot graph.
         """
-        graph = Digraph(strict="true")
+        graph = Digraph(strict=True)
         self.root_w.n.append_to_graph(graph, None)
 
         return graph

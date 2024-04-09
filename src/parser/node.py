@@ -8,10 +8,11 @@ class AbstractNode(ABC):
     def __init__(self) -> None:
         self.id: UUID = uuid4()
 
-    def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
+    def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
         graph.node(str(self.id), str(self))
         if parent_id is not None:
-            graph.edge(str(parent_id), str(self.id))
+            graph.edge(str(parent_id), str(self.id), label)
+
 
     def __repr__(self) -> str:
         return f"node-id:{str(self.id)}"

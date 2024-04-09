@@ -13,8 +13,8 @@ class CastOp(Expression):
         self.expression_w : Wrapper = wrap()
         super().__init__()
 
-    def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
-        super().append_to_graph(graph, parent_id)
+    def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
+        super().append_to_graph(graph, parent_id, label)
         self.expression_w.n.append_to_graph(graph, self.id)
 
     def __repr__(self) -> str:

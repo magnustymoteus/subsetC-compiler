@@ -13,8 +13,8 @@ class VariableDeclaration(BlockItem):
         self.storage_class_specifier: str | None = storage_class_specifier
         super().__init__()
 
-    def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
-        super().append_to_graph(graph, parent_id)
+    def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
+        super().append_to_graph(graph, parent_id, label)
         if self.definition_w.n is not None:
             self.definition_w.n.append_to_graph(graph, self.id)
         #if self.local_symtab_w.n is not None:

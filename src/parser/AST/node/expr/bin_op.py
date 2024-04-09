@@ -21,18 +21,17 @@ class BinaryOp(Expression):
     Binary Operation node. Node operating on two other nodes.
     """
 
-    def __init__(self, operator: str) -> None:
-        self.lhs_w: Wrapper = wrap()  # TODO ensure gets set
+    def __init__(self, operator: str, lhs_w: Wrapper[Expression] | None = None, rhs_w: Wrapper[Expression] | None = None) -> None:
+        self.lhs_w: Wrapper = wrap() if lhs_w is None else lhs_w
         """
         Wrapper for left hand side value node.
         """
 
-        self.rhs_w: Wrapper = wrap()  # TODO ensure gets set
+        self.rhs_w: Wrapper = wrap() if rhs_w is None else rhs_w
         """
         Wrapper for right hand side value node.
         """
 
-        # TODO use enum instead of string for operator type
         self.operator: str = operator
         """
         Operation type of the node.
@@ -62,8 +61,8 @@ class BinaryOp(Expression):
     def rhs(self, node: Basic):
         self.rhs_w.n = node
 
-    def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
-        super().append_to_graph(graph, parent_id)
+    def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
+        super().append_to_graph(graph, parent_id, label)
         self.lhs.append_to_graph(graph, self.id)
         self.rhs.append_to_graph(graph, self.id)
 

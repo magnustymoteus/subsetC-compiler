@@ -33,8 +33,8 @@ class UnaryOp(Expression):
     def operand(self, node: Basic):
         self.operand_w.n = node
 
-    def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
-        super().append_to_graph(graph, parent_id)
+    def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
+        super().append_to_graph(graph, parent_id, label)
         self.operand.append_to_graph(graph, self.id)
 
     def __repr__(self) -> str:

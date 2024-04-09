@@ -2,7 +2,7 @@ from llvmlite import ir, binding
 from src.parser.visitor.CFG_visitor.cfg_visitor import *
 from .mapping import *
 from src.parser.visitor.AST_visitor.type_checker_visitor import *
-
+from ..parser.CFG.node.basic_block import BasicBlock
 
 '''This visitor assumes that the AST/CFG is in TAC form'''
 class LLVMVisitor(CFGVisitor):
@@ -12,27 +12,30 @@ class LLVMVisitor(CFGVisitor):
         self.reg_counter += 1
         return result
 
-
     def __init__(self, cfg: ControlFlowGraph, name: str):
+        self.cfg = cfg
         self.no_load: bool = False
-        self.regs = {}
+        self.regs: dict[str, ir.Instruction] = {}
+        self.basic_blocks: dict[BasicBlock, ir.Block] = {}
         self.refs: set[str] = set()
-        self.postfix_function = None
+
 
         self.module: ir.Module = ir.Module(name=name)
         self.reg_counter: int = 0
         self.module.triple = binding.get_default_triple()
-        void_type = ir.VoidType()
-        fnty = ir.FunctionType(void_type, ())
-        func = ir.Function(self.module, fnty, name="main")
-        block = func.append_basic_block(name="entry")
-        self.builder: ir.IRBuilder = ir.IRBuilder(block)
 
         printf_type = ir.FunctionType(ir.IntType(32), [ir.IntType(8).as_pointer()], var_arg=True)
         self.printf = ir.Function(self.module, printf_type, name="printf")
 
-        super().__init__(cfg)
+        void_type = ir.VoidType()
+        fnty = ir.FunctionType(void_type, ())
+        func = ir.Function(self.module, fnty, name="main")
+        entry = func.append_basic_block(self._create_reg())
+        self.builder: ir.IRBuilder = ir.IRBuilder(entry)
+        # We're only visiting from the first basic block since we should be able to reach others from there
+        self.visit(cfg.basic_blocks[0])
         self.builder.ret_void()
+
 
     def _load_if_pointer(self, value: ir.Instruction):
         if value.type.is_pointer:
@@ -40,12 +43,13 @@ class LLVMVisitor(CFGVisitor):
         return value
 
     def visit(self, node_w: Wrapper[AbstractNode]):
-        if isinstance(node_w.n, Basic):
+        '''if isinstance(node_w.n, Basic):
             comments = node_w.n.comments + ([node_w.n.source_code_line] if node_w.n.source_code_line is not None else [])
             for comment in comments:
                 for subcomment in comment.split("\n"):
-                    self.builder.comment(subcomment)
+                    self.builder.comment(subcomment)'''
         return super().visit(node_w)
+
 
     def _get_type(self, type: PrimitiveType) -> tuple[ir.Type, int]:
         result: list[ir.Type, int] = []
@@ -62,6 +66,39 @@ class LLVMVisitor(CFGVisitor):
             result[0] = ir.PointerType(result[0])
             result[1] = 8
         return result[0], result[1]
+
+    def select(self, node_w: Wrapper[SelectionStatement]):
+        # if
+        if len(node_w.n.conditions) == 1:
+            condition_w: Wrapper[Expression] = node_w.n.conditions[0]
+            true_branch_w: Wrapper[CompoundStatement] = node_w.n.branches[0]
+            if node_w.n.default_branch_w is not None: # if
+                with self.builder.if_else(self.builder.trunc(self.visit(condition_w), ir.IntType(1))) as (then, otherwise):
+                    with then:
+                        self.visit(true_branch_w)
+                    with otherwise:
+                        self.visit(node_w.n.default_branch_w)
+            else: # if else
+                with self.builder.if_then(self.builder.trunc(self.visit(condition_w), ir.IntType(1))):
+                    self.visit(true_branch_w)
+        else:  # switch
+            pass
+
+    def iteration(self, node_w: Wrapper[IterationStatement]):
+        block = self.builder.block
+        conditional_block = self.builder.append_basic_block(self._create_reg())
+        self.builder.branch(conditional_block)
+        body_block = self.builder.append_basic_block(self._create_reg())
+        false_block = self.builder.append_basic_block(self._create_reg())
+        with self.builder.goto_block(body_block):
+            self.visit(node_w.n.body_w)
+            self.builder.branch(conditional_block)
+        with self.builder.goto_block(conditional_block):
+            self.builder.cbranch(self.builder.trunc(self.visit(node_w.n.condition_w),ir.IntType(1)), body_block, false_block)
+        self.builder = ir.IRBuilder(false_block)
+        if node_w.n.end_branch_w is not None:
+            self.visit(node_w.n.end_branch_w)
+
 
     # probably here until proper function calls get implemented
     def print(self, node_w: Wrapper[PrintStatement]):

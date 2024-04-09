@@ -1,11 +1,11 @@
-from ..basic import Basic, UUID, Digraph
+from ..basic import *
 from src.symbol_table.symbol_type import PrimitiveType
 class Expression(Basic):
     def __init__(self):
         self._type: PrimitiveType | None = None
         super().__init__()
-    def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
-        super().append_to_graph(graph, parent_id)
+    def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
+        super().append_to_graph(graph, parent_id, label)
     def get_typed_str(self, repr_str: str):
         if self.type is not None:
             return f"{repr_str} ({self.type})"

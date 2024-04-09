@@ -9,9 +9,9 @@ class LabeledStatement(Statement, Terminator):
         self.expr_w: Wrapper[Expression] | None =  expr_w
     def __repr__(self):
         return f"{self.label} (label statement)"
-    def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
-        super().append_to_graph(graph, parent_id)
+    def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
+        super().append_to_graph(graph, parent_id, label)
         if self.expr_w is not None:
-            self.expr_w.n.append_to_graph(graph, self.id)
+            self.expr_w.n.append_to_graph(graph, self.id, "condition")
         for statement in self.body:
             statement.n.append_to_graph(graph, self.id)

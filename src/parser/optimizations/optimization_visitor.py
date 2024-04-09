@@ -61,5 +61,5 @@ class OptimizationVisitor(ASTVisitor):
             value = symbol.value_w
             CopyVisitor().visit(value)
             node_w.n = value.n
-
-
+    def iteration(self, node_w: Wrapper[IterationStatement]):
+        pass

@@ -1,6 +1,5 @@
-from ..basic import Basic, Wrapper, wrap, Digraph
+from ..basic import *
 from .expr import Expression
-
 
 class Assignment(Expression):
     """
@@ -43,8 +42,8 @@ class Assignment(Expression):
     def value(self, node: Basic):
         self.value_w.n = node
 
-    def append_to_graph(self, graph: Digraph, parent_id: str | None) -> None:
-        super().append_to_graph(graph, parent_id)
+    def append_to_graph(self, graph: Digraph, parent_id: str | None, label: str | None = None) -> None:
+        super().append_to_graph(graph, parent_id, label)
         self.assignee.append_to_graph(graph, self.id)
         self.value.append_to_graph(graph, self.id)
 

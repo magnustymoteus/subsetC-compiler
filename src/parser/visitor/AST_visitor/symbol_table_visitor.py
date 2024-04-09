@@ -40,7 +40,7 @@ class SymbolTableVisitor(ASTVisitor):
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         super().variable_decl(node_w)
         symbol_name = node_w.n.identifier
-        if node_w.n.local_symtab_w.n.symbol_exists(symbol_name):
+        if node_w.n.local_symtab_w.n.symbol_exists_in_scope(symbol_name):
             decl_or_def : str = "Redeclaration" if not node_w.n.definition_w.n else "Redefinition"
             self.raiseSemanticErr(f"{decl_or_def} of symbol {symbol_name}")
         symtab_entry = SymbolTableEntry(symbol_name, node_w.n.type)

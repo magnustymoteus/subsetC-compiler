@@ -70,14 +70,16 @@ def main(argv):
 
     arg_parser.add_argument('--disable-warnings', action='store_true')
 
+    arg_parser.add_argument('--viz-all', action='store_true', help="visualize everything (CST, AST, CFG, symtabs)")
+    arg_parser.add_argument("--viz-cst", action="store_true", help="visualize concrete syntax tree (CST)")
+    arg_parser.add_argument("--viz-cfg", action="store_true", help="visualize control flow graph (CFG)")
+    arg_parser.add_argument( '--viz-ast', action='store_true', help='visualize abstract syntax tree (AST)')
+    arg_parser.add_argument( '--viz-symtab', action='store_true', help='visualize symbol tables (symtabs)')
 
-    arg_parser.add_argument( '--viz', action='store_true', help='visualize CST, AST, CFG, symbol tables')
 
     arg_parser.add_argument('--path', type=c_file, required=True, help="glob path of the .c file(s) to be compiled")
 
-    target = arg_parser.add_mutually_exclusive_group(required=True)
-    target.add_argument('--target-llvm', action='store_true')
-    target.add_argument('--target-mips', action='store_true')
+    arg_parser.add_argument('--targets', choices=["llvm", "mips"], nargs="+", required=True, help="Choose 1 or more languages to compile to")
     args = arg_parser.parse_args(argv[1:])
 
     warnings.filterwarnings("error")
@@ -94,7 +96,7 @@ def main(argv):
             # tree: list[ProgramContext]
             tree = parser.program()
 
-            if args.viz:
+            if args.viz_cst or args.viz_all:
                 visualizeCST(tree, parser.ruleNames, f"./{filename}-viz/cst")
 
             # conversion from CST to AST
@@ -110,29 +112,30 @@ def main(argv):
             if not args.disable_cfold:
                 ConstantFoldingVisitor(ast)
 
-            if args.viz:
+            if args.viz_ast or args.viz_all:
                 visualizeAST(ast, f"./{filename}-viz/ast.gv")
 
             cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
 
-            if args.viz:
-                visualizeCFG(cfg, f"./{filename}-viz/ast_cfg.gv")
+            if args.viz_cfg or args.viz_all:
+                visualizeAST(ast, f"./{filename}-viz/cfg.gv")
 
             TACVisitor(cfg)
 
-            if args.viz:
-                visualizeCFG(cfg, f"./{filename}-viz/ast_tac.gv")
-
             llvm = LLVMVisitor(cfg, filename)
+            for target in args.targets:
+                match target:
+                    case "llvm":
+                        llvm_file = Path(f"{filename}.ll")
+                        llvm_file.parent.mkdir(parents=True, exist_ok=True)
+                        f = open(f"./{filename}.ll", "w")
+                        f.write(str(llvm.module))
+                        f.close()
+                    case "mips":
+                        warnings.warn("compiling to MIPS is currently not supported")
+                    case _:
+                        warnings.warn("unsupported compilation target")
 
-            if args.target_llvm:
-                llvm_file = Path(f"{filename}.ll")
-                llvm_file.parent.mkdir(parents=True, exist_ok=True)
-                f = open(f"./{filename}.ll", "w")
-                f.write(str(llvm.module))
-                f.close()
-            elif args.target_mips:
-                warnings.warn("compiling to MIPS is currently not supported")
 
         except SyntaxError as e:
             print(f"{path_in_str}:{e}")

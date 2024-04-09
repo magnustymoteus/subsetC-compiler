@@ -52,14 +52,12 @@ class ASTVisitor():
                 return self.print(node_w)
             case Enumeration():
                 return self.enum(node_w)
-            case SwitchStatement():
-                return self.switch(node_w)
-            case ConditionalStatement():
-                return self.conditional(node_w)
-            case JumpStatement():
-                return self.jump(node_w)
+            case SelectionStatement():
+                return self.select(node_w)
             case IterationStatement():
                 return self.iteration(node_w)
+            case JumpStatement():
+                return self.jump(node_w)
             case LabeledStatement():
                 return self.labeled(node_w)
 
@@ -76,24 +74,21 @@ class ASTVisitor():
             self.visit(node_w.n.expr_w)
         for statement_w in node_w.n.body:
             self.visit(statement_w)
+    def jump(self, node_w: Wrapper[JumpStatement]):
+        pass
+
+    def select(self, node_w: Wrapper[SelectionStatement]):
+        for condition_w in node_w.n.conditions:
+            self.visit(condition_w)
+        for branch_w in node_w.n.branches:
+            self.visit(branch_w)
+        if node_w.n.default_branch_w is not None:
+            self.visit(node_w.n.default_branch_w)
+
     def iteration(self, node_w: Wrapper[IterationStatement]):
         self.visit(node_w.n.condition_w)
         self.visit(node_w.n.body_w)
-    def jump(self, node_w: Wrapper[JumpStatement]):
-        if node_w.n.value_w is not None:
-            self.visit(node_w.n.value_w)
 
-    def conditional(self, node_w: Wrapper[ConditionalStatement]):
-        self.visit(node_w.n.condition_w)
-        self.visit(node_w.n.true_branch_w)
-        if node_w.n.false_branch_w is not None:
-            self.visit(node_w.n.false_branch_w)
-    def switch(self, node_w: Wrapper[SwitchStatement]):
-        self.visit(node_w.n.expr_w)
-        for case_w in node_w.n.cases:
-            self.visit(case_w)
-        if node_w.n.default_w is not None:
-            self.visit(node_w.n.default_w)
     def enum(self, node_w: Wrapper[Enumeration]):
         pass
     def bin_op(self, node_w: Wrapper[BinaryOp]):

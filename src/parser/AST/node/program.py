@@ -11,8 +11,8 @@ class Program(Basic):
         self.children: list[Wrapper[AbstractNode]] = []
         super().__init__()
 
-    def append_to_graph(self, graph: Digraph, parent_id: UUID | None) -> None:
-        super().append_to_graph(graph, parent_id)
+    def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
+        super().append_to_graph(graph, parent_id, label)
         for child in self.children:
             child.n.append_to_graph(graph, self.id)
 
