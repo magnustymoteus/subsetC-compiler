@@ -19,7 +19,6 @@ class LLVMVisitor(CFGVisitor):
         self.basic_blocks: dict[BasicBlock, ir.Block] = {}
         self.refs: set[str] = set()
 
-
         self.module: ir.Module = ir.Module(name=name)
         self.reg_counter: int = 0
         self.module.triple = binding.get_default_triple()
@@ -82,22 +81,22 @@ class LLVMVisitor(CFGVisitor):
                 with self.builder.if_then(self.builder.trunc(self.visit(condition_w), ir.IntType(1))):
                     self.visit(true_branch_w)
         else:  # switch
-            pass
+            default_block = self.builder.append_basic_block("default")
+            switch = self.builder.switch(self.visit())
+
 
     def iteration(self, node_w: Wrapper[IterationStatement]):
         block = self.builder.block
-        conditional_block = self.builder.append_basic_block(self._create_reg())
+        conditional_block = self.builder.append_basic_block("condition")
         self.builder.branch(conditional_block)
-        body_block = self.builder.append_basic_block(self._create_reg())
-        false_block = self.builder.append_basic_block(self._create_reg())
+        body_block = self.builder.append_basic_block("loop-body")
+        false_block = self.builder.append_basic_block("end-loop")
         with self.builder.goto_block(body_block):
             self.visit(node_w.n.body_w)
             self.builder.branch(conditional_block)
         with self.builder.goto_block(conditional_block):
             self.builder.cbranch(self.builder.trunc(self.visit(node_w.n.condition_w),ir.IntType(1)), body_block, false_block)
         self.builder = ir.IRBuilder(false_block)
-        if node_w.n.end_branch_w is not None:
-            self.visit(node_w.n.end_branch_w)
 
 
     # probably here until proper function calls get implemented
@@ -170,7 +169,7 @@ class LLVMVisitor(CFGVisitor):
             case "-":
                 return self.builder.sub(operand_value.type(0), operand_value, self._create_reg())
             case "!":
-                return self.builder.not_(operand_value, self._create_reg())
+                return self.builder.icmp_signed('==', operand_value, ir.Constant(ir.IntType(1), 0), self._create_reg())
             case "~":
                 return self.builder.not_(operand_value, self._create_reg())
             case "++":

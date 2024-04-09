@@ -59,4 +59,5 @@ class BasicBlockVisitor(ASTVisitor):
         self.visit(node_w.n.body_w)
         self.statement_stack.append(node_w)
         self.assign_end_branch = is_root
+        self.add_bblock_next = True
 

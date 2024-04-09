@@ -112,15 +112,15 @@ def main(argv):
             if not args.disable_cfold:
                 ConstantFoldingVisitor(ast)
 
+            cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
+
+            TACVisitor(cfg)
+
             if args.viz_ast or args.viz_all:
                 visualizeAST(ast, f"./{filename}-viz/ast.gv")
 
-            cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
-
             if args.viz_cfg or args.viz_all:
-                visualizeAST(ast, f"./{filename}-viz/cfg.gv")
-
-            TACVisitor(cfg)
+                visualizeCFG(cfg, f"./{filename}-viz/cfg.gv")
 
             llvm = LLVMVisitor(cfg, filename)
             for target in args.targets:

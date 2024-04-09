@@ -40,6 +40,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
         match ctx.getChild(0).getText():
             case 'if':
                 false_branch_w = compound_or_selection_stmts[1] if len(compound_or_selection_stmts) == 2 else None
+                expr_w = wrap(BinaryOp("!=", expr_w, wrap(IntLiteral(0))))
                 return wrap(SelectionStatement([expr_w], [compound_or_selection_stmts[0]], false_branch_w))
             case 'switch':
                 labeled_stmts: list[Wrapper[LabeledStatement]] = self.visitAllMatches(ctx, C_GrammarParser.LabeledStmtContext)
@@ -65,12 +66,14 @@ class CSTToASTVisitor(C_GrammarVisitor):
                 if elements[0] is not None:
                     result.statements.append(elements[0])
                 condition_w: Wrapper[Expression] = elements[1] if elements[1] is not None else wrap(IntLiteral(1))
+                condition_w = wrap(BinaryOp("!=", condition_w, wrap(IntLiteral(0))))
                 if elements[2] is not None:
                     body_w.n.statements.append(elements[2])
                 result.statements.append(wrap(IterationStatement(condition_w, body_w)))
                 return wrap(result)
             case 'while':
                 condition_w: Wrapper[Expression] = self.visitFirstMatch(ctx, C_GrammarParser.ExprContext)
+                condition_w = wrap(BinaryOp("!=", condition_w, wrap(IntLiteral(0))))
                 return wrap(IterationStatement(condition_w, body_w))
             case _:
                 raise ValueError("Unexpected iteration statement")

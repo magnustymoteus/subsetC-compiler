@@ -1,3 +1,4 @@
+from src.parser.CFG.node.basic_block import BasicBlock
 from src.parser.visitor.CFG_visitor.cfg_visitor import *
 from copy import deepcopy
 # TODO:
@@ -6,24 +7,45 @@ from copy import deepcopy
 class TACVisitor(CFGVisitor):
     def __init__(self, cfg: ControlFlowGraph):
         self.interm_var_count: int = 0
-        self.current_tac_list: list[list[Wrapper[Expression]]] = []
-        self.declarations: list[Wrapper[VariableDeclaration]] = []
-        self.current_index: int = 0
+        self.tacs: dict[CompoundStatement | BasicBlock, list[tuple[Wrapper[Basic], int]]] = {}
+        self.subject_stack: list[list[CompoundStatement | BasicBlock, int]] = []
         super().__init__(cfg)
+        for subject in self.tacs:
+            current_index: int = 0
+            for element in self.tacs[subject]:
+                if isinstance(subject, CompoundStatement):
+                    subject.statements.insert(element[1]+current_index, element[0])
+                else:
+                    subject.ast_items.insert(element[1]+current_index, element[0])
+                current_index += 1
+
+
+    def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
+        self.subject_stack.append([node_w.n, 0])
+        stack_index = len(self.subject_stack) - 1
+        for statement_w in node_w.n.statements:
+            self.visit(statement_w)
+            self.subject_stack[stack_index][1] += 1
+        self.subject_stack.pop()
 
     def basic_block(self, node_w: Wrapper[BasicBlock]):
-        for index, ast_item in enumerate(node_w.n.ast_items):
-            self.current_tac_list.append([])
-            self.visit(ast_item)
-            self.current_index = index
-        for index, elem in enumerate(self.current_tac_list):
-            for sub_elem in elem:
-                node_w.n.ast_items.insert(index, sub_elem)
+        self.subject_stack.append([node_w.n, 0])
+        stack_index = len(self.subject_stack) - 1
+        for ast_item_w in node_w.n.ast_items:
+            self.visit(ast_item_w)
+            self.subject_stack[stack_index][1] += 1
+        self.subject_stack.pop()
 
-        node_w.n.ast_items = self.declarations + node_w.n.ast_items
+    def add_node_to_subject(self, node_w: Wrapper[Basic], custom_index: int = None):
+        subject = self.subject_stack[-1]
+        if self.tacs.get(subject[0], None) is None:
+            self.tacs[subject[0]] = []
+        if custom_index is None:
+            self.tacs[subject[0]].append((node_w, subject[1]))
+        else:
+            self.tacs[subject[0]].append((node_w, custom_index))
 
-        self.current_tac_list.clear()
-        self.declarations.clear()
+
 
     def addTACNode(self, node_w: Wrapper[Expression], custom_index: int | None = None) -> Wrapper[Identifier]:
         symbol_name: str = f"tac{self.interm_var_count}"
@@ -35,11 +57,10 @@ class TACVisitor(CFGVisitor):
         def_node: VariableDeclaration = VariableDeclaration(identifier.name, identifier.type)
         def_node.definition_w = node_w
 
-        insertion_index: int = self.current_index if custom_index is None else custom_index
-
-        self.current_tac_list[insertion_index+1].insert(0,wrap(def_node))
+        self.add_node_to_subject(wrap(def_node))
 
         self.interm_var_count += 1
+
         return wrap(identifier)
 
     def bin_op(self, node_w: Wrapper[BinaryOp]):
@@ -71,9 +92,9 @@ class TACVisitor(CFGVisitor):
             assign_node.assignee_w.n.type = node_w.n.type
             node_w.n.definition_w.n = None
 
-            self.declarations.append(wrap(deepcopy(node_w.n)))
-            node_w.n = assign_node
+            self.add_node_to_subject(wrap(deepcopy(node_w.n)), 0)
 
+            node_w.n = assign_node
 
 
 
