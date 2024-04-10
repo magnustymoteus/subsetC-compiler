@@ -5,7 +5,7 @@ from copy import deepcopy
 
 class OptimizationVisitor(ASTVisitor):
     """Traverses the AST tree in pre-order to perform constant propagation along other small optimizations (operator
-    assignments)"""
+    assignments, removing code after continue/break)"""
 
     def __init__(self, ast: Ast):
         super().__init__(ast)
@@ -62,4 +62,8 @@ class OptimizationVisitor(ASTVisitor):
             CopyVisitor().visit(value)
             node_w.n = value.n
     def iteration(self, node_w: Wrapper[IterationStatement]):
-        pass
+        for i, statement_w in enumerate(node_w.n.body_w.n.statements):
+            if isinstance(statement_w.n, JumpStatement):
+                self.visit(statement_w)
+                node_w.n.body_w.n.statements = node_w.n.body_w.n.statements[:i+1]
+                break

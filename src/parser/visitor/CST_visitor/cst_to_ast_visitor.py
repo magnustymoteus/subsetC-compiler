@@ -41,13 +41,17 @@ class CSTToASTVisitor(C_GrammarVisitor):
             case 'if':
                 false_branch_w = compound_or_selection_stmts[1] if len(compound_or_selection_stmts) == 2 else None
                 expr_w = wrap(BinaryOp("!=", expr_w, wrap(IntLiteral(0))))
-                return wrap(SelectionStatement([expr_w], [compound_or_selection_stmts[0]], false_branch_w))
+                return wrap(ConditionalStatement(expr_w, compound_or_selection_stmts[0], false_branch_w))
             case 'switch':
                 labeled_stmts: list[Wrapper[LabeledStatement]] = self.visitAllMatches(ctx, C_GrammarParser.LabeledStmtContext)
-                conditions = [wrap(BinaryOp('==', expr_w, child.n.expr_w)) for child in labeled_stmts if child.n.label == "case"]
-                defaults = [wrap(CompoundStatement(child.n.body)) for child in labeled_stmts if child.n.label == "default"]
-                cases = [wrap(CompoundStatement(child.n.body)) for child in labeled_stmts if child.n.label == "case"]
-                return wrap(SelectionStatement(conditions, cases, None if not len(defaults) else defaults[0]))
+                conditions = [child.n.expr_w for child in labeled_stmts if child.n.expr_w is not None]
+
+                defaults = [labeled_stmts.index(child) for child in labeled_stmts if child.n.label == "default"]
+                default_index = defaults[0] if len(defaults) != 0 else None
+
+                bodies = [wrap(CompoundStatement(child.n.body)) for child in labeled_stmts]
+
+                return wrap(SwitchStatement(expr_w, conditions, bodies, default_index))
             case _:
                 raise ValueError("Unexpected selection statement")
 
@@ -67,9 +71,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
                     result.statements.append(elements[0])
                 condition_w: Wrapper[Expression] = elements[1] if elements[1] is not None else wrap(IntLiteral(1))
                 condition_w = wrap(BinaryOp("!=", condition_w, wrap(IntLiteral(0))))
-                if elements[2] is not None:
-                    body_w.n.statements.append(elements[2])
-                result.statements.append(wrap(IterationStatement(condition_w, body_w)))
+                advancement_w = elements[2]
+                result.statements.append(wrap(IterationStatement(condition_w, body_w, advancement_w)))
                 return wrap(result)
             case 'while':
                 condition_w: Wrapper[Expression] = self.visitFirstMatch(ctx, C_GrammarParser.ExprContext)

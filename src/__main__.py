@@ -131,8 +131,9 @@ def main(argv):
             if args.viz_cfg or args.viz_all:
                 for function in llvm.module.functions:
                     if function.name == 'main':
-                        s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/llvm_cfg.gv")
-                        s.save()
+                        pass
+                        #s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/llvm_cfg.gv")
+                        #s.save()
 
             for target in args.targets:
                 match target:

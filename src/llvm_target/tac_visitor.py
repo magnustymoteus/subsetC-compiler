@@ -1,6 +1,6 @@
 from src.parser.CFG.node.basic_block import BasicBlock
 from src.parser.visitor.CFG_visitor.cfg_visitor import *
-from copy import deepcopy
+from copy import copy
 # TODO:
 
 '''Converts AST so that expressions have at most two operands by creating intermediate variables'''
@@ -49,7 +49,7 @@ class TACVisitor(CFGVisitor):
 
     def addTACNode(self, node_w: Wrapper[Expression], custom_index: int | None = None) -> Wrapper[Identifier]:
         symbol_name: str = f"tac{self.interm_var_count}"
-        new_type: PrimitiveType = deepcopy(node_w.n.type)
+        new_type: PrimitiveType = copy(node_w.n.type)
 
         identifier: Identifier = Identifier(symbol_name)
         identifier.type = new_type
@@ -86,13 +86,13 @@ class TACVisitor(CFGVisitor):
         super().variable_decl(node_w)
         if node_w.n.definition_w.n is not None:
             assign_node = Assignment("=")
-            assign_node.assignee_w.n = Identifier(deepcopy(node_w.n.identifier))
-            assign_node.value_w.n = deepcopy(node_w.n.definition_w.n)
-            assign_node.type = deepcopy(node_w.n.type)
+            assign_node.assignee_w.n = Identifier(copy(node_w.n.identifier))
+            assign_node.value_w.n = copy(node_w.n.definition_w.n)
+            assign_node.type = copy(node_w.n.type)
             assign_node.assignee_w.n.type = node_w.n.type
             node_w.n.definition_w.n = None
 
-            self.add_node_to_subject(wrap(deepcopy(node_w.n)), 0)
+            self.add_node_to_subject(wrap(copy(node_w.n)), 0)
 
             node_w.n = assign_node
 

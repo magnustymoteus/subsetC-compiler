@@ -16,10 +16,9 @@ class LLVMVisitor(CFGVisitor):
         self.cfg = cfg
         self.no_load: bool = False
         self.regs: dict[str, ir.Instruction] = {}
-        self.basic_blocks: dict[BasicBlock, ir.Block] = {}
         self.refs: set[str] = set()
 
-        self.current_bblock: BasicBlock = None
+        self.jump_stack: list[tuple[ir.Block | None, ir.Block | None]] = []# stack for jump statements with tuple = (continue block, break block)
 
         self.module: ir.Module = ir.Module(name=name)
         self.reg_counter: int = 0
@@ -73,37 +72,68 @@ class LLVMVisitor(CFGVisitor):
             self.visit(node_w.n.ast_items[i])
         return self.visit(node_w.n.ast_items[-1])
 
-    def select(self, node_w: Wrapper[SelectionStatement]):
-        # if
-        if len(node_w.n.conditions) == 1:
-            condition_w: Wrapper[Expression] = node_w.n.conditions[0]
-            true_branch_w: Wrapper[CompoundStatement] = node_w.n.branches[0]
-            if node_w.n.default_branch_w is not None: # if
-                with self.builder.if_else(self.builder.trunc(self.visit(condition_w), ir.IntType(1))) as (then, otherwise):
-                    with then:
-                        self.visit(true_branch_w)
-                    with otherwise:
-                        self.visit(node_w.n.default_branch_w)
-            else: # if else
-                with self.builder.if_then(self.builder.trunc(self.visit(condition_w), ir.IntType(1))):
+    def jump(self, node_w: Wrapper[JumpStatement]):
+        match node_w.n.label:
+            case "continue":
+                return self.builder.branch(self.jump_stack[-1][0])
+            case "break":
+                return self.builder.branch(self.jump_stack[-1][1])
+            case _:
+                raise ValueError("Unrecognized jump statement")
+
+    def conditional(self, node_w: Wrapper[ConditionalStatement]):
+        condition_w: Wrapper[Expression] = node_w.n.condition_w
+        true_branch_w: Wrapper[CompoundStatement] = node_w.n.true_branch_w
+        if node_w.n.false_branch_w is not None:  # if
+            with self.builder.if_else(self.builder.trunc(self.visit(condition_w), ir.IntType(1))) as (then, otherwise):
+                with then:
                     self.visit(true_branch_w)
-        else:  # switch
-            default_block = self.builder.append_basic_block("default")
-            switch = self.builder.switch(self.visit())
+                with otherwise:
+                    self.visit(node_w.n.false_branch_w)
+        else:  # if else
+            with self.builder.if_then(self.builder.trunc(self.visit(condition_w), ir.IntType(1))):
+                self.visit(true_branch_w)
+
+    def switch(self, node_w: Wrapper[SwitchStatement]):
+        end_block = self.builder.append_basic_block("switch.end")
+        default_block = self.builder.append_basic_block("default") if node_w.n.default_index is not None else end_block
+        self.jump_stack.append((None, end_block))
+        switch = self.builder.switch(self.visit(node_w.n.value_w), default_block)
+        case_blocks = []
+        for case_w in node_w.n.conditions:
+            case_block = self.builder.append_basic_block("case")
+            case_blocks.append(case_block)
+            switch.add_case(self.visit(case_w), case_block)
+        if node_w.n.default_index is not None:
+            case_blocks.insert(node_w.n.default_index, default_block)
+        for i, case_block in enumerate(case_blocks):
+            with self.builder.goto_block(case_block):
+                self.visit(node_w.n.branches[i])
+                if not case_block.is_terminated:
+                    next_block = end_block if i == len(case_blocks)-1 else case_blocks[i+1]
+                    self.builder.branch(next_block)
+        self.builder.position_at_end(end_block)
+        self.jump_stack.pop()
 
 
     def iteration(self, node_w: Wrapper[IterationStatement]):
-        block = self.builder.block
         conditional_block = self.builder.append_basic_block("condition")
+        advancement_block = self.builder.append_basic_block("advancement")
         self.builder.branch(conditional_block)
-        body_block = self.builder.append_basic_block("loop-body")
-        false_block = self.builder.append_basic_block("end-loop")
+        body_block = self.builder.append_basic_block("loop.body")
+        false_block = self.builder.append_basic_block("end.loop")
+        self.jump_stack.append((advancement_block, false_block))
         with self.builder.goto_block(body_block):
             self.visit(node_w.n.body_w)
+            if not self.builder.block.is_terminated:
+                self.builder.branch(advancement_block)
+        with self.builder.goto_block(advancement_block):
+            self.visit(node_w.n.adv_w)
             self.builder.branch(conditional_block)
         with self.builder.goto_block(conditional_block):
             self.builder.cbranch(self.builder.trunc(self.visit(node_w.n.condition_w),ir.IntType(1)), body_block, false_block)
-        self.builder = ir.IRBuilder(false_block)
+        self.builder.position_at_end(false_block)
+        self.jump_stack.pop()
 
 
     # probably here until proper function calls get implemented
