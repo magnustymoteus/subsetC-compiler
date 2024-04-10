@@ -93,7 +93,8 @@ class ASTVisitor():
             self.visit(node_w.n.false_branch_w)
 
     def iteration(self, node_w: Wrapper[IterationStatement]):
-        self.visit(node_w.n.adv_w)
+        if node_w.n.adv_w is not None:
+            self.visit(node_w.n.adv_w)
         self.visit(node_w.n.condition_w)
         self.visit(node_w.n.body_w)
 

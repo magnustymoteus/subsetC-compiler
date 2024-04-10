@@ -2,7 +2,7 @@ from src.parser.CFG.node.basic_block import BasicBlock
 from src.parser.visitor.AST_visitor.ast_visitor import *
 from src.parser.CFG import *
 from src.parser.visitor.AST_visitor.copy_visitor import *
-
+from copy import copy
 class BasicBlockVisitor(ASTVisitor):
     def __init__(self, ast: Ast):
         self.cfg: ControlFlowGraph = ControlFlowGraph()
@@ -20,7 +20,7 @@ class BasicBlockVisitor(ASTVisitor):
         self.current_basic_block_w = self.cfg.add_basic_block()
         self.current_basic_block_w.n.local_symtab_w = node_w.n.local_symtab_w
         node_w.n.basic_block_w = self.current_basic_block_w
-        node_copy_w = wrap(deepcopy(node_w.n))
+        node_copy_w = wrap(copy(node_w.n))
         node_w.n.basic_block_w.n.ast_items.append(node_copy_w)
         node_w.n = self.current_basic_block_w.n
         return self.current_basic_block_w.n.ast_items[-1]

@@ -118,18 +118,21 @@ class LLVMVisitor(CFGVisitor):
 
     def iteration(self, node_w: Wrapper[IterationStatement]):
         conditional_block = self.builder.append_basic_block("condition")
-        advancement_block = self.builder.append_basic_block("advancement")
         self.builder.branch(conditional_block)
+        continue_block = conditional_block
+        if node_w.n.adv_w is not None:
+            advancement_block = self.builder.append_basic_block("advancement")
+            continue_block = advancement_block
+            with self.builder.goto_block(advancement_block):
+                self.visit(node_w.n.adv_w)
+                self.builder.branch(conditional_block)
         body_block = self.builder.append_basic_block("loop.body")
         false_block = self.builder.append_basic_block("end.loop")
-        self.jump_stack.append((advancement_block, false_block))
+        self.jump_stack.append((continue_block, false_block))
         with self.builder.goto_block(body_block):
             self.visit(node_w.n.body_w)
             if not self.builder.block.is_terminated:
-                self.builder.branch(advancement_block)
-        with self.builder.goto_block(advancement_block):
-            self.visit(node_w.n.adv_w)
-            self.builder.branch(conditional_block)
+                self.builder.branch(continue_block)
         with self.builder.goto_block(conditional_block):
             self.builder.cbranch(self.builder.trunc(self.visit(node_w.n.condition_w),ir.IntType(1)), body_block, false_block)
         self.builder.position_at_end(false_block)
@@ -181,12 +184,6 @@ class LLVMVisitor(CFGVisitor):
         return self._get_bin_op_func(self.visit(node_w.n.lhs_w), node_w.n.lhs_w.n.type,
                                 self.visit(node_w.n.rhs_w), node_w.n.rhs_w.n.type,
                                 node_w.n.operator)()
-
-    def bin_op(self, node_w: Wrapper[BinaryOp]):
-        return self._get_bin_op_func(self.visit(node_w.n.lhs_w), node_w.n.lhs_w.n.type,
-                                self.visit(node_w.n.rhs_w), node_w.n.rhs_w.n.type,
-                                node_w.n.operator)()
-
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
         self.no_load = True

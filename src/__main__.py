@@ -114,10 +114,10 @@ def main(argv):
             if not args.disable_cfold:
                 ConstantFoldingVisitor(ast)
 
-            cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
-
             if args.viz_ast or args.viz_all:
                 visualizeAST(ast, f"./{filename}-viz/ast.gv")
+
+            cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
 
             if args.viz_cfg or args.viz_all:
                 visualizeCFG(cfg, f"./{filename}-viz/cfg1.gv")
