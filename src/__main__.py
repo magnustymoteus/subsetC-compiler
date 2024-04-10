@@ -119,21 +119,18 @@ def main(argv):
 
             cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
 
-            if args.viz_cfg or args.viz_all:
-                visualizeCFG(cfg, f"./{filename}-viz/cfg1.gv")
-
             TACVisitor(cfg)
 
-            visualizeCFG(cfg, f"./{filename}-viz/cfg2.gv")
+            if args.viz_cfg or args.viz_all:
+                visualizeCFG(cfg, f"./{filename}-viz/cfg.gv")
 
             llvm = LLVMVisitor(cfg, filename)
 
             if args.viz_cfg or args.viz_all:
                 for function in llvm.module.functions:
                     if function.name == 'main':
-                        pass
-                        #s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/llvm_cfg.gv")
-                        #s.save()
+                        s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/llvm_cfg.gv")
+                        s.save()
 
             for target in args.targets:
                 match target:

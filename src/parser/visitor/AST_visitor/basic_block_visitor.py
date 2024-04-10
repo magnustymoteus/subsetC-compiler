@@ -28,10 +28,9 @@ class BasicBlockVisitor(ASTVisitor):
         if self.add_bblock_next:
             node_w = self.create_bblock(node_w)
             self.add_bblock_next = False
-
         if self.assign_end_branch:
             for selection_w in self.statement_stack:
-                selection_w.n.end_branch_w = node_w
+                selection_w.n.end_branch_w = node_w.n.basic_block_w
             self.assign_end_branch = False
             self.statement_stack.clear()
 
@@ -56,6 +55,8 @@ class BasicBlockVisitor(ASTVisitor):
         self.assign_end_branch = is_root
     def iteration(self, node_w: Wrapper[IterationStatement]):
         is_root: bool = len(self.statement_stack) == 0
+        if node_w.n.adv_w is not None:
+            self.visit(self.create_bblock(node_w.n.adv_w))
         self.visit(self.create_bblock(node_w.n.condition_w))
         self.visit(self.create_bblock(node_w.n.body_w))
         self.statement_stack.append(node_w)
