@@ -20,4 +20,4 @@ class VisualizationVisitor(C_GrammarVisitor):
                     add_nodes(child)
 
         add_nodes(root)
-        dot.render(filename, format='png', cleanup=True)
+        dot.render(filename, format='gv', cleanup=True)

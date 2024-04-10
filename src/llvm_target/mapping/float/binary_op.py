@@ -34,5 +34,5 @@ def get_float_binary_op(left_value: ir.Instruction | ir.Constant, right_value: i
         case "&&":
             return lambda: builder.and_(left_value, right_value, create_reg())
         case _:
-            comp_op: Callable = lambda: builder.fcmp_ordered(operator, left_value, right_value, create_reg())
+            comp_op: Callable = lambda: builder.fcmp_unordered(operator, left_value, right_value, create_reg())
             return lambda: get_float_boolean_binary_op(left_value, right_value, operator, builder, create_reg, comp_op)

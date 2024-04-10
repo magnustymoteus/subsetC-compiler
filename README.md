@@ -5,4 +5,6 @@
 ## Optional Features
 * Project 2
   * const casting
+* Project 4
+  * else if
 * Extra Warnings

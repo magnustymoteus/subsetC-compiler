@@ -14,7 +14,8 @@ from src.parser.listener.error_listener import *
 from src.parser.visitor.AST_visitor import *
 from src.llvm_target import *
 from src.parser.optimizations import *
-
+from llvmlite.binding import *
+import graphviz
 
 
 # Gives filepath to C_GrammarLexer to generate tokens
@@ -54,7 +55,8 @@ def c_file(param):
         raise argparse.ArgumentTypeError('File must be a .c file')
     return param
 
-# TODO: put visit() in node classes themselves instead of in visitors
+# TODO: fix conditions for floats
+
 def main(argv):
     # Flags
     """
@@ -114,15 +116,24 @@ def main(argv):
 
             cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
 
-            TACVisitor(cfg)
-
             if args.viz_ast or args.viz_all:
                 visualizeAST(ast, f"./{filename}-viz/ast.gv")
 
             if args.viz_cfg or args.viz_all:
-                visualizeCFG(cfg, f"./{filename}-viz/cfg.gv")
+                visualizeCFG(cfg, f"./{filename}-viz/cfg1.gv")
+
+            TACVisitor(cfg)
+
+            visualizeCFG(cfg, f"./{filename}-viz/cfg2.gv")
 
             llvm = LLVMVisitor(cfg, filename)
+
+            if args.viz_cfg or args.viz_all:
+                for function in llvm.module.functions:
+                    if function.name == 'main':
+                        s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/llvm_cfg.gv")
+                        s.save()
+
             for target in args.targets:
                 match target:
                     case "llvm":

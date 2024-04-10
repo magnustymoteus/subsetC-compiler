@@ -15,6 +15,10 @@ class TypeCheckerVisitor(ASTVisitor):
                 current_rank = index
         return PrimitiveType(TypeCheckerVisitor.type_ranks[current_rank], is_constant)
 
+    def checkValidPrimitiveType(self, type: PrimitiveType):
+        if type.type not in TypeCheckerVisitor.type_ranks:
+            self.raiseSemanticErr(f"Unknown type {type}")
+
     def checkImplicitDemotion(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
         if TypeCheckerVisitor.type_ranks.index(assignee_type.type) < TypeCheckerVisitor.type_ranks.index(value_type.type):
             self.raiseWarning(f"Implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
@@ -91,6 +95,7 @@ class TypeCheckerVisitor(ASTVisitor):
         node_w.n.type = deepcopy(node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).type)
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
+        self.checkValidPrimitiveType(node_w.n.type)
         super().variable_decl(node_w)
         if node_w.n.definition_w.n is not None:
             self.checkPointerTypes(node_w.n.type, node_w.n.definition_w.n.type)

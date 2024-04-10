@@ -19,6 +19,8 @@ class LLVMVisitor(CFGVisitor):
         self.basic_blocks: dict[BasicBlock, ir.Block] = {}
         self.refs: set[str] = set()
 
+        self.current_bblock: BasicBlock = None
+
         self.module: ir.Module = ir.Module(name=name)
         self.reg_counter: int = 0
         self.module.triple = binding.get_default_triple()
@@ -65,6 +67,11 @@ class LLVMVisitor(CFGVisitor):
             result[0] = ir.PointerType(result[0])
             result[1] = 8
         return result[0], result[1]
+
+    def basic_block(self, node_w: Wrapper[BasicBlock]):
+        for i in range(0, len(node_w.n.ast_items)-1):
+            self.visit(node_w.n.ast_items[i])
+        return self.visit(node_w.n.ast_items[-1])
 
     def select(self, node_w: Wrapper[SelectionStatement]):
         # if
@@ -145,6 +152,11 @@ class LLVMVisitor(CFGVisitor):
                                 self.visit(node_w.n.rhs_w), node_w.n.rhs_w.n.type,
                                 node_w.n.operator)()
 
+    def bin_op(self, node_w: Wrapper[BinaryOp]):
+        return self._get_bin_op_func(self.visit(node_w.n.lhs_w), node_w.n.lhs_w.n.type,
+                                self.visit(node_w.n.rhs_w), node_w.n.rhs_w.n.type,
+                                node_w.n.operator)()
+
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
         self.no_load = True
@@ -169,7 +181,7 @@ class LLVMVisitor(CFGVisitor):
             case "-":
                 return self.builder.sub(operand_value.type(0), operand_value, self._create_reg())
             case "!":
-                return self.builder.icmp_signed('==', operand_value, ir.Constant(ir.IntType(1), 0), self._create_reg())
+                return self._get_bin_op_func(operand_value, node_w.n.operand_w.n.type, ir.Constant(ir.IntType(1), 0),  PrimitiveType('int', True), '==')()
             case "~":
                 return self.builder.not_(operand_value, self._create_reg())
             case "++":
