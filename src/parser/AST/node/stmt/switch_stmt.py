@@ -14,6 +14,7 @@ class SwitchStatement(Statement, Terminator):
         self.branches: list[Wrapper[CompoundStatement]] = branches
         self.default_index: int | None = default_index
         self.end_branch_w: Wrapper[Statement] | None = None
+
     def __repr__(self):
         return f"switch"
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:

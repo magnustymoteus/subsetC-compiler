@@ -67,3 +67,9 @@ class OptimizationVisitor(ASTVisitor):
                 self.visit(statement_w)
                 node_w.n.body_w.n.statements = node_w.n.body_w.n.statements[:i+1]
                 break
+    def switch(self, node_w: Wrapper[SwitchStatement]):
+        for branch_w in node_w.n.branches:
+            for i, statement_w in enumerate(branch_w.n.statements):
+                self.visit(statement_w)
+                branch_w.n.statements = branch_w.n.statements[:i+1]
+                break
