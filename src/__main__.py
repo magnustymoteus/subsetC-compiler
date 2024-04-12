@@ -55,7 +55,6 @@ def c_file(param):
         raise argparse.ArgumentTypeError('File must be a .c file')
     return param
 
-# TODO: fix conditions for floats
 # TODO: improve constant propagation
 # TODO: extra checks for jump statements not in loops or switch
 # TODO: make proper comments of C source code in LLVM code
