@@ -5,7 +5,7 @@ from copy import deepcopy
 
 class OptimizationVisitor(ASTVisitor):
     """Traverses the AST tree in pre-order to perform constant propagation along other small optimizations (operator
-    assignments, removing code after continue/break)"""
+    assignments, removing code after jump statements)"""
 
     def __init__(self, ast: Ast):
         super().__init__(ast)
@@ -62,14 +62,20 @@ class OptimizationVisitor(ASTVisitor):
             CopyVisitor().visit(value)
             node_w.n = value.n
     def iteration(self, node_w: Wrapper[IterationStatement]):
+        self.visit(node_w.n.adv_w)
+        self.visit(node_w.n.condition_w)
         for i, statement_w in enumerate(node_w.n.body_w.n.statements):
+            self.visit(statement_w)
             if isinstance(statement_w.n, JumpStatement):
-                self.visit(statement_w)
                 node_w.n.body_w.n.statements = node_w.n.body_w.n.statements[:i+1]
                 break
     def switch(self, node_w: Wrapper[SwitchStatement]):
+        self.visit(node_w.n.value_w)
+        for condition_w in node_w.n.conditions:
+            self.visit(condition_w)
         for branch_w in node_w.n.branches:
             for i, statement_w in enumerate(branch_w.n.statements):
                 self.visit(statement_w)
-                branch_w.n.statements = branch_w.n.statements[:i+1]
-                break
+                if isinstance(statement_w.n, JumpStatement):
+                    branch_w.n.statements = branch_w.n.statements[:i+1]
+                    break
