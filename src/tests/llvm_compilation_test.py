@@ -2,6 +2,7 @@ import os.path
 
 import pytest
 from src.__main__ import *
+from llvmlite import binding
 
 def compile(path, cfold: bool = True, cprop: bool = True):
     path_in_str = str(path)
@@ -25,7 +26,11 @@ def compile(path, cfold: bool = True, cprop: bool = True):
     cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
     TACVisitor(cfg)
     #visualizeCFG(cfg, "viz/cfg/tac-cfg/" + str(os.path.basename(path)) + ".gv")
-    LLVMVisitor(cfg, os.path.basename(path))
+    llvm = LLVMVisitor(cfg, os.path.basename(path))
+    for function in llvm.module.functions:
+        if function.name == 'main':
+            s = graphviz.Source(binding.get_function_cfg(function), filename=f"./viz/{str(os.path.basename(path))}_llvm_cfg.gv")
+            s.save()
     return ast
 def success(glob_path):
     failed = False

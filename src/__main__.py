@@ -56,14 +56,11 @@ def c_file(param):
     return param
 
 # TODO: fix conditions for floats
+# TODO: improve constant propagation
+# TODO: extra checks for jump statements not in loops or switch
+# TODO: make proper comments of C source code in LLVM code
 
 def main(argv):
-    # Flags
-    """
-    disable-cfold : disable constant folding (should be enabled by default)
-    disable-cprop: disable constant propagation (should be enabled by default)
-    viz: visualize CST, AST, CFG, symbol tables
-    """
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('--disable-cfold', action='store_true',
                             help='disable constant folding')
@@ -108,6 +105,9 @@ def main(argv):
             SymbolTableVisitor(ast)
             TypeCheckerVisitor(ast)
 
+            if args.viz_ast or args.viz_all:
+                visualizeAST(ast, f"./{filename}-viz/ast.gv")
+
             if not args.disable_cprop:
                 OptimizationVisitor(ast)
 
@@ -129,8 +129,9 @@ def main(argv):
             if args.viz_cfg or args.viz_all:
                 for function in llvm.module.functions:
                     if function.name == 'main':
-                        s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/llvm_cfg.gv")
-                        s.save()
+                        pass
+                        #s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/llvm_cfg.gv")
+                        #s.save()
 
             for target in args.targets:
                 match target:

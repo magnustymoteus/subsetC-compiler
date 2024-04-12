@@ -101,6 +101,10 @@ class TypeCheckerVisitor(ASTVisitor):
             self.checkPointerTypes(node_w.n.type, node_w.n.definition_w.n.type)
             self.checkImplicitDemotion(node_w.n.type, node_w.n.definition_w.n.type)
             self.checkDiscardedPointerQualifier(node_w.n.type, node_w.n.definition_w.n.type)
+    def switch(self, node_w: Wrapper[SwitchStatement]):
+        super().switch(node_w)
+        if node_w.n.value_w.n.type.type not in ['int', 'char']:
+            self.raiseSemanticErr(f"Switch value must be an integer")
 
 
 

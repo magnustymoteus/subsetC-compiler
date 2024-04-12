@@ -57,12 +57,13 @@ class OptimizationVisitor(ASTVisitor):
 
     def identifier(self, node_w: Wrapper[Identifier]):
         symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_cpropagated_symbol(node_w.n.name)
-        if symbol.type.ptr_count == 0 and not symbol.has_changed:
+        if symbol.value_w.n is not None and symbol.type.ptr_count == 0 and not symbol.has_changed:
             value = symbol.value_w
             CopyVisitor().visit(value)
             node_w.n = value.n
     def iteration(self, node_w: Wrapper[IterationStatement]):
-        self.visit(node_w.n.adv_w)
+        if node_w.n.adv_w is not None:
+            self.visit(node_w.n.adv_w)
         self.visit(node_w.n.condition_w)
         for i, statement_w in enumerate(node_w.n.body_w.n.statements):
             self.visit(statement_w)
