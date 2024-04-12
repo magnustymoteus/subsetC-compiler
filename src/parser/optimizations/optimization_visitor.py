@@ -61,6 +61,7 @@ class OptimizationVisitor(ASTVisitor):
             value = symbol.value_w
             CopyVisitor().visit(value)
             node_w.n = value.n
+            node_w.n.type = symbol.type
     def iteration(self, node_w: Wrapper[IterationStatement]):
         if node_w.n.adv_w is not None:
             self.visit(node_w.n.adv_w)

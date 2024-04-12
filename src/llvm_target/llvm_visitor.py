@@ -169,8 +169,7 @@ class LLVMVisitor(CFGVisitor):
         coerced_type: PrimitiveType = TypeCheckerVisitor.typeCoercion([lhs_type.type, rhs_type.type], True)
         lhs_is_pointer: bool = lhs_type.ptr_count > 0
         rhs_is_pointer: bool = rhs_type.ptr_count > 0
-        if lhs_type != rhs_type and not (lhs_is_pointer ^ rhs_is_pointer):
-
+        if (lhs_type.type != coerced_type.type or rhs_type.type != coerced_type.type) and not (lhs_is_pointer ^ rhs_is_pointer):
             cast_choice = ((not lhs_is_pointer and rhs_is_pointer)
                            or (rhs_type.type == coerced_type.type and rhs_is_pointer)
                            or (rhs_type.type == coerced_type.type and not lhs_is_pointer))

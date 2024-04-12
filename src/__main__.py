@@ -81,7 +81,7 @@ def main(argv):
     arg_parser.add_argument('--targets', choices=["llvm", "mips"], nargs="+", required=True, help="Choose 1 or more languages to compile to")
     args = arg_parser.parse_args(argv[1:])
 
-    warnings.filterwarnings("error")
+    #warnings.filterwarnings("error")
     pass_tests = Path.cwd().glob(args.path)
     for path in pass_tests:
         path_in_str = str(path)

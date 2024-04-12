@@ -7,6 +7,10 @@ class TypeCheckerVisitor(ASTVisitor):
         super().__init__(ast)
 
     @staticmethod
+    def is_comparison(operator: str):
+        return operator in ['<', '>', '>=', '<=', '==', '!=', '&&', '||', '!']
+
+    @staticmethod
     def typeCoercion(primitive_types : list[str], is_constant: bool) -> PrimitiveType:
         current_rank = 0
         for current_type in primitive_types:
@@ -55,11 +59,17 @@ class TypeCheckerVisitor(ASTVisitor):
     def bin_op(self, node_w: Wrapper[BinaryOp]):
         super().bin_op(node_w)
         self.checkPointerTypes(node_w.n.lhs_w.n.type, node_w.n.rhs_w.n.type)
-        node_w.n.type = TypeCheckerVisitor.typeCoercion([node_w.n.lhs_w.n.type.type, node_w.n.rhs_w.n.type.type], True)
+        if TypeCheckerVisitor.is_comparison(node_w.n.operator):
+            node_w.n.type = PrimitiveType('int', True)
+        else:
+            node_w.n.type = TypeCheckerVisitor.typeCoercion([node_w.n.lhs_w.n.type.type, node_w.n.rhs_w.n.type.type], True)
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
         super().un_op(node_w)
-        node_w.n.type = deepcopy(node_w.n.operand_w.n.type)
+        if TypeCheckerVisitor.is_comparison(node_w.n.operator):
+            node_w.n.type = PrimitiveType('int', True)
+        else:
+            node_w.n.type = deepcopy(node_w.n.operand_w.n.type)
         if node_w.n.is_postfix:
             self.checkAssignee(node_w.n.operand_w)
 
