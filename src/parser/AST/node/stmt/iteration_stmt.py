@@ -1,11 +1,8 @@
-from src.parser.AST.node.stmt.statement import Statement
-from src.parser.AST.node.terminator import *
 from src.parser.AST.node.expr.expr import *
-from src.parser.CFG import BasicBlock
-from src.parser.AST.node.variable_decl import *
+from src.parser.CFG.node import BasicBlock
 from src.parser.AST.node.stmt.compound_stmt import *
 
-class IterationStatement(Statement, Terminator):
+class IterationStatement(Statement):
     def __init__(self, condition_w: Wrapper[Expression], body_w: Wrapper[CompoundStatement], adv_w: Wrapper[Expression | BasicBlock] | None = None):
         super().__init__()
         self.condition_w: Wrapper[Expression] = condition_w

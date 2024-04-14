@@ -1,11 +1,10 @@
 from src.parser.AST.node.stmt.statement import Statement
-from src.parser.AST.node.terminator import *
 from src.parser.AST.node.expr.expr import *
 from src.parser.AST.node.stmt.compound_stmt import *
 from src.parser.CFG import BasicBlock
 
 
-class SwitchStatement(Statement, Terminator):
+class SwitchStatement(Statement):
     def __init__(self, value_w: Wrapper[Expression], conditions: list[Wrapper[Expression]], branches: list[Wrapper[CompoundStatement]],
                  default_index: int | None = None):
         super().__init__()

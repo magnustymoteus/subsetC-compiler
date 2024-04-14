@@ -1,7 +1,13 @@
+from uuid import UUID
+
+from graphviz import Digraph
+
 from src.parser.AST.node.stmt.statement import Statement
-from src.parser.AST.node.terminator import *
 from src.parser.AST.node.expr import Expression
-class LabeledStatement(Statement, Terminator):
+from src.parser.node import Wrapper
+
+
+class LabeledStatement(Statement):
     def __init__(self, label: str, body: list[Wrapper[Statement]], expr_w: Wrapper[Expression] | None = None):
         super().__init__()
         self.label: str = label

@@ -2,52 +2,135 @@ from src.parser.visitor.AST_visitor.ast_visitor import *
 
 '''Here we traverse the AST in pre-order(top down) in terms of making symbol tables and references to them '''
 class SymbolTableVisitor(ASTVisitor):
+    """
+    A visitor class for building and managing symbol tables during AST traversal.
+
+    Attributes:
+        stack (list[Wrapper[SymbolTable]]): A stack to keep track of symbol tables.
+
+    Methods:
+        _get_most_local_sym_tab(self) -> Wrapper[SymbolTable]: Returns the most local symbol table from the stack.
+        visit(self, node_w: Wrapper[Basic]): Visits a node in the AST and updates the local symbol table.
+        __init__(self, ast: Ast): Initializes the SymbolTableVisitor with the given AST.
+        program(self, node_w: Wrapper[Program]): Visits the program node in the AST and creates a global scope symbol table.
+        identifier(self, node_w: Wrapper[Identifier]): Visits an identifier node in the AST and checks if the symbol is declared.
+        compound_stmt(self, node_w: Wrapper[CompoundStatement]): Visits a compound statement node in the AST and creates a new symbol table.
+        cast_op(self, node_w: Wrapper[CastOp]): Visits a cast operation node in the AST.
+        func_def(self, node_w: Wrapper[FunctionDefinition]): Visits a function definition node in the AST.
+        variable_decl(self, node_w: Wrapper[VariableDeclaration]): Visits a variable declaration node in the AST and adds the symbol to the symbol table.
+        enum(self, node_w: Wrapper[Enumeration]): Visits an enumeration node in the AST and adds the symbols to the symbol table.
+    """
+
     def _get_most_local_sym_tab(self) -> Wrapper[SymbolTable]:
+        """
+        Returns the most local symbol table from the stack.
+
+        Returns:
+            Wrapper[SymbolTable]: The most local symbol table.
+        """
         return self.stack[-1]
+
     def visit(self, node_w: Wrapper[Basic]):
+        """
+        Visits a node in the AST and updates the local symbol table.
+
+        Args:
+            node_w (Wrapper[Basic]): The wrapped node to visit.
+
+        Returns:
+            Any: The result of visiting the node.
+        """
         if len(self.stack) > 0:
             node_w.n.local_symtab_w = self._get_most_local_sym_tab()
         return super().visit(node_w)
+
     def __init__(self, ast: Ast):
+        """
+        Initializes the SymbolTableVisitor with the given AST.
+
+        Args:
+            ast (Ast): The abstract syntax tree.
+        """
         self.stack: list[Wrapper[SymbolTable]] = list()
         super().__init__(ast)
+
     def program(self, node_w: Wrapper[Program]):
+        """
+        Visits the program node in the AST and creates a global scope symbol table.
+
+        Args:
+            node_w (Wrapper[Program]): The wrapped program node to visit.
+        """
         # make global scope symbol table
         self.stack.append(wrap(SymbolTable()))
         super().program(node_w)
         self.stack.pop()
 
-
     def identifier(self, node_w: Wrapper[Identifier]):
+        """
+        Visits an identifier node in the AST and checks if the symbol is declared.
+
+        Args:
+            node_w (Wrapper[Identifier]): The wrapped identifier node to visit.
+        """
         # if the symbol is not found in the current symbol table raise an error
         if node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name) is None:
             self.raiseSemanticErr(f"Undeclared variable {node_w.n.name}")
 
-
     def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
+        """
+        Visits a compound statement node in the AST and creates a new symbol table.
+
+        Args:
+            node_w (Wrapper[CompoundStatement]): The wrapped compound statement node to visit.
+        """
         new_symtab = wrap(SymbolTable(self._get_most_local_sym_tab()))
         self.stack.append(new_symtab)
         super().compound_stmt(node_w)
         self.stack.pop()
 
     def cast_op(self, node_w: Wrapper[CastOp]):
+        """
+        Visits a cast operation node in the AST.
+
+        Args:
+            node_w (Wrapper[CastOp]): The wrapped cast operation node to visit.
+        """
         super().cast_op(node_w)
 
     def func_def(self, node_w: Wrapper[FunctionDefinition]):
+        """
+        Visits a function definition node in the AST.
+
+        Args:
+            node_w (Wrapper[FunctionDefinition]): The wrapped function definition node to visit.
+        """
         # TODO
         pass
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
+        """
+        Visits a variable declaration node in the AST and adds the symbol to the symbol table.
+
+        Args:
+            node_w (Wrapper[VariableDeclaration]): The wrapped variable declaration node to visit.
+        """
         super().variable_decl(node_w)
         symbol_name = node_w.n.identifier
         if node_w.n.local_symtab_w.n.symbol_exists_in_scope(symbol_name):
-            decl_or_def : str = "Redeclaration" if not node_w.n.definition_w.n else "Redefinition"
+            decl_or_def: str = "Redeclaration" if not node_w.n.definition_w.n else "Redefinition"
             self.raiseSemanticErr(f"{decl_or_def} of symbol {symbol_name}")
         symtab_entry = SymbolTableEntry(symbol_name, node_w.n.type)
         symtab_entry.value_w.n = node_w.n.definition_w.n
         node_w.n.local_symtab_w.n.add_symbol(symtab_entry)
 
     def enum(self, node_w: Wrapper[Enumeration]):
+        """
+        Visits an enumeration node in the AST and adds the symbols to the symbol table.
+
+        Args:
+            node_w (Wrapper[Enumeration]): The wrapped enumeration node to visit.
+        """
         super().enum(node_w)
         for i, label in enumerate(node_w.n.chronological_labels):
             current_symtab_entry = SymbolTableEntry(label, node_w.n.type)

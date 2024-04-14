@@ -11,6 +11,10 @@ grammar C_project5;
 program: (functionDef | declaration)* EOF;
 
 functionDef: declarationSpec identifier LPAREN (parameterList)? RPAREN compoundStmt;
+
+parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
+parameterDeclaration: declarationSpec declarator?;
+
 typeSpec: 'char' | 'int' | 'float' | typedefName | enumSpec;
 typeQual: 'const';
 storageClassSpec: 'typedef';
@@ -26,8 +30,6 @@ typedefName: identifier;
 pointer: (ARISK typeQual?)+;
 initializer: assignmentExpr;
 
-parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
-parameterDeclaration: declarationSpec declarator?;
 
 stmt: exprStmt | compoundStmt | printfStmt | iterationStmt | jumpStmt | selectionStmt;
 

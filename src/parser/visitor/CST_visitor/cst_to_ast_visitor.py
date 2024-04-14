@@ -3,20 +3,62 @@ from src.antlr_files.C_GrammarParser import *
 from src.parser.AST import *
 
 class CSTToASTVisitor(C_GrammarVisitor):
+    """
+    This class represents a visitor that converts a Concrete Syntax Tree (CST) to an Abstract Syntax Tree (AST).
+    It inherits from the C_GrammarVisitor class.
+    """
+
     def visitFirstMatch(self, ctx, match_type):
+        """
+        Visits the first child node of the given context that matches the specified type.
+
+        Args:
+            ctx: The context node to visit.
+            match_type: The type of the child node to match.
+
+        Returns:
+            The result of visiting the first matching child node, or None if no matching child node is found.
+        """
         if isinstance(match_type, list):
             return next((self.visit(child) for child in ctx.getChildren() if type(child) in match_type), None)
         return next((self.visit(child) for child in ctx.getChildren() if isinstance(child, match_type)), None)
+
     def visitAllMatches(self, ctx, match_type):
+        """
+        Visits all child nodes of the given context that match the specified type.
+
+        Args:
+            ctx: The context node to visit.
+            match_type: The type of the child nodes to match.
+
+        Returns:
+            A list of results from visiting the matching child nodes.
+        """
         if isinstance(match_type, list):
             return [self.visit(child) for child in ctx.getChildren() if type(child) in match_type]
         return [self.visit(child) for child in ctx.getChildren() if isinstance(child, match_type)]
+
     def __init__(self, tokens):
+        """
+        Initializes the CSTToASTVisitor object.
+
+        Args:
+            tokens: The token stream associated with the CST.
+        """
         super().__init__()
         self.tokens = tokens
         self.processed_indices = set()
 
     def get_comments_for_ctx(self, ctx):
+        """
+        Retrieves the comments associated with the given context node.
+
+        Args:
+            ctx: The context node.
+
+        Returns:
+            A list of comments associated with the context node.
+        """
         token_stream = self.tokens.getHiddenTokensToLeft(ctx.start.tokenIndex)
         if token_stream:
             result = [token.text for token in token_stream if token.tokenIndex not in self.processed_indices]
@@ -25,16 +67,42 @@ class CSTToASTVisitor(C_GrammarVisitor):
         return []
 
     def attach_comments(self, ast_node_w, ctx):
+        """
+        Attaches the comments associated with the given context node to the corresponding AST node.
+
+        Args:
+            ast_node_w: The wrapper object representing the AST node.
+            ctx: The context node.
+        """
         ast_node_w.n.comments += self.get_comments_for_ctx(ctx)
         ast_node_w.n.source_code_line = ctx.getText()
 
     def visit(self, tree):
+        """
+        Visits the given tree and returns the result of the visit.
+
+        Args:
+            tree: The tree to visit.
+
+        Returns:
+            The result of the visit.
+        """
         result = super().visit(tree)
         if isinstance(result, Wrapper):
             self.attach_comments(result, tree)
             result.n.set_line_col_nr(tree.start.line, tree.start.column)
         return result
+
     def visitSelectionStmt(self, ctx:C_GrammarParser.SelectionStmtContext):
+        """
+        Visits the given selection statement context and converts it to an AST node.
+
+        Args:
+            ctx: The selection statement context.
+
+        Returns:
+            The AST node representing the selection statement.
+        """
         expr_w: Wrapper[Expression] = self.visitFirstMatch(ctx, C_GrammarParser.ExprContext)
         compound_or_selection_stmts = self.visitAllMatches(ctx, [C_GrammarParser.CompoundStmtContext, C_GrammarParser.SelectionStmtContext])
         match ctx.getChild(0).getText():
@@ -56,12 +124,40 @@ class CSTToASTVisitor(C_GrammarVisitor):
                 raise ValueError("Unexpected selection statement")
 
     def visitJumpStmt(self, ctx:C_GrammarParser.JumpStmtContext):
+        """
+        Visits the given jump statement context and converts it to an AST node.
+
+        Args:
+            ctx: The jump statement context.
+
+        Returns:
+            The AST node representing the jump statement.
+        """
         return wrap(JumpStatement(ctx.getChild(0).getText()))
+
     def visitLabeledStmt(self, ctx:C_GrammarParser.LabeledStmtContext):
+        """
+        Visits the given labeled statement context and converts it to an AST node.
+
+        Args:
+            ctx: The labeled statement context.
+
+        Returns:
+            The AST node representing the labeled statement.
+        """
         return wrap(LabeledStatement(ctx.getChild(0).getText(), self.visitAllMatches(ctx, C_GrammarParser.BlockItemContext),
                                 self.visitFirstMatch(ctx, C_GrammarParser.ConstantExprContext)))
 
     def visitIterationStmt(self, ctx: C_GrammarParser.IterationStmtContext):
+        """
+        Visits the given iteration statement context and converts it to an AST node.
+
+        Args:
+            ctx: The iteration statement context.
+
+        Returns:
+            The AST node representing the iteration statement.
+        """
         body_w: Wrapper[CompoundStatement] = self.visitFirstMatch(ctx, C_GrammarParser.CompoundStmtContext)
         match ctx.getChild(0).getText():
             case 'for':
@@ -82,6 +178,15 @@ class CSTToASTVisitor(C_GrammarVisitor):
                 raise ValueError("Unexpected iteration statement")
 
     def visitForCondition(self, ctx:C_GrammarParser.ForConditionContext):
+        """
+        Visits the given for condition context and returns the elements of the for condition.
+
+        Args:
+            ctx: The for condition context.
+
+        Returns:
+            A list of elements representing the for condition.
+        """
         elements: list[Wrapper[Expression | VariableDeclaration] | None] = [None, None, None] # [initialization, condition, advancement]
         i: int = 0
         for child in ctx.getChildren():
@@ -92,12 +197,30 @@ class CSTToASTVisitor(C_GrammarVisitor):
         return elements
 
     def visitFunctionDef(self, ctx: C_GrammarParser.FunctionDefContext):
+        """
+        Visits the given function definition context and converts it to an AST node.
+
+        Args:
+            ctx: The function definition context.
+
+        Returns:
+            The AST node representing the function definition.
+        """
         # TODO complete this in the future: patryk
         # visits the last child node of the current context
         # ctx.getChild(ctx.getChildCount()-1) e.g. compoundStmtContext
         return self.visit(ctx.getChild(ctx.getChildCount() - 1))
 
     def visitPrintfStmt(self, ctx: C_GrammarParser.PrintfStmtContext):
+        """
+        Visits the given printf statement context and converts it to an AST node.
+
+        Args:
+            ctx: The printf statement context.
+
+        Returns:
+            The AST node representing the printf statement.
+        """
         format: str = ""
         argument: Wrapper[Basic] | None = None
         for child in ctx.getChildren():
@@ -111,13 +234,32 @@ class CSTToASTVisitor(C_GrammarVisitor):
         return wrap(PrintStatement(format, argument))
 
     def visitPostfixExpr(self, ctx: C_GrammarParser.PostfixExprContext):
+        """
+        Visits the given postfix expression context and converts it to an AST node.
+
+        Args:
+            ctx: The postfix expression context.
+
+        Returns:
+            The AST node representing the postfix expression.
+        """
         if ctx.getChildCount() > 1:
             result = wrap(UnaryOp(ctx.getChild(1).getChild(0).getText(), True))
 
             result.n.operand_w = self.visit(ctx.getChild(0))
             return result
         return self.visit(ctx.getChild(0))
+
     def visitEnumSpec(self, ctx:C_GrammarParser.EnumSpecContext):
+        """
+        Visits the given enum specification context and converts it to an AST node.
+
+        Args:
+            ctx: The enum specification context.
+
+        Returns:
+            The AST node representing the enum specification.
+        """
         is_enum_definition: bool = False
         labels: list[Wrapper[Identifier]] = []
         identifier = None
@@ -132,7 +274,17 @@ class CSTToASTVisitor(C_GrammarVisitor):
         if is_enum_definition:
             return wrap(Enumeration(identifier.n.name, labels))
         return identifier.n.name
+
     def visitPointer(self, ctx:C_GrammarParser.PointerContext):
+        """
+        Visits the given pointer context and returns the pointer count and constant pointers.
+
+        Args:
+            ctx: The pointer context.
+
+        Returns:
+            A tuple containing the pointer count and a list of constant pointers.
+        """
         ptr_count: int = 0
         const_ptrs: list[int] = []
         for child in ctx.getChildren():
@@ -144,6 +296,15 @@ class CSTToASTVisitor(C_GrammarVisitor):
         return ptr_count, const_ptrs
 
     def visitDeclaration(self, ctx:C_GrammarParser.DeclarationContext):
+        """
+        Visits the given declaration context and converts it to an AST node.
+
+        Args:
+            ctx: The declaration context.
+
+        Returns:
+            The AST node representing the declaration.
+        """
         declaration_spec = self.visit(ctx.getChild(0))
         declarator_result = self.visitFirstMatch(ctx, C_GrammarParser.DeclaratorContext)
         storage_class_specifier = declaration_spec[0]
@@ -155,9 +316,29 @@ class CSTToASTVisitor(C_GrammarVisitor):
             return wrap(result)
         elif isinstance(type_specifier.n, Enumeration):
             return type_specifier
+
     def visitForDeclaration(self, ctx:C_GrammarParser.ForDeclarationContext):
+        """
+        Visits the given for declaration context and converts it to an AST node.
+
+        Args:
+            ctx: The for declaration context.
+
+        Returns:
+            The AST node representing the for declaration.
+        """
         return self.visitDeclaration(ctx)
+
     def visitDeclarationSpec(self, ctx: C_GrammarParser.DeclarationSpecContext):
+        """
+        Visits the given declaration specification context and returns the storage class specifier and type specifier.
+
+        Args:
+            ctx: The declaration specification context.
+
+        Returns:
+            A tuple containing the storage class specifier and the type specifier.
+        """
         type_specifier = None
         is_constant = False
         ptr_count = 0
@@ -182,6 +363,15 @@ class CSTToASTVisitor(C_GrammarVisitor):
         return storage_class_specifier, PrimitiveType(type_specifier, is_constant, ptr_count, const_ptrs)
 
     def visitTypeSpec(self, ctx:C_GrammarParser.TypeSpecContext):
+        """
+        Visits the given type specification context and converts it to an AST node.
+
+        Args:
+            ctx: The type specification context.
+
+        Returns:
+            The AST node representing the type specification.
+        """
         visitedChild = self.visit(ctx.getChild(0))
         is_enum: bool = isinstance(ctx.getChild(0), C_GrammarParser.EnumSpecContext)
         return visitedChild if is_enum else ctx.getText()

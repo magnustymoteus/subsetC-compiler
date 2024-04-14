@@ -15,7 +15,11 @@ class SymbolTableEntry:
 
 class SymbolTable(AbstractNode):
     def __init__(self, parent: Wrapper[SymbolTable] | None = None):
-        # [a, SymbolTableEntry]
+        """
+        Initialize a SymbolTable object.
+
+        :param parent: The parent symbol table.
+        """
         self.lookup_table: dict[str, SymbolTableEntry] = dict()  # identifier (symbol) mapped to symbol table entry
         self.parent: None | Wrapper[SymbolTable] = parent
         super().__init__()
@@ -28,9 +32,10 @@ class SymbolTable(AbstractNode):
 
     def get_corresponding_table(self, symbol: str) -> SymbolTable | None:
         """
-        Get the symbol table that contains the given symbol
-        :param name: the name of the symbol to look up
-        :return: the symbol table if found, None otherwise
+        Get the symbol table that contains the given symbol.
+
+        :param symbol: The name of the symbol to look up.
+        :return: The symbol table if found, None otherwise.
         """
         if self.lookup_table.get(symbol, None) is None:
             if self.parent is not None:
@@ -38,30 +43,47 @@ class SymbolTable(AbstractNode):
         else:
             return self
         return None
+
     def lookup_symbol(self, symbol: str) -> SymbolTableEntry | None:
         """
         Look up a symbol in the symbol table. If the symbol is not found in the current symbol table, look in the parent.
-        :param name: the name of the symbol to look up
-        :return: the symbol table entry if found, None otherwise
+
+        :param symbol: The name of the symbol to look up.
+        :return: The symbol table entry if found, None otherwise.
         """
         table = self.get_corresponding_table(symbol)
         return table.lookup_table[symbol] if table is not None else None
+
     def lookup_cpropagated_symbol(self, symbol: str):
         entry = self.lookup_symbol(symbol)
         while not entry.has_changed and isinstance(entry.value_w.n, Identifier):
             return self.lookup_cpropagated_symbol(entry.value_w.n.name)
         return entry
+
     def symbol_exists(self, name: str) -> bool:
         """
-               Check if a symbol exists in the symbol table. Only checks most local scope.
-               :param name: the name of the symbol to check
-               :return: True if the symbol exists, False otherwise
-               """
+        Check if a symbol exists in the symbol table.
+
+        :param name: The name of the symbol to check.
+        :return: True if the symbol exists, False otherwise.
+        """
         return True if self.lookup_symbol(name) is not None else False
+
     def symbol_exists_in_scope(self, name: str) -> bool:
+        """
+        Check if a symbol exists in the current symbol table.  Only checks most local scope.
+
+        :param name: The name of the symbol to check.
+        :return: True if the symbol exists, False otherwise.
+        """
         return True if self.lookup_table.get(name, None) is not None else False
 
     def add_symbol(self, entry: SymbolTableEntry):
+        """
+        Add a symbol to the symbol table.
+
+        :param entry: The symbol table entry to add.
+        """
         self.lookup_table[entry.name] = entry
 
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None):

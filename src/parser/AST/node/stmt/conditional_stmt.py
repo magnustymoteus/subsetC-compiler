@@ -1,11 +1,9 @@
-from src.parser.AST.node.stmt.statement import Statement
-from src.parser.AST.node.terminator import *
 from src.parser.AST.node.expr.expr import *
 from src.parser.AST.node.stmt.compound_stmt import *
-from src.parser.CFG import BasicBlock
+from src.parser.CFG.node import BasicBlock
 
 
-class ConditionalStatement(Statement, Terminator):
+class ConditionalStatement(Statement):
     def __init__(self, condition_w: Wrapper[Expression | BasicBlock],
                  true_branch_w: Wrapper[CompoundStatement | BasicBlock], false_branch_w: Wrapper[CompoundStatement | BasicBlock] | None = None):
         super().__init__()
