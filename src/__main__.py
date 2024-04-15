@@ -1,19 +1,14 @@
-import os
 from pathlib import Path
 import argparse
 import warnings
 
-from src.parser.visitor.CST_visitor.cst_to_ast_visitor import CSTToASTVisitor
-from src.parser.visitor.CST_visitor.visualization_visitor import VisualizationVisitor
+from src.compilation import *
+from src.constructs import *
 
-from src.parser import optimizations as optim
 from src.antlr_files.C_GrammarLexer import *
 from src.antlr_files.C_GrammarParser import *
 from src.antlr_files.C_GrammarVisitor import *
-from src.parser.listener.error_listener import *
-from src.parser.visitor.AST_visitor import *
-from src.llvm_target import *
-from src.parser.optimizations import *
+
 from llvmlite.binding import *
 import graphviz
 
@@ -33,9 +28,6 @@ def getAST(tree, tokens) -> Ast:
     ast.set_root(root)
     return ast
 
-
-def applyConstantFolding(ast: Ast):
-    optim.constant_folding(ast)
 
 def visualizeCST(tree, rules, filename):
     visualizationVisitor = VisualizationVisitor()
