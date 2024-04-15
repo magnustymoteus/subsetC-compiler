@@ -102,7 +102,7 @@ class TypeCheckerVisitor(ASTVisitor):
             symtype = assignee_w.n.type
             # TODO: with constant pointers?
             if symtype.ptr_count == 0 and symtype.is_constant:
-                self.raiseSemanticErr(f"assignment of readonly variable {symtype}")
+                self.raiseSemanticErr(f"assignment of readonly variable {assignee_w.n.name}")
         else:
             self.raiseSemanticErr("lvalue required as left operand of assignment")
 
