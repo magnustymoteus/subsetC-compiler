@@ -9,12 +9,22 @@ class OptimizationVisitor(ASTVisitor):
 
     def __init__(self, ast: Ast):
         self.stop_propagating: bool = False
+        self.propagated_symbols: set[SymbolTableEntry] = set()
         super().__init__(ast)
 
     def stop_propagation(self):
         self.stop_propagating = True
     def start_propagation(self):
         self.stop_propagating = False
+
+    def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
+        for statement_w in node_w.n.statements:
+            symbols_before = self.propagated_symbols
+            self.visit(statement_w)
+            symbols_after = self.propagated_symbols
+            for stopped_symbol in symbols_after-symbols_before:
+                stopped_symbol.stopped_propagating = True
+            self.propagated_symbols.clear()
 
     def _lookup_cpropagated_symbol(self, symtab_w: Wrapper[SymbolTable], symbol: str):
         entry = symtab_w.n.lookup_symbol(symbol)
@@ -31,9 +41,8 @@ class OptimizationVisitor(ASTVisitor):
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
         if node_w.n.operator in ["++", "--"]:
-            if isinstance(node_w.n.operand_w.n, Identifier):
-                symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.operand_w.n.name)
-                symbol.stopped_propagating = True
+            symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.operand_w.n.name)
+            symbol.stopped_propagating = True
         super().un_op(node_w)
 
     def assign(self, node_w: Wrapper[Assignment]):
@@ -57,7 +66,7 @@ class OptimizationVisitor(ASTVisitor):
             self.visit(node_w.n.value_w)
             if isinstance(node_w.n.assignee_w.n, Identifier):
                 symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.assignee_w.n.name)
-                symbol.stopped_propagating = True
+                symbol.stopped_propagating = self.stop_propagating
 
     def deref_op(self, node_w: Wrapper[DerefOp]):
         if isinstance(node_w.n.operand_w.n, AddressOfOp):
@@ -75,6 +84,7 @@ class OptimizationVisitor(ASTVisitor):
         if not self.stop_propagating:
             symbol: SymbolTableEntry = self._lookup_cpropagated_symbol(node_w.n.local_symtab_w, node_w.n.name)
             if symbol.value_w.n is not None and symbol.type.ptr_count == 0 and not symbol.stopped_propagating:
+                self.propagated_symbols.add(symbol)
                 value = symbol.value_w
                 CopyVisitor().visit(value)
                 node_w.n = value.n

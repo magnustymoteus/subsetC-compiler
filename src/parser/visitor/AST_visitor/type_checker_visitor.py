@@ -145,7 +145,7 @@ class TypeCheckerVisitor(ASTVisitor):
             node_w.n.type = PrimitiveType('int', True)
         else:
             node_w.n.type = deepcopy(node_w.n.operand_w.n.type)
-        if node_w.n.is_postfix:
+        if node_w.n.operator in ["--", "++"]:
             self.checkAssignee(node_w.n.operand_w)
 
     def deref_op(self, node_w: Wrapper[DerefOp]):
