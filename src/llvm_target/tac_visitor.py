@@ -56,10 +56,12 @@ class TACVisitor(CFGVisitor):
 
         def_node: VariableDeclaration = VariableDeclaration(identifier.name, identifier.type)
         def_node.definition_w = node_w
+        def_node.local_symtab_w = node_w.n.local_symtab_w
 
         self.add_node_to_subject(wrap(def_node))
 
         self.interm_var_count += 1
+
 
         return wrap(identifier)
 
@@ -84,17 +86,23 @@ class TACVisitor(CFGVisitor):
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         super().variable_decl(node_w)
-        if node_w.n.definition_w.n is not None:
-            assign_node = Assignment("=")
-            assign_node.assignee_w.n = Identifier(copy(node_w.n.identifier))
-            assign_node.value_w.n = copy(node_w.n.definition_w.n)
-            assign_node.type = copy(node_w.n.type)
-            assign_node.assignee_w.n.type = node_w.n.type
-            node_w.n.definition_w.n = None
+        if node_w.n.local_symtab_w.n.has_parent:
+            if node_w.n.definition_w.n is not None:
+                assign_node = Assignment("=")
+                assign_node.assignee_w.n = Identifier(copy(node_w.n.identifier))
+                assign_node.value_w.n = copy(node_w.n.definition_w.n)
+                assign_node.type = copy(node_w.n.type)
+                assign_node.assignee_w.n.type = node_w.n.type
+                assign_node.local_symtab_w = node_w.n.local_symtab_w
+                node_w.n.definition_w.n = None
 
-            self.add_node_to_subject(wrap(copy(node_w.n)), 0)
+                self.add_node_to_subject(wrap(copy(node_w.n)), 0)
 
-            node_w.n = assign_node
+                node_w.n = assign_node
+        else:
+            if node_w.n.definition_w.n is not None:
+                if not isinstance(node_w.n.definition_w.n, Literal):
+                    self.raiseSemanticErr("Global variable definition must be a compile time constant")
 
 
 

@@ -10,4 +10,4 @@ int main() {
             printf("%d", 3);
             break;
     }
-}
+ return 0; }

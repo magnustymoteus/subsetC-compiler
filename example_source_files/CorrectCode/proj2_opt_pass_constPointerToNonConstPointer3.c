@@ -4,4 +4,4 @@ const float* f_ptr = &f;
 float* non_const_f_ptr = f_ptr;
 *non_const_f_ptr = 3.1492;
 const float result = f + 1.0;
-}
+ return 0; }

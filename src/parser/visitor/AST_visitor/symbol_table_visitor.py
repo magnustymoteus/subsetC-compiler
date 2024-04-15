@@ -16,7 +16,6 @@ class SymbolTableVisitor(ASTVisitor):
         identifier(self, node_w: Wrapper[Identifier]): Visits an identifier node in the AST and checks if the symbol is declared.
         compound_stmt(self, node_w: Wrapper[CompoundStatement]): Visits a compound statement node in the AST and creates a new symbol table.
         cast_op(self, node_w: Wrapper[CastOp]): Visits a cast operation node in the AST.
-        func_def(self, node_w: Wrapper[FunctionDefinition]): Visits a function definition node in the AST.
         variable_decl(self, node_w: Wrapper[VariableDeclaration]): Visits a variable declaration node in the AST and adds the symbol to the symbol table.
         enum(self, node_w: Wrapper[Enumeration]): Visits an enumeration node in the AST and adds the symbols to the symbol table.
     """
@@ -66,6 +65,15 @@ class SymbolTableVisitor(ASTVisitor):
         super().program(node_w)
         self.stack.pop()
 
+    def func_call(self, node_w: Wrapper[FunctionCall]):
+        super().func_call(node_w)
+        if not node_w.n.local_symtab_w.n.symbol_exists(node_w.n.func_name):
+            self.raiseSemanticErr(f"Undeclared function {node_w.n.func_name}")
+        else:
+            symbol_entry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.func_name)
+            if symbol_entry.value_w.n is None:
+                self.raiseSemanticErr(f"Function {node_w.n.func_name} declared without definition")
+
     def identifier(self, node_w: Wrapper[Identifier]):
         """
         Visits an identifier node in the AST and checks if the symbol is declared.
@@ -76,6 +84,7 @@ class SymbolTableVisitor(ASTVisitor):
         # if the symbol is not found in the current symbol table raise an error
         if node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name) is None:
             self.raiseSemanticErr(f"Undeclared variable {node_w.n.name}")
+
 
     def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
         """
@@ -89,6 +98,15 @@ class SymbolTableVisitor(ASTVisitor):
         super().compound_stmt(node_w)
         self.stack.pop()
 
+    def func_def(self, node_w: Wrapper[FunctionDefinition]):
+        statements = node_w.n.body_w.n.statements
+        node_w.n.body_w.n.statements = node_w.n.parameters+statements
+        entry = SymbolTableEntry(node_w.n.name, node_w.n.type)
+        entry.value_w = node_w.n.body_w
+        node_w.n.local_symtab_w.n.add_symbol(entry)
+        super().func_def(node_w)
+        node_w.n.body_w.n.statements = statements
+
     def cast_op(self, node_w: Wrapper[CastOp]):
         """
         Visits a cast operation node in the AST.
@@ -98,15 +116,6 @@ class SymbolTableVisitor(ASTVisitor):
         """
         super().cast_op(node_w)
 
-    def func_def(self, node_w: Wrapper[FunctionDefinition]):
-        """
-        Visits a function definition node in the AST.
-
-        Args:
-            node_w (Wrapper[FunctionDefinition]): The wrapped function definition node to visit.
-        """
-        # TODO
-        pass
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         """

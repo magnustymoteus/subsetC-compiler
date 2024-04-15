@@ -25,4 +25,4 @@ int main() {
         default:
             printf("%c", 'c');
     }
-}
+ return 0; }

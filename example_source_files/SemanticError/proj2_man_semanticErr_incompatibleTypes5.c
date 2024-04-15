@@ -7,4 +7,4 @@ int z = -33;
 int* p = &z;
 
 p = *x;
-}
+ return 0; }

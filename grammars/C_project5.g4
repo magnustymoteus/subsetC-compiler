@@ -1,18 +1,10 @@
 grammar C_project5;
 
-/*
-    expr: expression
-    spec: specifier
-    def: definition
-    qual: qualifier
-*/
-// Parser rules
-
 program: (functionDef | declaration)* EOF;
 
 functionDef: declarationSpec identifier LPAREN (parameterList)? RPAREN compoundStmt;
 
-parameterList: parameterDeclaration | parameterList ',' parameterDeclaration;
+parameterList: parameterDeclaration (',' parameterDeclaration)*;
 parameterDeclaration: declarationSpec declarator?;
 
 typeSpec: 'char' | 'int' | 'float' | typedefName | enumSpec;
@@ -20,7 +12,7 @@ typeQual: 'const';
 storageClassSpec: 'typedef';
 declarationSpec: storageClassSpec? typeQual? typeSpec pointer?;
 declaration: declarationSpec declarator? SEMICOL; //(',' declarator)*;
-declarator: identifier | identifier EQ assignmentExpr | LPAREN parameterList? RPAREN;
+declarator: identifier | identifier EQ assignmentExpr | identifier LPAREN parameterList? RPAREN;
 
 enumSpec: 'enum' identifier (LBRACE enum (',' enum)* RBRACE)?;
 enum: identifier;
@@ -41,7 +33,7 @@ forDeclaration: declarationSpec declarator?;
 
 labeledStmt: 'case' constantExpr COL blockItem* | 'default' COL blockItem*;
 
-jumpStmt: 'continue' SEMICOL | 'break' SEMICOL;
+jumpStmt: 'continue' SEMICOL | 'break' SEMICOL | 'return' expr? SEMICOL;
 
 // temporary, remove when introducing function calls (?)
 printfStmt: 'printf' LPAREN '"' printfFormat '"' ',' (identifier | literal) RPAREN SEMICOL;
@@ -71,7 +63,11 @@ addExpr: multExpr | addExpr (PLUS | MINUS) multExpr;
 multExpr: castExpr | multExpr (ARISK | DIV | MOD) castExpr;
 castExpr: unaryExpr | LPAREN typeSpec RPAREN castExpr;
 unaryExpr: postfixExpr | unaryOp castExpr;
-postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr postfixOp;
+postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr postfixOp | functionCallExpr | arrayAccessExpr;
+
+functionCallExpr: identifier LPAREN (assignmentExpr (',' assignmentExpr)*)? RPAREN;
+arrayAccessExpr: LBRACK expr RBRACK;
+
 postfixOp: DPLUS | DMINUS;
 primaryExpr: identifier | literal | LPAREN expr RPAREN;
 unaryOp: PLUS | MINUS | NOT | BITNOT | DPLUS | DMINUS | AMP | ARISK;
@@ -91,6 +87,9 @@ RPAREN: ')';
 
 LBRACE: '{';
 RBRACE: '}';
+
+LBRACK: '[';
+RBRACK: ']';
 
 PLUS: '+';
 MINUS: '-';

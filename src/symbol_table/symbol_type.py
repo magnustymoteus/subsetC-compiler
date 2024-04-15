@@ -32,6 +32,8 @@ class FunctionType(SymbolType):
         self.return_type: SymbolType = return_type
         self.parameter_types: list[SymbolType] = parameter_types
         super().__init__()
+    def __repr__(self):
+        return f"{self.return_type} ({self.parameter_types})"
 
 
 '''class ArrayType(SymbolType):

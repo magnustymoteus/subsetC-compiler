@@ -9,4 +9,4 @@ int** x_ptr = &b_ptr;
 x_ptr = &b;
 
 // error because int** = int*
-}
+ return 0; }

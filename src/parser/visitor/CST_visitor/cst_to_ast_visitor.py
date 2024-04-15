@@ -133,7 +133,13 @@ class CSTToASTVisitor(C_GrammarVisitor):
         Returns:
             The AST node representing the jump statement.
         """
-        return wrap(JumpStatement(ctx.getChild(0).getText()))
+        type: str = ctx.getChild(0).getText()
+        match type:
+            case "return":
+                expr_w: Wrapper[Expression] | None = self.visitFirstMatch(ctx, C_GrammarParser.ExprContext)
+                return wrap(ReturnStatement(expr_w))
+            case _:
+                return wrap(JumpStatement(type))
 
     def visitLabeledStmt(self, ctx:C_GrammarParser.LabeledStmtContext):
         """
@@ -196,6 +202,16 @@ class CSTToASTVisitor(C_GrammarVisitor):
                 elements[i] = self.visit(child)
         return elements
 
+    def visitParameterList(self, ctx:C_GrammarParser.ParameterListContext):
+        return self.visitAllMatches(ctx, C_GrammarParser.ParameterDeclarationContext)
+    def visitParameterDeclaration(self, ctx:C_GrammarParser.ParameterDeclarationContext):
+        return self.visitDeclaration(ctx)
+
+    def visitFunctionCallExpr(self, ctx:C_GrammarParser.FunctionCallExprContext):
+        func_name: str = ctx.getChild(0).getText()
+        arguments: list[Wrapper[Expression]] = self.visitAllMatches(ctx, C_GrammarParser.AssignmentExprContext)
+        return wrap(FunctionCall(func_name, arguments))
+
     def visitFunctionDef(self, ctx: C_GrammarParser.FunctionDefContext):
         """
         Visits the given function definition context and converts it to an AST node.
@@ -206,10 +222,15 @@ class CSTToASTVisitor(C_GrammarVisitor):
         Returns:
             The AST node representing the function definition.
         """
-        # TODO complete this in the future: patryk
-        # visits the last child node of the current context
-        # ctx.getChild(ctx.getChildCount()-1) e.g. compoundStmtContext
-        return self.visit(ctx.getChild(ctx.getChildCount() - 1))
+        body_w: Wrapper[CompoundStatement] = self.visitFirstMatch(ctx, C_GrammarParser.CompoundStmtContext)
+        function_name: str = self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext).n.name
+        return_type: PrimitiveType = self.visitFirstMatch(ctx, C_GrammarParser.DeclarationSpecContext)[1]
+        parameters: list[Wrapper[VariableDeclaration]] = self.visitFirstMatch(ctx, C_GrammarParser.ParameterListContext)
+        if parameters is None:
+            parameters = []
+        result = FunctionDefinition(function_name, body_w, parameters)
+        result.type = FunctionType(return_type, [parameter_w.n.type for parameter_w in parameters])
+        return wrap(result)
 
     def visitPrintfStmt(self, ctx: C_GrammarParser.PrintfStmtContext):
         """

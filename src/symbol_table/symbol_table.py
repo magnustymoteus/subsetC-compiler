@@ -6,7 +6,7 @@ class SymbolTableEntry:
     def __init__(self, name: str, symbolType: SymbolType):
         self.name = name
         self.type = symbolType
-        self.has_changed: bool = False
+        self.stopped_propagating: bool = False
         self.value_w: Wrapper = wrap()
     @property
     def __repr__(self):
@@ -29,6 +29,8 @@ class SymbolTable(AbstractNode):
         for symbol in self.lookup_table:
             result += "\n"+self.lookup_table[symbol].__repr__()
         return "Symbol Table:"+result
+    def has_parent(self) -> bool:
+        return self.parent is not None
 
     def get_corresponding_table(self, symbol: str) -> SymbolTable | None:
         """
@@ -53,12 +55,6 @@ class SymbolTable(AbstractNode):
         """
         table = self.get_corresponding_table(symbol)
         return table.lookup_table[symbol] if table is not None else None
-
-    def lookup_cpropagated_symbol(self, symbol: str):
-        entry = self.lookup_symbol(symbol)
-        while not entry.has_changed and isinstance(entry.value_w.n, Identifier):
-            return self.lookup_cpropagated_symbol(entry.value_w.n.name)
-        return entry
 
     def symbol_exists(self, name: str) -> bool:
         """

@@ -19,4 +19,4 @@ printf("%d", result); //show the result
 x = x + 1;
 }
 }
-}
+ return 0; }

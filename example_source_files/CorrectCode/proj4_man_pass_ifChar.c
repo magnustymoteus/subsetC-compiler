@@ -12,4 +12,4 @@ int main() {
             printf("%d", 420);
         }
     }
-}
+ return 0; }

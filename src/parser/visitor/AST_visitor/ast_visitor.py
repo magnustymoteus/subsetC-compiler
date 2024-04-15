@@ -18,7 +18,7 @@ class ASTVisitor():
         raise SemanticError(f"{self.current_line_nr}:{self.current_col_nr}:error: {message}")
 
     def raiseWarning(self, message: str):
-        warnings.warn(f"{self.current_line_nr}:{self.current_col_nr}:error: {message}")
+        warnings.warn(f"{self.current_line_nr}:{self.current_col_nr}:warning: {message}")
 
     def visit(self, node_w: Wrapper[Basic]):
         """
@@ -71,11 +71,14 @@ class ASTVisitor():
                 return self.conditional(node_w)
             case IterationStatement():
                 return self.iteration(node_w)
+            case ReturnStatement():
+                return self.return_stmt(node_w)
             case JumpStatement():
                 return self.jump(node_w)
             case LabeledStatement():
                 return self.labeled(node_w)
-
+            case FunctionCall():
+                return self.func_call(node_w)
             case _:
                 raise Exception
 
@@ -106,7 +109,13 @@ class ASTVisitor():
             self.visit(node_w.n.expr_w)
         for statement_w in node_w.n.body:
             self.visit(statement_w)
+    def return_stmt(self, node_w: Wrapper[ReturnStatement]):
+        if node_w.n.expr_w is not None:
+            self.visit(node_w.n.expr_w)
 
+    def func_call(self, node_w: Wrapper[FunctionCall]):
+        for arg_w in node_w.n.arguments:
+            self.visit(arg_w)
     def jump(self, node_w: Wrapper[JumpStatement]):
         """
         Method called when encountering a JumpStatement node.
@@ -298,7 +307,9 @@ class ASTVisitor():
         Returns:
             None
         """
-        pass
+        for param_w in node_w.n.parameters:
+            self.visit(param_w)
+        self.visit(node_w.n.body_w)
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         """

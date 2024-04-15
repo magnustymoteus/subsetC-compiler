@@ -3,4 +3,4 @@ int main() {
 	int *b = &a;
 	int **c = &b;
 	**c = 10;
-}
+ return 0; }

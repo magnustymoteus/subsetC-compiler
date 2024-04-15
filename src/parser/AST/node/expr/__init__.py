@@ -9,3 +9,4 @@ from src.parser.AST.node.expr.char_lit import *
 from src.parser.AST.node.expr.identifier import *
 from src.parser.AST.node.expr.lit import *
 from src.parser.AST.node.expr.cast_op import *
+from src.parser.AST.node.expr.func_call import *

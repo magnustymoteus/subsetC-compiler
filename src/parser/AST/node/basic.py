@@ -13,7 +13,6 @@ class Basic(AbstractNode):
         self.comments = []
         self.source_code_line: str | None = None
         self.local_symtab_w: Wrapper[SymbolTable] = wrap()
-        self.basic_block_w: Wrapper[BasicBlock] | None = None
 
 
 
@@ -25,11 +24,7 @@ class Basic(AbstractNode):
         """
         Add the node to the dot graph. The name is determined by the node's repr.
         """
-        if self.basic_block_w is not None:
-            with graph.subgraph(name=f"cluster_{self.basic_block_w.n.id}", graph_attr={"margin": "30"}) as subgraph:
-                super().append_to_graph(subgraph, parent_id, label)
-        else:
-            super().append_to_graph(graph, parent_id, label)
+        super().append_to_graph(graph, parent_id, label)
         if self.local_symtab_w.n is not None:
             self.local_symtab_w.n.append_to_graph(graph, self.id)
 

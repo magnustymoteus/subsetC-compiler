@@ -9,4 +9,4 @@ int* p = &z;
 x = *p;
 
 p* = 5;
-}
+ return 0; }

@@ -122,7 +122,7 @@ class TypeCheckerVisitor(ASTVisitor):
         if left_copy.ptr_count > 0 and right_copy.ptr_count == 0:
             if right_copy.type != 'int':
                 # case where a pointer gets assigned to a non integer non pointer
-                self.raiseSemanticErr(f"Cannot assign pointer {left_copy} to {right_copy}")
+                self.raiseSemanticErr(f"Cannot bind pointer {left_copy} to {right_copy}")
             # case where a pointer gets assigned to a non pointer integer
         elif left_copy.ptr_count != right_copy.ptr_count:
             # case where two pointers dont match
@@ -191,6 +191,31 @@ class TypeCheckerVisitor(ASTVisitor):
         super().switch(node_w)
         if node_w.n.value_w.n.type.type not in ['int', 'char']:
             self.raiseSemanticErr(f"Switch value must be an integer")
+
+    def func_call(self, node_w: Wrapper[FunctionCall]):
+        super().func_call(node_w)
+        entry: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.func_name)
+        func_type: FunctionType = entry.type
+        node_w.n.type = func_type.return_type
+
+        arg_count = len(node_w.n.arguments)
+        param_count = len(func_type.parameter_types)
+        if arg_count != param_count:
+            more_or_less_str: str = "Too many" if arg_count > param_count else "Too few"
+            self.raiseSemanticErr(f"{more_or_less_str} arguments to function {node_w.n.func_name}")
+        for i in range(0, arg_count):
+            arg_type = node_w.n.arguments[i].n.type
+            param_type = func_type.parameter_types[i]
+            self.checkImplicitDemotion(param_type, arg_type)
+            self.checkPointerTypes(param_type, arg_type)
+            self.checkDiscardedPointerQualifier(param_type, arg_type)
+
+
+    def return_stmt(self, node_w: Wrapper[ReturnStatement]):
+        super().return_stmt(node_w)
+        if node_w.n.expr_w is not None:
+            node_w.n.type = node_w.n.expr_w.n.type
+
 
 
 

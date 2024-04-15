@@ -4,4 +4,4 @@ int main() {
     b = 10;
     a = 5;
     int c = 10 > a+b;
-}
+ return 0; }

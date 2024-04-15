@@ -11,4 +11,4 @@ f2 = f2 + f;
 
 char c = 'a';
 c = 'b';
-}
+ return 0; }

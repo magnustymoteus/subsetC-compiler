@@ -8,4 +8,4 @@ int main() {
     int z = x && y;
 
     bool b = y * z * 57809;
-}
+ return 0; }

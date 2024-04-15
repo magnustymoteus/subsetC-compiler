@@ -20,7 +20,7 @@ class BasicBlockVisitor(ASTVisitor):
         self.assign_end_branch: bool = False
         self.statement_stack: list[Wrapper[Statement]] = []
         self.current_basic_block_w: Wrapper[BasicBlock] = None
-        self.add_bblock_next: bool = True
+        self.add_bblock_next: bool = False
         super().__init__(ast)
 
     def create_bblock(self, node_w: Wrapper[Basic]):
@@ -41,6 +41,10 @@ class BasicBlockVisitor(ASTVisitor):
         node_w.n = self.current_basic_block_w.n
         return self.current_basic_block_w.n.ast_items[-1]
 
+    def func_def(self, node_w: Wrapper[FunctionDefinition]):
+        self.add_bblock_next: bool = True
+        self.visit(node_w.n.body_w)
+
     def visit(self, node_w: Wrapper[Basic]):
         """
         Visits a basic node.
@@ -53,12 +57,10 @@ class BasicBlockVisitor(ASTVisitor):
             self.add_bblock_next = False
         if self.assign_end_branch:
             for selection_w in self.statement_stack:
-                selection_w.n.end_branch_w = node_w.n.basic_block_w
+                selection_w.n.end_branch_w = self.current_basic_block_w
             self.assign_end_branch = False
             self.statement_stack.clear()
 
-        if self.current_basic_block_w is not None:
-            node_w.n.basic_block_w = self.current_basic_block_w
         super().visit(node_w)
 
     def switch(self, node_w: Wrapper[SwitchStatement]):

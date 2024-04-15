@@ -3,6 +3,8 @@ class ConstantFoldingVisitor(ASTVisitor):
     def __init__(self, ast: Ast):
         super().__init__(ast)
     def bin_op(self, node_w: Wrapper[BinaryOp]):
+        self.visit(node_w.n.lhs_w)
+        self.visit(node_w.n.rhs_w)
         if isinstance(node_w.n.lhs, Literal) and isinstance(node_w.n.rhs, Literal):
             result = node_w.n
             new_type = node_w.n.type
@@ -59,6 +61,7 @@ class ConstantFoldingVisitor(ASTVisitor):
                 node_w.n = IntLiteral(result)
             node_w.n.type = new_type
     def un_op(self, node_w: Wrapper[UnaryOp]):
+        self.visit(node_w.n.operand_w)
         if isinstance(node_w.n.operand, Literal) and not node_w.n.is_postfix:
             result = node_w.n
             new_type = node_w.n.operand_w.n.type
@@ -79,6 +82,7 @@ class ConstantFoldingVisitor(ASTVisitor):
             node_w.n = literal_type(result)
             node_w.n.type = new_type
     def cast_op(self, node_w: Wrapper[CastOp]):
+        self.visit(node_w.n.expression_w)
         if isinstance(node_w.n.expression_w.n, Literal):
             result = node_w.n
             match node_w.n.target_type.type:

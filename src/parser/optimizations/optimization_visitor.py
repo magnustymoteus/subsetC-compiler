@@ -8,17 +8,32 @@ class OptimizationVisitor(ASTVisitor):
     assignments, removing code after jump statements)"""
 
     def __init__(self, ast: Ast):
+        self.stop_propagating: bool = False
         super().__init__(ast)
 
+    def stop_propagation(self):
+        self.stop_propagating = True
+    def start_propagation(self):
+        self.stop_propagating = False
+
+    def _lookup_cpropagated_symbol(self, symtab_w: Wrapper[SymbolTable], symbol: str):
+        entry = symtab_w.n.lookup_symbol(symbol)
+        while not entry.stopped_propagating and isinstance(entry.value_w.n, Identifier):
+            return self._lookup_cpropagated_symbol(symtab_w, entry.value_w.n.name)
+        return entry
+
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
-        if node_w.n.definition_w.n is not None:
-            self.visit(node_w.n.definition_w)
+        if node_w.n.type.ptr_count > 0:
+            self.stop_propagation()
+            node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.identifier).stopped_propagating = True
+        super().variable_decl(node_w)
+        self.start_propagation()
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
         if node_w.n.operator in ["++", "--"]:
             if isinstance(node_w.n.operand_w.n, Identifier):
                 symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.operand_w.n.name)
-                symbol.has_changed = True
+                symbol.stopped_propagating = True
         super().un_op(node_w)
 
     def assign(self, node_w: Wrapper[Assignment]):
@@ -42,7 +57,7 @@ class OptimizationVisitor(ASTVisitor):
             self.visit(node_w.n.value_w)
             if isinstance(node_w.n.assignee_w.n, Identifier):
                 symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.assignee_w.n.name)
-                symbol.has_changed = True
+                symbol.stopped_propagating = True
 
     def deref_op(self, node_w: Wrapper[DerefOp]):
         if isinstance(node_w.n.operand_w.n, AddressOfOp):
@@ -52,25 +67,31 @@ class OptimizationVisitor(ASTVisitor):
             super().deref_op(node_w)
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
-        if not isinstance(node_w.n.operand_w.n, Identifier):
-            self.visit(node_w.n.operand_w)
+        self.stop_propagation()
+        self.visit(node_w.n.operand_w)
+        self.start_propagation()
 
     def identifier(self, node_w: Wrapper[Identifier]):
-        symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_cpropagated_symbol(node_w.n.name)
-        if symbol.value_w.n is not None and symbol.type.ptr_count == 0 and not symbol.has_changed:
-            value = symbol.value_w
-            CopyVisitor().visit(value)
-            node_w.n = value.n
-            node_w.n.type = symbol.type
+        if not self.stop_propagating:
+            symbol: SymbolTableEntry = self._lookup_cpropagated_symbol(node_w.n.local_symtab_w, node_w.n.name)
+            if symbol.value_w.n is not None and symbol.type.ptr_count == 0 and not symbol.stopped_propagating:
+                value = symbol.value_w
+                CopyVisitor().visit(value)
+                node_w.n = value.n
+                node_w.n.type = symbol.type
+        else:
+            node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).stopped_propagating = True
     def iteration(self, node_w: Wrapper[IterationStatement]):
         if node_w.n.adv_w is not None:
             self.visit(node_w.n.adv_w)
         self.visit(node_w.n.condition_w)
+        self.stop_propagation()
         for i, statement_w in enumerate(node_w.n.body_w.n.statements):
             self.visit(statement_w)
             if isinstance(statement_w.n, JumpStatement):
                 node_w.n.body_w.n.statements = node_w.n.body_w.n.statements[:i+1]
                 break
+        self.start_propagation()
     def switch(self, node_w: Wrapper[SwitchStatement]):
         self.visit(node_w.n.value_w)
         for condition_w in node_w.n.conditions:

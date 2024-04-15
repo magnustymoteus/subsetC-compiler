@@ -3,4 +3,4 @@ int main() {
     int *ptr = &a;
     *ptr++;
     ptr++;
-}
+ return 0; }

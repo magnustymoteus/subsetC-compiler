@@ -12,4 +12,4 @@ int main() {
         int z = 20;
         }
     }
-}
+ return 0; }

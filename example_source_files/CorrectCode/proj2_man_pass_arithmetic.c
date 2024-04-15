@@ -8,4 +8,4 @@ int main() {
     int x = (-b + b*b - 4*a*c) / (2*a);
 
     int d = c;
-}
+ return 0; }

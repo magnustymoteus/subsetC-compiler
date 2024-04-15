@@ -4,4 +4,4 @@ int main() {
     int **c = &b;
     int ***d = &c;
     ***d = 10;
-}
+ return 0; }

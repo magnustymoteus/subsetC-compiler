@@ -9,4 +9,4 @@ int n = number++;
 n = n - n++;
 
 ++n;
-}
+ return 0; }

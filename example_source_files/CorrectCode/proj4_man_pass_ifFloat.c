@@ -9,4 +9,4 @@ int main() {
     else if(x == 6969.69420) {
         printf("%d", 3);
     }
-}
+ return 0; }

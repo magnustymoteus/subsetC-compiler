@@ -5,4 +5,4 @@ typedef vector char;
 
 int main() {
     vector = 'c';
-}
+ return 0; }

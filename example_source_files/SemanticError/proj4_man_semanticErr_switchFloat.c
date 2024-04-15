@@ -11,4 +11,4 @@ int main() {
         default:
             printf("%d", 3);
     }
-}
+ return 0; }

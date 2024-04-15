@@ -3,4 +3,4 @@ int main() {
         printf("%d", i);
     }
     printf("%d", 420);
-}
+ return 0; }

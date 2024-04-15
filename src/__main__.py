@@ -55,7 +55,6 @@ def c_file(param):
         raise argparse.ArgumentTypeError('File must be a .c file')
     return param
 
-# TODO: improve constant propagation
 # TODO: extra checks for jump statements not in loops or switch
 # TODO: make proper comments of C source code in LLVM code
 
@@ -104,9 +103,6 @@ def main(argv):
             SymbolTableVisitor(ast)
             TypeCheckerVisitor(ast)
 
-            if args.viz_ast or args.viz_all:
-                visualizeAST(ast, f"./{filename}-viz/ast.gv")
-
             if not args.disable_cprop:
                 OptimizationVisitor(ast)
 
@@ -123,14 +119,14 @@ def main(argv):
             if args.viz_cfg or args.viz_all:
                 visualizeCFG(cfg, f"./{filename}-viz/cfg.gv")
 
-            llvm = LLVMVisitor(cfg, filename)
+            llvm = LLVMVisitor(ast, filename)
 
             if args.viz_cfg or args.viz_all:
                 for function in llvm.module.functions:
                     if function.name == 'main':
                         pass
-                        #s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/llvm_cfg.gv")
-                        #s.save()
+                        '''s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/llvm_cfg.gv")
+                        s.save()'''
 
             for target in args.targets:
                 match target:
