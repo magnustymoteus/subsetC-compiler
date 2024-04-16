@@ -1,4 +1,5 @@
 from src.antlr_files.C_PreprocessorParser import *
+from src.antlr_files.C_PreprocessorLexer import *
 from src.antlr_files.C_PreprocessorVisitor import *
 from antlr4.TokenStreamRewriter import *
 import os
@@ -13,15 +14,14 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
     @staticmethod
     def get_original_text(ctx) -> str:
         return ctx.parser.getInputStream().getText(ctx.start, ctx.stop)
-    def __init__(self, buffered_tokens_stream: BufferedTokenStream, filepath: str):
+    def __init__(self, buffered_tokens_stream: BufferedTokenStream, filepath: str, defines: dict[str, str]={}):
         self.filepath = filepath
-        self.defines: dict[str, str] = {}
+        self.defines: dict[str, str] = defines
         self.rewriter = TokenStreamRewriter(buffered_tokens_stream)
-        self.included_paths: set[str] = {filepath}
-        self.ifndef_stack: list[int] # contains line for the end of the endif directive token
+        self.ifndef_stack: list[tuple[int, bool]] = [] # contains line for the end of the endif directive token
     def visitProgram(self, ctx: C_PreprocessorParser.ProgramContext):
         super().visitProgram(ctx)
-        if self.if_counter != 0:
+        if len(self.ifndef_stack) > 0:
             self.raise_preprocessing_error("Unterminated #if", ctx)
     def visitLine(self, ctx:C_PreprocessorParser.LineContext):
         self.visitChildren(ctx)
@@ -35,9 +35,16 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
             included_path = os.path.join(os.path.dirname(self.filepath), incomplete_path)
             if not os.path.exists(included_path):
                 self.raise_preprocessing_error(f"{included_path}: No such file", ctx)
+
             included_contents = open(included_path, 'r').read()
-            self.rewriter.replace("default", ctx.start.tokenIndex, ctx.stop.tokenIndex, included_contents)
-            self.included_paths.add(included_path)
+            tokens = C_PreprocessorLexer(InputStream(included_contents))
+            stream = CommonTokenStream(tokens)
+            tree = C_PreprocessorParser(stream).program()
+            sub_preprocessor = PreprocessorVisitor(stream, included_path, self.defines)
+            sub_preprocessor.visit(tree)
+            self.defines = self.defines | sub_preprocessor.defines
+            self.rewriter.replace("default", ctx.start.tokenIndex, ctx.stop.tokenIndex, sub_preprocessor.get_processed_result())
+
         else:
             # TODO: stdio.h => enable printf, scanf, ...
             self.rewriter.delete("default", ctx.start.tokenIndex, ctx.stop.tokenIndex)
@@ -49,8 +56,14 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
     def get_processed_result(self):
         return self.rewriter.getDefaultText()
     def visitIfndefDirective(self, ctx:C_PreprocessorParser.IfndefDirectiveContext):
-        self.if_counter += 1
+        is_not_defined: bool = self.defines.get(ctx.getChild(1).getText(), None) is None
+        self.ifndef_stack.append((ctx.stop.tokenIndex, is_not_defined))
+        self.rewriter.delete("default", ctx.start.tokenIndex, ctx.stop.tokenIndex)
     def visitEndifDirective(self, ctx:C_PreprocessorParser.EndifDirectiveContext):
-        self.if_counter -= 1
-        if self.if_counter < 0:
+        if self.ifndef_stack == 0:
             self.raise_preprocessing_error(f"#endif without #if", ctx)
+        ifndef = self.ifndef_stack.pop()
+        removal_start_index: int = ctx.start.tokenIndex
+        if not ifndef[1]:
+            removal_start_index = ifndef[0]+1
+        self.rewriter.delete("default", removal_start_index, ctx.stop.tokenIndex)

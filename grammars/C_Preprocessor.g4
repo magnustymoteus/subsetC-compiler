@@ -17,7 +17,7 @@ WS           : [ \t]+ -> channel(HIDDEN);
 ANY: ~'\n';
 
 // Parser rules
-program : (line '\n'*)* EOF;
+program : ('\n' | line)* EOF;
 line: (directive | textLine);
 directive : (defineDirective
           | includeDirective
