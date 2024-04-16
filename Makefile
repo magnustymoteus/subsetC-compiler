@@ -2,7 +2,7 @@ all: antlr-regen test
 
 .PHONY: antlr
 antlr:
-	cd grammars && java -jar ../src/antlr_files/antlr-4.13.1-complete.jar -o ../src/antlr_files -Dlanguage=Python3 -visitor -no-listener C_Grammar.g4
+	cd grammars && java -jar ../src/antlr_files/antlr-4.13.1-complete.jar -o ../src/antlr_files -Dlanguage=Python3 -visitor -no-listener C_Grammar.g4 C_Preprocessor.g4
 
 .PHONY: antlr-cleanup
 antlr-cleanup:

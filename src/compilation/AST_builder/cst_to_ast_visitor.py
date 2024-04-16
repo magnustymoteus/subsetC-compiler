@@ -75,7 +75,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
             ctx: The context node.
         """
         ast_node_w.n.comments += self.get_comments_for_ctx(ctx)
-        ast_node_w.n.source_code_line = ctx.getText()
+        ast_node_w.n.source_code_line = ctx.parser.getInputStream().getText(ctx.start, ctx.stop)
 
     def visit(self, tree):
         """

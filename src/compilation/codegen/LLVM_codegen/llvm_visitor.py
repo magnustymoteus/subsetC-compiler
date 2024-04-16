@@ -24,6 +24,10 @@ class LLVMVisitor(CFGVisitor):
         result: str = str(self.reg_counter)
         self.reg_counter += 1
         return result
+    def _create_global_reg(self) -> str:
+        result: str = str(self.reg_counters[0])
+        self.reg_counters[0] += 1
+        return result
 
     def push_regs_stack(self):
         self.regs_stack.append({})
@@ -192,7 +196,7 @@ class LLVMVisitor(CFGVisitor):
     # probably here until proper function calls get implemented
     def print(self, node_w: Wrapper[PrintStatement]):
         format_string = ir.GlobalVariable(self.module, ir.ArrayType(ir.IntType(8), len(node_w.n.format) + 1),
-                                          self._create_reg())
+                                          self._create_global_reg())
         format_string.global_constant = True
         format_string.initializer = ir.Constant(ir.ArrayType(ir.IntType(8), len(node_w.n.format) + 1),
                                                 [ir.IntType(8)(ord(c)) for c in f"{node_w.n.format}\00"])

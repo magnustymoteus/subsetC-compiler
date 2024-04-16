@@ -2,6 +2,7 @@ from pathlib import Path
 import argparse
 import warnings
 
+from src.antlr_files.C_PreprocessorLexer import C_PreprocessorLexer
 from src.compilation import *
 from src.constructs import *
 
@@ -14,9 +15,8 @@ import graphviz
 
 
 # Gives filepath to C_GrammarLexer to generate tokens
-def getTokens(filepath: str):
-    input_stream = FileStream(filepath)
-    lexer = C_GrammarLexer(input_stream)
+def getTokens(source_code: str):
+    lexer = C_GrammarLexer(InputStream(source_code))
     stream = CommonTokenStream(lexer)
     return stream
 
@@ -40,6 +40,16 @@ def visualizeAST(ast: Ast, filename: str):
 def visualizeCFG(cfg: ControlFlowGraph, filename: str):
     graph = cfg.to_dot_graph()
     graph.save(filename=filename)
+
+def getPreprocessedCode(filepath):
+    input_stream = FileStream(filepath)
+    lexer = C_PreprocessorLexer(input_stream)
+    stream = CommonTokenStream(lexer)
+    tree = C_PreprocessorParser(stream).program()
+    preprocessor = PreprocessorVisitor(stream, filepath)
+    preprocessor.visit(tree)
+    return preprocessor.get_processed_result()
+
 
 def c_file(param):
     base, ext = os.path.splitext(param)
@@ -77,8 +87,9 @@ def main(argv):
         path_in_str = str(path)
         filename = str(os.path.splitext(os.path.basename(path))[0])
         try:
+            preprocessed_code = getPreprocessedCode(path_in_str)
             # Lexes the input file
-            tokens = getTokens(path_in_str)
+            tokens = getTokens(preprocessed_code)
             parser = C_GrammarParser(tokens)
             parser.addErrorListener(MyErrorListener())
 
@@ -87,7 +98,6 @@ def main(argv):
 
             if args.viz_cst or args.viz_all:
                 visualizeCST(tree, parser.ruleNames, f"./{filename}-viz/cst")
-
             # conversion from CST to AST
             ast = getAST(tree, tokens)
 
@@ -131,7 +141,8 @@ def main(argv):
                     case _:
                         warnings.warn("unsupported compilation target")
 
-
+        except PreprocessingError as e:
+            print(f"{path_in_str}:{e}")
         except SyntaxError as e:
             print(f"{path_in_str}:{e}")
         except SemanticError as e:
