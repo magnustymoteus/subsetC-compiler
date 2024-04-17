@@ -80,6 +80,13 @@ class SymbolTable(AbstractNode):
         :param entry: The symbol table entry to add.
         """
         self.lookup_table[entry.name] = entry
+    def get_enclosing_function_type(self) -> SymbolTable | None:
+        if not isinstance(self, FunctionEncloser):
+            if self.parent is not None:
+                return self.parent.n.get_enclosing_function_type()
+        else:
+            return self.func_signature
+        return None
 
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None):
         table_contents_str = ''
@@ -91,4 +98,10 @@ class SymbolTable(AbstractNode):
             subgraph.node(str(self.id), label=table_str, shape='plain')
             if self.parent is not None:
                 subgraph.edge(str(self.id), str(self.parent.n.id), dir="back")
+
+class FunctionEncloser(SymbolTable):
+    def __init__(self, parent: Wrapper[SymbolTable], func_signature: FunctionType):
+        super().__init__(parent)
+        self.func_signature: FunctionType = func_signature
+
 

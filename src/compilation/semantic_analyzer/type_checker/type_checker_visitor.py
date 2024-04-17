@@ -127,6 +127,11 @@ class TypeCheckerVisitor(ASTVisitor):
         elif left_copy.ptr_count != right_copy.ptr_count:
             # case where two pointers dont match
             self.raiseSemanticErr(f"Incompatible pointer types {left_copy} and {right_copy}")
+    def checkReturnType(self, return_type: PrimitiveType, returned_type: PrimitiveType):
+        self.checkImplicitDemotion(return_type, returned_type)
+        self.checkPointerTypes(return_type, returned_type)
+        if return_type.type == "void" and returned_type != return_type:
+            self.raiseSemanticErr(f"Cannot return type {returned_type} as void")
 
     def bin_op(self, node_w: Wrapper[BinaryOp]):
         super().bin_op(node_w)
@@ -212,6 +217,10 @@ class TypeCheckerVisitor(ASTVisitor):
         super().return_stmt(node_w)
         if node_w.n.expr_w is not None:
             node_w.n.type = node_w.n.expr_w.n.type
+        function_signature: FunctionType = node_w.n.local_symtab_w.n.get_enclosing_function_type()
+        self.checkReturnType(function_signature.return_type, node_w.n.type)
+
+
 
 
 

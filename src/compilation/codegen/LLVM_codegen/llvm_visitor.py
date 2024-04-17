@@ -100,7 +100,7 @@ class LLVMVisitor(CFGVisitor):
         func = self.regs_stack[0][node_w.n.func_name]
         params = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.func_name).type.parameter_types
         for i in range(0, len(node_w.n.arguments)):
-            if node_w.n.arguments[i].n.type.type != params[i].type:
+            if not self.types_compatible(node_w.n.arguments[i].n.type, params[i]):
                 args[i] = self._cast(self._load_if_pointer(args[i]), node_w.n.arguments[i].n.type, params[i])
         return self.builder.call(func, args, node_w.n.func_name)
 
@@ -219,6 +219,8 @@ class LLVMVisitor(CFGVisitor):
     def _cast(self, value, from_type: PrimitiveType, to_type: PrimitiveType):
         result = do_cast(self.builder, from_type, to_type)
         return result(value, self._get_llvm_type(to_type)[0], self._create_reg()) if result is not None else value
+    def types_compatible(self, l_type: PrimitiveType, r_type: PrimitiveType) -> bool:
+        return l_type.type == r_type.type and l_type.ptr_count == r_type.ptr_count
 
     def _get_bin_op_func(self, lhs_value, lhs_type, rhs_value, rhs_type, operator) -> Callable:
         coerced_type: PrimitiveType = TypeCheckerVisitor.typeCoercion([lhs_type.type, rhs_type.type], True)
@@ -319,11 +321,15 @@ class LLVMVisitor(CFGVisitor):
         self.no_load = False
 
         value = self.visit(node_w.n.value_w)
-        if node_w.n.type.type != node_w.n.value_w.n.type.type:
+        if not self.types_compatible(node_w.n.type, node_w.n.value_w.n.type):
             value = self._cast(self._load_if_pointer(value), node_w.n.value_w.n.type, node_w.n.type)
         self.builder.store(value, assignee, self._get_llvm_type(node_w.n.type)[1])
 
     def return_stmt(self, node_w: Wrapper[ReturnStatement]):
         if node_w.n.expr_w is None:
             return self.builder.ret_void()
-        return self.builder.ret(self.visit(node_w.n.expr_w))
+        returned_value = self.visit(node_w.n.expr_w)
+        return_type = node_w.n.local_symtab_w.n.get_enclosing_function_type().return_type
+        if not self.types_compatible(node_w.n.type, return_type):
+            returned_value = self._cast(self._load_if_pointer(returned_value), node_w.n.type, return_type)
+        return self.builder.ret(returned_value)

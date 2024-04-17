@@ -99,6 +99,8 @@ class SymbolTableVisitor(ASTVisitor):
         self.stack.pop()
 
     def func_def(self, node_w: Wrapper[FunctionDefinition]):
+        function_encloser = wrap(FunctionEncloser(self._get_most_local_sym_tab(), node_w.n.type))
+        self.stack.append(function_encloser)
         statements = node_w.n.body_w.n.statements
         node_w.n.body_w.n.statements = node_w.n.parameters+statements
         entry = SymbolTableEntry(node_w.n.name, node_w.n.type)
@@ -106,6 +108,7 @@ class SymbolTableVisitor(ASTVisitor):
         node_w.n.local_symtab_w.n.add_symbol(entry)
         self.visit(node_w.n.body_w)
         node_w.n.body_w.n.statements = statements
+        self.stack.pop()
 
     def cast_op(self, node_w: Wrapper[CastOp]):
         """

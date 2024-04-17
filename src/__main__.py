@@ -59,6 +59,8 @@ def c_file(param):
 
 # TODO: extra checks for jump statements not in loops or switch
 # TODO: make proper comments of C source code in LLVM code
+# TODO: check for redeclarations/redefinitions of functions with the same signature
+# TODO: line numbers in errors/warnings for source code with includes is off
 
 def main(argv):
     arg_parser = argparse.ArgumentParser()

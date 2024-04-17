@@ -6,7 +6,9 @@ from llvmlite import binding
 
 def compile(path, cfold: bool = True, cprop: bool = True):
     path_in_str = str(path)
-    tokens = getTokens(path_in_str)
+    preprocessed_code = getPreprocessedCode(path_in_str)
+    # Lexes the input file
+    tokens = getTokens(preprocessed_code)
     parser = C_GrammarParser(tokens)
     parser.addErrorListener(MyErrorListener())
     tree = parser.program()

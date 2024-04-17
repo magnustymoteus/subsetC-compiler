@@ -18,10 +18,10 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
         self.filepath = filepath
         self.defines: dict[str, str] = defines
         self.rewriter = TokenStreamRewriter(buffered_tokens_stream)
-        self.ifndef_stack: list[tuple[int, bool]] = [] # contains line for the end of the endif directive token
+        self.ifndef_stack_stack: list[tuple[int, bool]] = [] # contains line for the end of the endif directive token
     def visitProgram(self, ctx: C_PreprocessorParser.ProgramContext):
         super().visitProgram(ctx)
-        if len(self.ifndef_stack) > 0:
+        if len(self.ifndef_stack_stack) > 0:
             self.raise_preprocessing_error("Unterminated #if", ctx)
     def visitLine(self, ctx:C_PreprocessorParser.LineContext):
         self.visitChildren(ctx)
@@ -57,12 +57,12 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
         return self.rewriter.getDefaultText()
     def visitIfndefDirective(self, ctx:C_PreprocessorParser.IfndefDirectiveContext):
         is_not_defined: bool = self.defines.get(ctx.getChild(1).getText(), None) is None
-        self.ifndef_stack.append((ctx.stop.tokenIndex, is_not_defined))
+        self.ifndef_stack_stack.append((ctx.stop.tokenIndex, is_not_defined))
         self.rewriter.delete("default", ctx.start.tokenIndex, ctx.stop.tokenIndex)
     def visitEndifDirective(self, ctx:C_PreprocessorParser.EndifDirectiveContext):
-        if self.ifndef_stack == 0:
+        if self.ifndef_stack_stack == 0:
             self.raise_preprocessing_error(f"#endif without #if", ctx)
-        ifndef = self.ifndef_stack.pop()
+        ifndef = self.ifndef_stack_stack.pop()
         removal_start_index: int = ctx.start.tokenIndex
         if not ifndef[1]:
             removal_start_index = ifndef[0]+1
