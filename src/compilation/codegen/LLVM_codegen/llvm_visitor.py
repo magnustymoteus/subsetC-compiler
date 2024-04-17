@@ -104,7 +104,7 @@ class LLVMVisitor(CFGVisitor):
                 args[i] = self._cast(self._load_if_pointer(args[i]), node_w.n.arguments[i].n.type, params[i])
         return self.builder.call(func, args, node_w.n.func_name)
 
-    def func_def(self, node_w: Wrapper[FunctionDefinition]):
+    def func_decl(self, node_w: Wrapper[FunctionDeclaration]):
         param_types = [self._get_llvm_type(param)[0] for param in node_w.n.type.parameter_types]
         fnty = ir.FunctionType(self._get_llvm_type(node_w.n.type.return_type)[0], param_types)
         func = ir.Function(self.module, fnty, name=node_w.n.name)

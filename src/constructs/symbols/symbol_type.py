@@ -26,6 +26,8 @@ class PrimitiveType(SymbolType):
             added += 5
         result = f"{self.type}" if not self.is_constant else f"const {self.type}"
         return f"{result}{ptr_str}"
+    def __eq__(self, other):
+        return self.type == other.type and self.ptr_count == other.ptr_count
 
 class FunctionType(SymbolType):
     def __init__(self, return_type: SymbolType, parameter_types: list[SymbolType]):

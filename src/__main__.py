@@ -103,6 +103,8 @@ def main(argv):
             # conversion from CST to AST
             ast = getAST(tree, tokens)
 
+            ResolverVisitor(ast)
+
             # Makes symbol table entries of the ast nodes
             SymbolTableVisitor(ast)
             TypeCheckerVisitor(ast)

@@ -7,7 +7,7 @@ functionDef: declarationSpec identifier LPAREN (parameterList)? RPAREN compoundS
 parameterList: parameterDeclaration (',' parameterDeclaration)*;
 parameterDeclaration: declarationSpec declarator?;
 
-typeSpec: 'char' | 'int' | 'float' | typedefName | enumSpec;
+typeSpec: 'char' | 'int' | 'float' | 'void' | typedefName | enumSpec;
 typeQual: 'const';
 storageClassSpec: 'typedef';
 declarationSpec: storageClassSpec? typeQual? typeSpec pointer?;

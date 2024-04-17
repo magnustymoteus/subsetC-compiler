@@ -41,7 +41,7 @@ class BasicBlockVisitor(ASTVisitor):
         node_w.n = self.current_basic_block_w.n
         return self.current_basic_block_w.n.ast_items[-1]
 
-    def func_def(self, node_w: Wrapper[FunctionDefinition]):
+    def func_decl(self, node_w: Wrapper[FunctionDeclaration]):
         self.add_bblock_next: bool = True
         self.visit(node_w.n.body_w)
 

@@ -53,8 +53,8 @@ class ASTVisitor():
                 return self.cast_op(node_w)
             case CompoundStatement():
                 return self.compound_stmt(node_w)
-            case FunctionDefinition():
-                return self.func_def(node_w)
+            case FunctionDeclaration():
+                return self.func_decl(node_w)
             case VariableDeclaration():
                 return self.variable_decl(node_w)
             case Literal():
@@ -299,19 +299,20 @@ class ASTVisitor():
         for statement in node_w.n.statements:
             self.visit(statement)
 
-    def func_def(self, node_w: Wrapper[FunctionDefinition]):
+    def func_decl(self, node_w: Wrapper[FunctionDeclaration]):
         """
-        Method called when encountering a FunctionDefinition node.
+        Method called when encountering a FunctionDeclaration node.
 
         Args:
-            node_w (Wrapper[FunctionDefinition]): The FunctionDefinition node wrapper.
+            node_w (Wrapper[FunctionDeclaration]): The FunctionDeclaration node wrapper.
 
         Returns:
             None
         """
         for param_w in node_w.n.parameters:
             self.visit(param_w)
-        self.visit(node_w.n.body_w)
+        if node_w.n.body_w.n is not None:
+            self.visit(node_w.n.body_w)
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         """

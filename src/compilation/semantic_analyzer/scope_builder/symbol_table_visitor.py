@@ -98,7 +98,7 @@ class SymbolTableVisitor(ASTVisitor):
         super().compound_stmt(node_w)
         self.stack.pop()
 
-    def func_def(self, node_w: Wrapper[FunctionDefinition]):
+    def func_decl(self, node_w: Wrapper[FunctionDeclaration]):
         function_encloser = wrap(FunctionEncloser(self._get_most_local_sym_tab(), node_w.n.type))
         self.stack.append(function_encloser)
         statements = node_w.n.body_w.n.statements

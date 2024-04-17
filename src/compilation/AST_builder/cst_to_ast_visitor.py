@@ -228,8 +228,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
         parameters: list[Wrapper[VariableDeclaration]] = self.visitFirstMatch(ctx, C_GrammarParser.ParameterListContext)
         if parameters is None:
             parameters = []
-        result = FunctionDefinition(function_name, body_w, parameters)
-        result.type = FunctionType(return_type, [parameter_w.n.type for parameter_w in parameters])
+        result = FunctionDeclaration(function_name, FunctionType(return_type, [parameter_w.n.type for parameter_w in parameters]), parameters, body_w)
         return wrap(result)
 
     def visitPrintfStmt(self, ctx: C_GrammarParser.PrintfStmtContext):
@@ -332,6 +331,10 @@ class CSTToASTVisitor(C_GrammarVisitor):
         type_specifier = declaration_spec[1]
         if declarator_result is not None:
             identifier_node = declarator_result[0]
+            if isinstance(declarator_result[1], list):
+                type = FunctionType(type_specifier, [param_w.n.type for param_w in declarator_result[1]])
+                result = FunctionDeclaration(identifier_node.n.name, type, declarator_result[1])
+                return wrap(result)
             result = VariableDeclaration(identifier_node.n.name, type_specifier, storage_class_specifier)
             result.definition_w = declarator_result[1]
             return wrap(result)
@@ -401,7 +404,15 @@ class CSTToASTVisitor(C_GrammarVisitor):
 
     def visitDeclarator(self, ctx: C_GrammarParser.DeclaratorContext):
         if ctx.getChildCount() > 1:
-            return self.visit(ctx.getChild(0)), self.visit(ctx.getChild(2))
+            # is non function declaration
+            if ctx.getChild(1).getText() == '=':
+                return self.visit(ctx.getChild(0)), self.visit(ctx.getChild(2))
+            # is function declaration
+            parameters: list[Wrapper[VariableDeclaration]] | None = self.visitFirstMatch(ctx, C_GrammarParser.ParameterListContext)
+            if parameters is None:
+                parameters = []
+            return self.visit(ctx.getChild(0)), parameters
+
         return self.visit(ctx.getChild(0)), wrap()
 
     def visitCastExpr(self, ctx: C_GrammarParser.CastExprContext):
