@@ -14,6 +14,7 @@ def compile(path, cfold: bool = True, cprop: bool = True):
     tree = parser.program()
     #visualizeCST(tree, parser.ruleNames, "./viz/cst/"+str(os.path.basename(path)))
     ast = getAST(tree, tokens)
+    ResolverVisitor(ast)
     #visualizeAST(ast, "./viz/ast/ast-viz/" + str(os.path.basename(path)) + ".gv")
     SymbolTableVisitor(ast)
     #visualizeAST(ast, "./viz/ast/symtab-ast/" + str(os.path.basename(path)) + ".gv")
