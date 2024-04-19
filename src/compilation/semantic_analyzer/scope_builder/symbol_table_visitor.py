@@ -71,7 +71,7 @@ class SymbolTableVisitor(ASTVisitor):
             self.raiseSemanticErr(f"Undeclared function {node_w.n.func_name}")
         else:
             symbol_entry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.func_name)
-            if symbol_entry.definition_w.n is None:
+            if symbol_entry.value_w.n is None:
                 self.raiseSemanticErr(f"Function {node_w.n.func_name} declared without definition")
 
     def identifier(self, node_w: Wrapper[Identifier]):
@@ -104,7 +104,7 @@ class SymbolTableVisitor(ASTVisitor):
         statements = node_w.n.body_w.n.statements
         node_w.n.body_w.n.statements = node_w.n.parameters+statements
         entry = SymbolTableEntry(node_w.n.name, node_w.n.type)
-        entry.definition_w = node_w.n.body_w
+        entry.value_w = node_w.n.body_w
         node_w.n.local_symtab_w.n.add_symbol(entry)
         self.visit(node_w.n.body_w)
         node_w.n.body_w.n.statements = statements
@@ -133,7 +133,7 @@ class SymbolTableVisitor(ASTVisitor):
             decl_or_def: str = "Redeclaration" if not node_w.n.definition_w.n else "Redefinition"
             self.raiseSemanticErr(f"{decl_or_def} of symbol {symbol_name}")
         symtab_entry = SymbolTableEntry(symbol_name, node_w.n.type)
-        symtab_entry.definition_w.n = node_w.n.definition_w.n
+        symtab_entry.value_w.n = node_w.n.definition_w.n
         node_w.n.local_symtab_w.n.add_symbol(symtab_entry)
 
     def enum(self, node_w: Wrapper[Enumeration]):
@@ -146,7 +146,7 @@ class SymbolTableVisitor(ASTVisitor):
         super().enum(node_w)
         for i, label in enumerate(node_w.n.chronological_labels):
             current_symtab_entry = SymbolTableEntry(label, node_w.n.type)
-            current_symtab_entry.definition_w.n = IntLiteral(i)
+            current_symtab_entry.value_w.n = IntLiteral(i)
             node_w.n.local_symtab_w.n.add_symbol(current_symtab_entry)
         symtab_entry = SymbolTableEntry(node_w.n.name, node_w.n.type)
         node_w.n.local_symtab_w.n.add_symbol(symtab_entry)

@@ -29,8 +29,8 @@ class ConstantPropagationVisitor(ASTVisitor):
 
     def _lookup_cpropagated_symbol(self, symtab_w: Wrapper[SymbolTable], symbol: str):
         entry = symtab_w.n.lookup_symbol(symbol)
-        while not entry.stopped_propagating and isinstance(entry.definition_w.n, Identifier):
-            return self._lookup_cpropagated_symbol(symtab_w, entry.definition_w.n.name)
+        while not entry.stopped_propagating and isinstance(entry.value_w.n, Identifier):
+            return self._lookup_cpropagated_symbol(symtab_w, entry.value_w.n.name)
         return entry
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
@@ -67,6 +67,7 @@ class ConstantPropagationVisitor(ASTVisitor):
             self.visit(node_w.n.value_w)
             if isinstance(node_w.n.assignee_w.n, Identifier):
                 symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.assignee_w.n.name)
+                symbol.value_w = node_w.n.value_w
                 symbol.stopped_propagating = self.stop_propagating
 
     def deref_op(self, node_w: Wrapper[DerefOp]):
@@ -77,23 +78,19 @@ class ConstantPropagationVisitor(ASTVisitor):
             super().deref_op(node_w)
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
-        self.stop_propagation()
-        self.visit(node_w.n.operand_w)
-        self.start_propagation()
+        pass
 
     def identifier(self, node_w: Wrapper[Identifier]):
         if not self.stop_propagating:
             symbol: SymbolTableEntry = self._lookup_cpropagated_symbol(node_w.n.local_symtab_w, node_w.n.name)
-            if symbol.definition_w.n is not None and symbol.type.ptr_count == 0 and not symbol.stopped_propagating:
+            if symbol.value_w.n is not None and symbol.type.ptr_count == 0 and not symbol.stopped_propagating:
                 self.propagated_symbols.add(symbol)
-                value = symbol.definition_w
+                value = symbol.value_w
                 CopyVisitor().visit(value)
                 node_w.n = value.n
                 node_w.n.type = symbol.type
         else:
             node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).stopped_propagating = True
     def iteration(self, node_w: Wrapper[IterationStatement]):
-        self.stop_propagation()
-        super().iteration(node_w)
-        self.start_propagation()
+        pass
 
