@@ -6,7 +6,8 @@ class SymbolTableEntry:
         self.name = name
         self.type = symbolType
         self.stopped_propagating: bool = False
-        self.value_w: Wrapper = wrap()
+        self.definition_w: Wrapper = wrap()
+        self.used: bool = False
     @property
     def __repr__(self):
         return f"symbol: {self.name}, type: {self.type}"
@@ -91,7 +92,7 @@ class SymbolTable(AbstractNode):
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None):
         table_contents_str = ''
         for symbol_entry in self.lookup_table.values():
-            table_contents_str += f'<tr><td>{symbol_entry.name}</td><td>{symbol_entry.type}</td><td>{symbol_entry.value_w.n}</td></tr>'
+            table_contents_str += f'<tr><td>{symbol_entry.name}</td><td>{symbol_entry.type}</td><td>{symbol_entry.definition_w.n}</td></tr>'
         table_str = (f'<<table border="0" cellborder="1" cellspacing="0"><tr>  '
                      f'<td><i>Symbol</i></td><td><i>Type</i></td><td><i>Value</i></td></tr>{table_contents_str}</table>>')
         with graph.subgraph(name="symtab", graph_attr={"rank": "same"}) as subgraph:

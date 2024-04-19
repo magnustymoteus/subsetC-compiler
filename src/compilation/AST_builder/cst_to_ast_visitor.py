@@ -61,7 +61,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
         """
         token_stream = self.tokens.getHiddenTokensToLeft(ctx.start.tokenIndex)
         if token_stream:
-            result = [token.text for token in token_stream if token.tokenIndex not in self.processed_indices]
+            result = [token.text for token in token_stream if token.tokenIndex not in self.processed_indices and token.text.strip() != '']
             self.processed_indices = self.processed_indices.union({token.tokenIndex for token in token_stream})
             return result
         return []
@@ -75,7 +75,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
             ctx: The context node.
         """
         ast_node_w.n.comments += self.get_comments_for_ctx(ctx)
-        ast_node_w.n.source_code_line = ctx.parser.getInputStream().getText(ctx.start, ctx.stop)
+        if isinstance(ctx, C_GrammarParser.BlockItemContext):
+            ast_node_w.n.source_code_line = ctx.parser.getInputStream().getText(ctx.start, ctx.stop)
 
     def visit(self, tree):
         """

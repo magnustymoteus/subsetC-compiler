@@ -1,7 +1,5 @@
 grammar C_Preprocessor;
 
-
-// Directives
 DEFINE       : '#' 'define';
 INCLUDE      : '#' 'include';
 IFNDEF       : '#' 'ifndef';
@@ -16,7 +14,6 @@ BLOCKCMT: '/*' .*? '*/' -> channel(HIDDEN);
 WS           : [ \t]+ -> channel(HIDDEN);
 ANY: ~'\n';
 
-// Parser rules
 program : ('\n' | line)* EOF;
 line: (directive | textLine);
 directive : (defineDirective

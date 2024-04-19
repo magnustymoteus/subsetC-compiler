@@ -1,7 +1,7 @@
 from src.compilation.visitor.AST_visitor import *
 from src.constructs import *
 
-class OptimizationVisitor(ASTVisitor):
+class ConstantPropagationVisitor(ASTVisitor):
     """Traverses the AST tree in pre-order to perform constant propagation along other small optimizations (operator
     assignments, removing code after jump statements)"""
 
@@ -29,8 +29,8 @@ class OptimizationVisitor(ASTVisitor):
 
     def _lookup_cpropagated_symbol(self, symtab_w: Wrapper[SymbolTable], symbol: str):
         entry = symtab_w.n.lookup_symbol(symbol)
-        while not entry.stopped_propagating and isinstance(entry.value_w.n, Identifier):
-            return self._lookup_cpropagated_symbol(symtab_w, entry.value_w.n.name)
+        while not entry.stopped_propagating and isinstance(entry.definition_w.n, Identifier):
+            return self._lookup_cpropagated_symbol(symtab_w, entry.definition_w.n.name)
         return entry
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
@@ -84,32 +84,16 @@ class OptimizationVisitor(ASTVisitor):
     def identifier(self, node_w: Wrapper[Identifier]):
         if not self.stop_propagating:
             symbol: SymbolTableEntry = self._lookup_cpropagated_symbol(node_w.n.local_symtab_w, node_w.n.name)
-            if symbol.value_w.n is not None and symbol.type.ptr_count == 0 and not symbol.stopped_propagating:
+            if symbol.definition_w.n is not None and symbol.type.ptr_count == 0 and not symbol.stopped_propagating:
                 self.propagated_symbols.add(symbol)
-                value = symbol.value_w
+                value = symbol.definition_w
                 CopyVisitor().visit(value)
                 node_w.n = value.n
                 node_w.n.type = symbol.type
         else:
             node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).stopped_propagating = True
     def iteration(self, node_w: Wrapper[IterationStatement]):
-        if node_w.n.adv_w is not None:
-            self.visit(node_w.n.adv_w)
-        self.visit(node_w.n.condition_w)
         self.stop_propagation()
-        for i, statement_w in enumerate(node_w.n.body_w.n.statements):
-            self.visit(statement_w)
-            if isinstance(statement_w.n, JumpStatement):
-                node_w.n.body_w.n.statements = node_w.n.body_w.n.statements[:i+1]
-                break
+        super().iteration(node_w)
         self.start_propagation()
-    def switch(self, node_w: Wrapper[SwitchStatement]):
-        self.visit(node_w.n.value_w)
-        for condition_w in node_w.n.conditions:
-            self.visit(condition_w)
-        for branch_w in node_w.n.branches:
-            for i, statement_w in enumerate(branch_w.n.statements):
-                self.visit(statement_w)
-                if isinstance(statement_w.n, JumpStatement):
-                    branch_w.n.statements = branch_w.n.statements[:i+1]
-                    break
+

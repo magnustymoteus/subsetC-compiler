@@ -32,7 +32,8 @@ class LLVMVisitor(CFGVisitor):
     def push_regs_stack(self):
         self.regs_stack.append({})
 
-    def __init__(self, ast: Ast, name: str):
+    def __init__(self, ast: Ast, name: str, disable_comments: bool = False):
+        self.disable_comments: bool = disable_comments
         self.no_load: bool = False
         self.regs_stack: list[dict[str, ir.Instruction | ir.Function]] = [{}]
         self.reg_counters: list[int] = [0]
@@ -47,6 +48,7 @@ class LLVMVisitor(CFGVisitor):
         printf_type = ir.FunctionType(ir.IntType(32), [ir.IntType(8).as_pointer()], var_arg=True)
         self.printf = ir.Function(self.module, printf_type, name="printf")
 
+        self.builder = None
         self.visit(ast.root_w)
 
     def _load_if_pointer(self, value: ir.Instruction):
@@ -55,11 +57,11 @@ class LLVMVisitor(CFGVisitor):
         return value
 
     def visit(self, node_w: Wrapper[AbstractNode]):
-        '''if isinstance(node_w.n, Basic):
+        if not self.disable_comments and self.builder is not None and isinstance(node_w.n, Basic):
             comments = node_w.n.comments + ([node_w.n.source_code_line] if node_w.n.source_code_line is not None else [])
             for comment in comments:
                 for subcomment in comment.split("\n"):
-                    self.builder.comment(subcomment)'''
+                    self.builder.comment(subcomment)
         return super().visit(node_w)
 
     def _get_llvm_type(self, type: PrimitiveType) -> tuple[ir.Type, int]:

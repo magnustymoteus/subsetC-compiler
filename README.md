@@ -9,4 +9,6 @@
   * else if
 * Project 5
   * include guards
+  * Do not generate code for conditionals that are never true.
+  * Do not generate code for variables that are not used.
 * Extra Warnings

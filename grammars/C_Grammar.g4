@@ -128,7 +128,6 @@ INT: '0' | [1-9][0-9]*;
 FLOAT: INT* '.' [0-9]*;
 CHAR: '\'' . '\'' | '\'' '\\' ([abefnrtv0]|'\\'|'\''|'"'|'?') '\'';
 
-// the space in [] is important
 WS: [ \t\r\n]+ -> channel(HIDDEN);
 
 BLOCKCMT: '/*' .*? '*/' -> channel(HIDDEN);

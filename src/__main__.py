@@ -58,9 +58,8 @@ def c_file(param):
     return param
 
 # TODO: extra checks for jump statements not in loops or switch
-# TODO: make proper comments of C source code in LLVM code
-# TODO: check for redeclarations/redefinitions of functions with the same signature
 # TODO: line numbers in errors/warnings for source code with includes is off
+# TODO: check if return is called for non void functions in all paths
 
 def main(argv):
     arg_parser = argparse.ArgumentParser()
@@ -68,6 +67,7 @@ def main(argv):
                             help='disable constant folding')
     arg_parser.add_argument('--disable-cprop', action='store_true',
                             help='disable constant propagation')
+    arg_parser.add_argument('--disable-comments', action='store_true', help="disable comments attached to instructions")
 
     arg_parser.add_argument('--disable-warnings', action='store_true')
 
@@ -110,10 +110,12 @@ def main(argv):
             TypeCheckerVisitor(ast)
 
             if not args.disable_cprop:
-                OptimizationVisitor(ast)
+                ConstantPropagationVisitor(ast)
 
             if not args.disable_cfold:
                 ConstantFoldingVisitor(ast)
+
+            DeadCodeVisitor(ast)
 
             if args.viz_ast or args.viz_all:
                 visualizeAST(ast, f"./{filename}-viz/ast.gv")
@@ -125,12 +127,13 @@ def main(argv):
             if args.viz_cfg or args.viz_all:
                 visualizeCFG(cfg, f"./{filename}-viz/cfg.gv")
 
-            llvm = LLVMVisitor(ast, filename)
+            llvm = LLVMVisitor(ast, filename, args.disable_comments)
 
             if args.viz_cfg or args.viz_all:
                 for function in llvm.module.functions:
-                    s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
-                    s.save()
+                    pass
+                    '''s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
+                    s.save()'''
 
             for target in args.targets:
                 match target:

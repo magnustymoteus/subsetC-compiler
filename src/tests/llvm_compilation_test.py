@@ -21,10 +21,11 @@ def compile(path, cfold: bool = True, cprop: bool = True):
     TypeCheckerVisitor(ast)
     #visualizeAST(ast, "viz/ast/type-checked-ast/" + str(os.path.basename(path)) + ".gv")
     if cprop:
-        OptimizationVisitor(ast)
+        ConstantPropagationVisitor(ast)
         #visualizeAST(ast, "viz/ast/cpropped-ast/" + str(os.path.basename(path)) + ".gv")
     if cfold:
         ConstantFoldingVisitor(ast)
+    DeadCodeVisitor(ast)
     #visualizeAST(ast, "viz/ast/optimized-ast/" + str(os.path.basename(path)) + ".gv")
     cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
     TACVisitor(cfg)
