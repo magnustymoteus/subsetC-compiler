@@ -57,6 +57,8 @@ class ASTVisitor():
                 return self.func_decl(node_w)
             case VariableDeclaration():
                 return self.variable_decl(node_w)
+            case ArrayLiteral():
+                return self.array_lit(node_w)
             case Literal():
                 return self.lit(node_w)
             case Identifier():
@@ -79,6 +81,8 @@ class ASTVisitor():
                 return self.labeled(node_w)
             case FunctionCall():
                 return self.func_call(node_w)
+            case ArrayAccess():
+                return self.array_access(node_w)
             case _:
                 raise Exception
 
@@ -113,6 +117,10 @@ class ASTVisitor():
     def return_stmt(self, node_w: Wrapper[ReturnStatement]):
         if node_w.n.expr_w is not None:
             self.visit(node_w.n.expr_w)
+    def array_access(self, node_w: Wrapper[ArrayAccess]):
+        self.visit(node_w.n.identifier_w)
+        for index_w in node_w.n.indices:
+            self.visit(index_w)
 
     def func_call(self, node_w: Wrapper[FunctionCall]):
         for arg_w in node_w.n.arguments:
@@ -249,6 +257,9 @@ class ASTVisitor():
         """
         self.visit(node_w.n.expression_w)
 
+    def array_lit(self, node_w: Wrapper[ArrayLiteral]):
+        for elem_w in node_w.n.value:
+            self.visit(elem_w)
     def lit(self, node_w: Wrapper[Literal]):
         """
         Method called when encountering a Literal node.

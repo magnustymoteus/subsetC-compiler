@@ -65,21 +65,31 @@ class LLVMVisitor(CFGVisitor):
         return super().visit(node_w)
 
     def _get_llvm_type(self, type: PrimitiveType) -> tuple[ir.Type, int]:
-        result: list[ir.Type, int] = []
-        match type.type:
-            case "int":
-                result = [ir.IntType(32), 4]
-            case "char":
-                result = [ir.IntType(8), 4]
-            case "float":
-                result = [ir.FloatType(), 4]
-            case "void":
-                result = [ir.VoidType(), 0]
-            case _:
-                raise ValueError(f"Critical Error: unrecognized type")
-        for ptr in range(0, type.ptr_count):
-            result[0] = ir.PointerType(result[0])
-            result[1] = 8
+        result: list[ir.Type, int] = [None, 0]
+        if isinstance(type, ArrayType):
+            for i, dim in enumerate(reversed(type.dimension)):
+                if i == 0:
+                    elem_type = self._get_llvm_type(type.element_type)
+                    result[1] = dim * elem_type[1]
+                    result[0] = ir.ArrayType(elem_type[0], dim)
+                else:
+                    result[0] = ir.ArrayType(result[0], dim)
+                    result[1] *= dim
+        else:
+            match type.type:
+                case "int":
+                    result = [ir.IntType(32), 4]
+                case "char":
+                    result = [ir.IntType(8), 4]
+                case "float":
+                    result = [ir.FloatType(), 4]
+                case "void":
+                    result = [ir.VoidType(), 0]
+                case _:
+                    raise ValueError(f"Critical Error: unrecognized type")
+            for ptr in range(0, type.ptr_count):
+                result[0] = ir.PointerType(result[0])
+                result[1] = 8
         return result[0], result[1]
     def _get_type(self, type: ir.Type) -> PrimitiveType:
         match type:
@@ -211,6 +221,8 @@ class LLVMVisitor(CFGVisitor):
             argument = self.builder.fpext(argument, ir.DoubleType(), self._create_reg())
         return self.builder.call(self.printf, [format_string_ptr, argument])
 
+    def array_lit(self, node_w: Wrapper[ArrayLiteral]):
+        return self._get_llvm_type(node_w.n.type)[0]([self.visit(value_w) for value_w in node_w.n.value])
     def lit(self, node_w: Wrapper[Literal]) -> ir.Constant:
         return self._get_llvm_type(node_w.n.type)[0](node_w.n.value)
 
@@ -225,7 +237,7 @@ class LLVMVisitor(CFGVisitor):
         return l_type.type == r_type.type and l_type.ptr_count == r_type.ptr_count
 
     def _get_bin_op_func(self, lhs_value, lhs_type, rhs_value, rhs_type, operator) -> Callable:
-        coerced_type: PrimitiveType = TypeCheckerVisitor.typeCoercion([lhs_type.type, rhs_type.type], True)
+        coerced_type: PrimitiveType = PrimitiveType.typeCoercion([lhs_type.type, rhs_type.type], True)
         lhs_is_pointer: bool = lhs_type.ptr_count > 0
         rhs_is_pointer: bool = rhs_type.ptr_count > 0
         if (lhs_type.type != coerced_type.type or rhs_type.type != coerced_type.type) and not (
@@ -257,6 +269,10 @@ class LLVMVisitor(CFGVisitor):
     def cast_op(self, node_w: Wrapper[CastOp]):
         return self._cast(self.visit(node_w.n.expression_w), node_w.n.expression_w.n.type, node_w.n.target_type)
 
+    def array_access(self, node_w: Wrapper[ArrayAccess]):
+        indices = [wrap(IntLiteral(0))]+node_w.n.indices
+        current_index = self.builder.gep(self.regs[node_w.n.identifier_w.n.name], [self.visit(index_w) for index_w in indices], True, self._create_reg())
+        return self._load_if_pointer(current_index) if not self.no_load else current_index
     def un_op(self, node_w: Wrapper[UnaryOp]):
         self.no_load = node_w.n.operator in ["++", "--"]
         operand = self.visit(node_w.n.operand_w)

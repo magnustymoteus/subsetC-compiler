@@ -1,5 +1,6 @@
 from src.compilation.visitor.CFG_visitor.cfg_visitor import *
 from copy import copy
+from numpy import ndenumerate
 
 '''Converts AST so that expressions have at most two operands by creating intermediate variables'''
 class TACVisitor(CFGVisitor):
@@ -44,7 +45,6 @@ class TACVisitor(CFGVisitor):
             self.tacs[subject[0]].append((node_w, custom_index))
 
 
-
     def addTACNode(self, node_w: Wrapper[Expression], custom_index: int | None = None) -> Wrapper[Identifier]:
         symbol_name: str = f"tac{self.interm_var_count}"
         new_type: PrimitiveType = copy(node_w.n.type)
@@ -82,21 +82,41 @@ class TACVisitor(CFGVisitor):
         if not (isinstance(node_w.n.expression_w.n, Identifier) or isinstance(node_w.n.expression_w.n, Literal)):
             node_w.n.expression_w = self.addTACNode(node_w.n.expression_w)
 
+
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         super().variable_decl(node_w)
         if node_w.n.local_symtab_w.n.has_parent:
             if node_w.n.definition_w.n is not None:
-                assign_node = Assignment("=")
-                assign_node.assignee_w.n = Identifier(copy(node_w.n.identifier))
-                assign_node.value_w.n = copy(node_w.n.definition_w.n)
-                assign_node.type = copy(node_w.n.type)
-                assign_node.assignee_w.n.type = node_w.n.type
-                assign_node.local_symtab_w = node_w.n.local_symtab_w
-                node_w.n.definition_w.n = None
+                resulting_node = None
+                if isinstance(node_w.n.type, ArrayType):
+                    statements: list[Wrapper[Statement]] = []
+                    array_lit: ArrayLiteral = node_w.n.definition_w.n
+                    for indices, val_w in ndenumerate(ArrayLiteral.to_array(array_lit)):
+                        index_list: list[Wrapper[IntLiteral]] = [wrap(IntLiteral(index)) for index in indices]
+                        assign_node = Assignment("=")
+                        identifier_w = wrap(Identifier(node_w.n.identifier))
+                        arr_access = ArrayAccess(identifier_w, index_list)
+                        assign_node.assignee_w.n = arr_access
+                        assign_node.value_w = val_w
+                        assign_node.type = val_w.n.type
+                        assign_node.local_symtab_w = node_w.n.local_symtab_w
+                        statements.append(wrap(assign_node))
 
+                    compound_node = CompoundStatement(statements)
+                    resulting_node = compound_node
+                else:
+                    assign_node = Assignment("=")
+                    assign_node.assignee_w.n = Identifier(copy(node_w.n.identifier))
+                    assign_node.value_w.n = copy(node_w.n.definition_w.n)
+                    assign_node.type = copy(node_w.n.type)
+                    assign_node.assignee_w.n.type = node_w.n.type
+                    assign_node.local_symtab_w = node_w.n.local_symtab_w
+                    resulting_node = assign_node
+
+                node_w.n.definition_w.n = None
                 self.add_node_to_subject(wrap(copy(node_w.n)), 0)
 
-                node_w.n = assign_node
+                node_w.n = resulting_node
         else:
             if node_w.n.definition_w.n is not None:
                 if not isinstance(node_w.n.definition_w.n, Literal):

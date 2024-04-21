@@ -332,15 +332,27 @@ class CSTToASTVisitor(C_GrammarVisitor):
         type_specifier = declaration_spec[1]
         if declarator_result is not None:
             identifier_node = declarator_result[0]
-            if isinstance(declarator_result[1], list):
-                type = FunctionType(type_specifier, [param_w.n.type for param_w in declarator_result[1]])
-                result = FunctionDeclaration(identifier_node.n.name, type, declarator_result[1])
-                return wrap(result)
+            dimension = []
+            if declarator_result[1] is not None:
+                if len(declarator_result[1]) == 1:
+                    parameters = declarator_result[1][0]
+                    type = FunctionType(type_specifier, [param_w.n.type for param_w in parameters])
+                    result = FunctionDeclaration(identifier_node.n.name, type, parameters)
+                    return wrap(result)
+                dimension = declarator_result[1][1]
+            if len(dimension) > 0:
+                type_specifier = ArrayType(type_specifier, dimension)
             result = VariableDeclaration(identifier_node.n.name, type_specifier, storage_class_specifier)
-            result.definition_w = declarator_result[1]
+            if declarator_result[1] is not None:
+                result.definition_w = declarator_result[1][0]
             return wrap(result)
         elif isinstance(type_specifier.n, Enumeration):
             return type_specifier
+    def visitArrayAccessExpr(self, ctx:C_GrammarParser.ArrayAccessExprContext):
+        identifier_w: Wrapper[Identifier] = self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext)
+        indices: list[Wrapper[Expression]] = self.visitAllMatches(ctx, C_GrammarParser.AssignmentExprContext)
+        result = ArrayAccess(identifier_w, indices)
+        return wrap(result)
 
     def visitForDeclaration(self, ctx:C_GrammarParser.ForDeclarationContext):
         """
@@ -401,20 +413,28 @@ class CSTToASTVisitor(C_GrammarVisitor):
         is_enum: bool = isinstance(ctx.getChild(0), C_GrammarParser.EnumSpecContext)
         return visitedChild if is_enum else ctx.getText()
 
+    def visitInitializer(self, ctx:C_GrammarParser.InitializerContext):
+        assignmentExpr = self.visitFirstMatch(ctx, C_GrammarParser.AssignmentExprContext)
+        if assignmentExpr is not None:
+            # is not array initializer
+            return assignmentExpr
+        # is array initializer
+        result: ArrayLiteral = ArrayLiteral(self.visitAllMatches(ctx, C_GrammarParser.InitializerContext))
+        return wrap(result)
 
-
+    def visitInitDeclarator(self, ctx:C_GrammarParser.InitDeclaratorContext):
+        dimensions = [lit.n.value for lit in self.visitAllMatches(ctx, C_GrammarParser.IntLiteralContext)]
+        initializer = self.visitFirstMatch(ctx, C_GrammarParser.InitializerContext)
+        return initializer, dimensions
+    def visitFunctionDeclarator(self, ctx:C_GrammarParser.FunctionDeclaratorContext):
+        parameters: list[Wrapper[VariableDeclaration]] | None = self.visitFirstMatch(ctx,
+                                                                        C_GrammarParser.ParameterListContext)
+        if parameters is None:
+            parameters = []
+        return parameters
     def visitDeclarator(self, ctx: C_GrammarParser.DeclaratorContext):
-        if ctx.getChildCount() > 1:
-            # is non function declaration
-            if ctx.getChild(1).getText() == '=':
-                return self.visit(ctx.getChild(0)), self.visit(ctx.getChild(2))
-            # is function declaration
-            parameters: list[Wrapper[VariableDeclaration]] | None = self.visitFirstMatch(ctx, C_GrammarParser.ParameterListContext)
-            if parameters is None:
-                parameters = []
-            return self.visit(ctx.getChild(0)), parameters
-
-        return self.visit(ctx.getChild(0)), wrap()
+        identifier = self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext)
+        return identifier, self.visitFirstMatch(ctx, [C_GrammarParser.InitDeclaratorContext, C_GrammarParser.FunctionDeclaratorContext])
 
     def visitCastExpr(self, ctx: C_GrammarParser.CastExprContext):
         if ctx.getChildCount() > 1:
@@ -528,14 +548,12 @@ class CSTToASTVisitor(C_GrammarVisitor):
                 case _:
                     node = wrap(UnaryOp(ctx.getChild(0).getText()))
             node.n.operand_w = self.visit(ctx.getChild(1))
-
             return node
         return self.visitChildren(ctx)
 
     def visitCharLiteral(self, ctx: C_GrammarParser.CharLiteralContext):
         char_value = ctx.getChild(0).getText()[1:-1].encode('utf-8').decode('unicode_escape')
         node: Wrapper[CharLiteral] = wrap(CharLiteral(char_value))
-
         return node
 
     def visitIntLiteral(self, ctx: C_GrammarParser.IntLiteralContext):
@@ -548,12 +566,10 @@ class CSTToASTVisitor(C_GrammarVisitor):
     def visitFloatLiteral(self, ctx: C_GrammarParser.FloatLiteralContext):
         node: Wrapper[FloatLiteral] = wrap(FloatLiteral(
             float(ctx.getChild(0).getText())))
-
         return node
 
     def visitIdentifier(self, ctx: C_GrammarParser.IdentifierContext):
         node: Wrapper[Identifier] = wrap(Identifier(ctx.getChild(0).getText()))
-
         return node
 
     def visitBlockItem(self, ctx: C_GrammarParser.StmtContext):

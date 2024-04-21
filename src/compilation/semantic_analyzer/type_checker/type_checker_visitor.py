@@ -7,8 +7,6 @@ class TypeCheckerVisitor(ASTVisitor):
     It visits each node in the AST and checks the validity of the types used in expressions and assignments.
     """
 
-    type_ranks: list[str] = ["char", "int", "float"]
-
     def __init__(self, ast: Ast):
         super().__init__(ast)
 
@@ -25,24 +23,6 @@ class TypeCheckerVisitor(ASTVisitor):
         """
         return operator in ['<', '>', '>=', '<=', '==', '!=', '&&', '||', '!']
 
-    @staticmethod
-    def typeCoercion(primitive_types: list[str], is_constant: bool) -> PrimitiveType:
-        """
-        Perform type coercion on a list of primitive types.
-
-        Args:
-            primitive_types (list[str]): The list of primitive types to perform type coercion on.
-            is_constant (bool): True if the resulting type should be constant, False otherwise.
-
-        Returns:
-            PrimitiveType: The resulting type after type coercion.
-        """
-        current_rank = 0
-        for current_type in primitive_types:
-            index = TypeCheckerVisitor.type_ranks.index(current_type)
-            if index > current_rank:
-                current_rank = index
-        return PrimitiveType(TypeCheckerVisitor.type_ranks[current_rank], is_constant)
 
     def checkValidPrimitiveType(self, type: PrimitiveType):
         """
@@ -54,7 +34,7 @@ class TypeCheckerVisitor(ASTVisitor):
         Raises:
             SemanticError: If the type is not valid.
         """
-        if type.type not in TypeCheckerVisitor.type_ranks:
+        if type.type not in PrimitiveType.type_ranks:
             self.raiseSemanticErr(f"Unknown type {type}")
 
     def checkImplicitDemotion(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
@@ -68,7 +48,7 @@ class TypeCheckerVisitor(ASTVisitor):
         Raises:
             Warning: If there is implicit demotion.
         """
-        if TypeCheckerVisitor.type_ranks.index(assignee_type.type) < TypeCheckerVisitor.type_ranks.index(value_type.type):
+        if PrimitiveType.type_ranks.index(assignee_type.type) < PrimitiveType.type_ranks.index(value_type.type):
             self.raiseWarning(f"Implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
 
     def checkDiscardedPointerQualifier(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
@@ -96,9 +76,8 @@ class TypeCheckerVisitor(ASTVisitor):
         Raises:
             SemanticError: If the assignee is not valid.
         """
-        is_identifier = isinstance(assignee_w.n, Identifier)
-        is_deref = isinstance(assignee_w.n, DerefOp)
-        if is_identifier or is_deref:
+        is_lvalue = isinstance(assignee_w.n, (Identifier, DerefOp, ArrayAccess))
+        if is_lvalue:
             symtype = assignee_w.n.type
             # TODO: with constant pointers?
             if symtype.ptr_count == 0 and symtype.is_constant:
@@ -132,6 +111,16 @@ class TypeCheckerVisitor(ASTVisitor):
         self.checkPointerTypes(return_type, returned_type)
         if return_type.type == "void" and returned_type != return_type:
             self.raiseSemanticErr(f"Cannot return type {returned_type} as void")
+    def checkArrayInitialization(self, node_w: Wrapper[VariableDeclaration]):
+        arr_type: ArrayType = node_w.n.type
+        definition_type = node_w.n.definition_w.n.type
+        if not isinstance(definition_type, ArrayType):
+            self.raiseSemanticErr(f"Cannot initialize array {arr_type} with {definition_type}")
+        for i in range(0, len(arr_type.dimension)):
+            if arr_type.dimension[i] < definition_type.dimension[i]:
+                self.raiseWarning(f"Excess elements in scalar initializer: {arr_type.dimension[i]} < {definition_type.dimension[i]}")
+        node_w.n.definition_w.n.adjust(arr_type.dimension, arr_type.element_type)
+
 
     def bin_op(self, node_w: Wrapper[BinaryOp]):
         super().bin_op(node_w)
@@ -139,7 +128,7 @@ class TypeCheckerVisitor(ASTVisitor):
         if TypeCheckerVisitor.is_comparison(node_w.n.operator):
             node_w.n.type = PrimitiveType('int', True)
         else:
-            node_w.n.type = TypeCheckerVisitor.typeCoercion([node_w.n.lhs_w.n.type.type, node_w.n.rhs_w.n.type.type], True)
+            node_w.n.type = PrimitiveType.typeCoercion([node_w.n.lhs_w.n.type.type, node_w.n.rhs_w.n.type.type], True)
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
         super().un_op(node_w)
@@ -188,6 +177,29 @@ class TypeCheckerVisitor(ASTVisitor):
             self.checkPointerTypes(node_w.n.type, node_w.n.definition_w.n.type)
             self.checkImplicitDemotion(node_w.n.type, node_w.n.definition_w.n.type)
             self.checkDiscardedPointerQualifier(node_w.n.type, node_w.n.definition_w.n.type)
+            if isinstance(node_w.n.type, ArrayType):
+                self.checkArrayInitialization(node_w)
+    def array_access(self, node_w: Wrapper[ArrayAccess]):
+        super().array_access(node_w)
+        for index_w in node_w.n.indices:
+            if index_w.n.type.type not in ['int', 'char']:
+                self.raiseSemanticErr(f"Cannot access array {node_w.n.identifier_w.n.name}: index {index_w.n} not an integer")
+        ptr_count: int = node_w.n.identifier_w.n.type.ptr_count
+        resulting_dim: int = ptr_count - len(node_w.n.indices)
+        if resulting_dim < 0:
+            self.raiseSemanticErr(f"Cannot access array {node_w.n.identifier_w.n.name}: trying to access dimension {len(node_w.n.indices)} but array has {ptr_count}")
+        node_w.n.type = PrimitiveType(node_w.n.identifier_w.n.type.type, node_w.n.identifier_w.n.type.is_constant, resulting_dim)
+
+    def array_lit(self, node_w: Wrapper[ArrayLiteral]):
+        super().array_lit(node_w)
+        values = node_w.n.value
+        types: list[str] = [elem_w.n.type.type for elem_w in values]
+        coerced_type = PrimitiveType.typeCoercion(types, False)
+        array_types = [elem_w.n.type for elem_w in values if isinstance(elem_w.n.type, ArrayType)]
+        dim_max = max(array_types, key=lambda type: type.dimension[0]) if len(array_types) > 0 else None
+        dim = [len(values)] + dim_max.dimension if dim_max is not None else [len(values)]
+        node_w.n.type = ArrayType(coerced_type, dim)
+
 
     def switch(self, node_w: Wrapper[SwitchStatement]):
         super().switch(node_w)

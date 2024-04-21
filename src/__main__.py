@@ -115,14 +115,17 @@ def main(argv):
             if not args.disable_cfold:
                 ConstantFoldingVisitor(ast)
 
-            DeadCodeVisitor(ast)
 
             if args.viz_ast or args.viz_all:
                 visualizeAST(ast, f"./{filename}-viz/ast.gv")
 
+            DeadCodeVisitor(ast)
+
+
             cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
 
             TACVisitor(cfg)
+
 
             if args.viz_cfg or args.viz_all:
                 visualizeCFG(cfg, f"./{filename}-viz/cfg.gv")

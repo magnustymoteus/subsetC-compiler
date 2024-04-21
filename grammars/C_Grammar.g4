@@ -12,7 +12,10 @@ typeQual: 'const';
 storageClassSpec: 'typedef';
 declarationSpec: storageClassSpec? typeQual? typeSpec pointer?;
 declaration: declarationSpec declarator? SEMICOL; //(',' declarator)*;
-declarator: identifier | identifier EQ assignmentExpr | identifier LPAREN parameterList? RPAREN;
+declarator: identifier (initDeclarator | functionDeclarator)?;
+functionDeclarator: LPAREN parameterList? RPAREN;
+initDeclarator: EQ initializer | (LBRACK intLiteral RBRACK)+ (EQ initializer)?;
+initializer: assignmentExpr | LBRACE (initializer (',' initializer)*)? RBRACE;
 
 enumSpec: 'enum' identifier (LBRACE enum (',' enum)* RBRACE)?;
 enum: identifier;
@@ -20,8 +23,6 @@ enum: identifier;
 typedefName: identifier;
 
 pointer: (ARISK typeQual?)+;
-initializer: assignmentExpr;
-
 
 stmt: exprStmt | compoundStmt | printfStmt | iterationStmt | jumpStmt | selectionStmt;
 
@@ -66,7 +67,7 @@ unaryExpr: postfixExpr | unaryOp castExpr;
 postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr postfixOp | functionCallExpr | arrayAccessExpr;
 
 functionCallExpr: identifier LPAREN (assignmentExpr (',' assignmentExpr)*)? RPAREN;
-arrayAccessExpr: LBRACK expr RBRACK;
+arrayAccessExpr: identifier (LBRACK assignmentExpr RBRACK)+;
 
 postfixOp: DPLUS | DMINUS;
 primaryExpr: identifier | literal | LPAREN expr RPAREN;

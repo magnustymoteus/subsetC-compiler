@@ -3,4 +3,5 @@ int main() {
     a = 10;
     int b = a * 3;
     const int c = b + 3;
+
  return 0; }

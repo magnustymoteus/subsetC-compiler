@@ -6,14 +6,18 @@ class ConstantPropagationVisitor(ASTVisitor):
     assignments, removing code after jump statements)"""
 
     def __init__(self, ast: Ast):
-        self.stop_propagating: bool = False
+        self.propagation_counter: int = 0
         self.propagated_symbols: set[SymbolTableEntry] = set()
         super().__init__(ast)
 
+    @property
+    def stop_propagating(self) -> bool:
+        return False if self.propagation_counter == 0 else True
     def stop_propagation(self):
-        self.stop_propagating = True
+        self.propagation_counter += 1
     def start_propagation(self):
-        self.stop_propagating = False
+        if self.propagation_counter > 0:
+            self.propagation_counter -= 1
 
     def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
         for i, statement_w in enumerate(node_w.n.statements):
@@ -69,8 +73,14 @@ class ConstantPropagationVisitor(ASTVisitor):
                 symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.assignee_w.n.name)
                 symbol.value_w = node_w.n.value_w
                 symbol.stopped_propagating = self.stop_propagating
+            else:
+                self.stop_propagation()
+                self.visit(node_w.n.assignee_w)
+                self.start_propagation()
+
 
     def deref_op(self, node_w: Wrapper[DerefOp]):
+        self.stop_propagation()
         if isinstance(node_w.n.operand_w.n, AddressOfOp):
             node_w.n = node_w.n.operand_w.n.operand_w.n
             self.visit(node_w)
@@ -78,7 +88,7 @@ class ConstantPropagationVisitor(ASTVisitor):
             super().deref_op(node_w)
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
-        pass
+        self.stop_propagation()
 
     def identifier(self, node_w: Wrapper[Identifier]):
         if not self.stop_propagating:
@@ -93,4 +103,6 @@ class ConstantPropagationVisitor(ASTVisitor):
             node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).stopped_propagating = True
     def iteration(self, node_w: Wrapper[IterationStatement]):
         pass
+    def array_access(self, node_w: Wrapper[ArrayAccess]):
+        self.stop_propagation()
 
