@@ -65,21 +65,21 @@ class TACVisitor(CFGVisitor):
 
     def bin_op(self, node_w: Wrapper[BinaryOp]):
         super().bin_op(node_w)
-        if not (isinstance(node_w.n.lhs_w.n, Identifier) or isinstance(node_w.n.lhs_w.n, Literal)):
+        if not isinstance(node_w.n.lhs_w.n, (Identifier, Literal, ArrayAccess)):
             node_w.n.lhs_w = self.addTACNode(node_w.n.lhs_w)
-        if not (isinstance(node_w.n.rhs_w.n, Identifier) or isinstance(node_w.n.rhs_w.n, Literal)):
+        if not isinstance(node_w.n.rhs_w.n, (Identifier, Literal, ArrayAccess)):
             node_w.n.rhs_w = self.addTACNode(node_w.n.rhs_w)
     def deref_op(self, node_w: Wrapper[DerefOp]):
         super().un_op(node_w)
-        if not (isinstance(node_w.n.operand_w.n, Identifier) or isinstance(node_w.n.operand_w.n, Literal)):
+        if not isinstance(node_w.n.operand_w.n, (Identifier, Literal, ArrayAccess)):
             node_w.n.operand_w = self.addTACNode(node_w.n.operand_w)
     def un_op(self, node_w: Wrapper[UnaryOp]):
         super().un_op(node_w)
-        if not (isinstance(node_w.n.operand_w.n, Identifier) or isinstance(node_w.n.operand_w.n, Literal)):
-                node_w.n.operand_w = self.addTACNode(node_w.n.operand_w)
+        if not isinstance(node_w.n.operand_w.n, (Identifier, Literal, ArrayAccess)):
+            node_w.n.operand_w = self.addTACNode(node_w.n.operand_w)
     def cast_op(self, node_w: Wrapper[CastOp]):
         super().cast_op(node_w)
-        if not (isinstance(node_w.n.expression_w.n, Identifier) or isinstance(node_w.n.expression_w.n, Literal)):
+        if not isinstance(node_w.n.expression_w.n, (Identifier, Literal, ArrayAccess)):
             node_w.n.expression_w = self.addTACNode(node_w.n.expression_w)
 
 

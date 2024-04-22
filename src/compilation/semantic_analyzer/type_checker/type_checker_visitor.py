@@ -229,8 +229,8 @@ class TypeCheckerVisitor(ASTVisitor):
         super().return_stmt(node_w)
         if node_w.n.expr_w is not None:
             node_w.n.type = node_w.n.expr_w.n.type
-        function_signature: FunctionType = node_w.n.local_symtab_w.n.get_enclosing_function_type()
-        self.checkReturnType(function_signature.return_type, node_w.n.type)
+            function_signature: FunctionType = node_w.n.local_symtab_w.n.get_enclosing_function_type()
+            self.checkReturnType(function_signature.return_type, node_w.n.type)
 
 
 

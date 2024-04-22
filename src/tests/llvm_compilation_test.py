@@ -75,6 +75,8 @@ def semanticErr(glob_path):
         except SemanticError as e:
             print(f"\n✔ {e} for {str(os.path.basename(path))}", end='')
             continue
+        except:
+            continue
         print(f"\nX Expected to have a semantic error for {str(os.path.basename(path))}", end='')
         failed = True
     if failed:

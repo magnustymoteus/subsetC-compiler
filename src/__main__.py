@@ -105,6 +105,7 @@ def main(argv):
 
             ResolverVisitor(ast)
 
+
             # Makes symbol table entries of the ast nodes
             SymbolTableVisitor(ast)
             TypeCheckerVisitor(ast)
@@ -127,7 +128,6 @@ def main(argv):
 
             TACVisitor(cfg)
 
-
             if args.viz_cfg or args.viz_all:
                 visualizeCFG(cfg, f"./{filename}-viz/cfg.gv")
 
@@ -135,8 +135,9 @@ def main(argv):
 
             if args.viz_cfg or args.viz_all:
                 for function in llvm.module.functions:
-                    s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
-                    s.save()
+                    pass
+                    '''s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
+                    s.save()'''
 
             for target in args.targets:
                 match target:

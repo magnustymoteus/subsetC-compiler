@@ -141,8 +141,9 @@ class LLVMVisitor(CFGVisitor):
             alloced = self.visit(param_w)
             self.builder.store(func.args[i], alloced)
         self.visit(node_w.n.body_w)
-        if not self.builder.block.is_terminated and isinstance(fnty.return_type, ir.VoidType):
-            self.builder.ret_void()
+        if not self.builder.block.is_terminated:
+            if isinstance(fnty.return_type, ir.VoidType):
+                self.builder.ret_void()
         self.regs_stack.pop()
         self.reg_counters.pop()
         return func
@@ -164,15 +165,21 @@ class LLVMVisitor(CFGVisitor):
     def conditional(self, node_w: Wrapper[ConditionalStatement]):
         condition_w: Wrapper[Expression] = node_w.n.condition_w
         true_branch_w: Wrapper[CompoundStatement] = node_w.n.true_branch_w
-        if node_w.n.false_branch_w is not None:  # if
+        if node_w.n.false_branch_w:
+            both_return: bool = False
             with self.builder.if_else(self.builder.trunc(self.visit(condition_w), ir.IntType(1))) as (then, otherwise):
                 with then:
                     self.visit(true_branch_w)
+                    both_return = isinstance(self.builder.block.instructions[-1], ir.Ret)
                 with otherwise:
                     self.visit(node_w.n.false_branch_w)
+                    both_return = both_return and isinstance(self.builder.block.instructions[-1], ir.Ret)
+            if both_return:
+                self.builder.function.basic_blocks.remove(self.builder.block)
         else:  # if else
             with self.builder.if_then(self.builder.trunc(self.visit(condition_w), ir.IntType(1))):
                 self.visit(true_branch_w)
+
 
     def switch(self, node_w: Wrapper[SwitchStatement]):
         end_block = self.builder.append_basic_block("switch.end")

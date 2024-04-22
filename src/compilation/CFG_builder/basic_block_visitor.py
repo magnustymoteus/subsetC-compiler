@@ -78,7 +78,7 @@ class BasicBlockVisitor(ASTVisitor):
         for i in range(0, len(node_w.n.branches)):
             self.visit(self.create_bblock(node_w.n.branches[i]))
         self.statement_stack.append(node_w)
-        self.assign_end_branch = is_root
+        self.add_bblock_next = is_root
 
     def conditional(self, node_w: Wrapper[ConditionalStatement]):
         """
@@ -93,7 +93,7 @@ class BasicBlockVisitor(ASTVisitor):
         if node_w.n.false_branch_w is not None:
             self.visit(self.create_bblock(node_w.n.false_branch_w))
         self.statement_stack.append(node_w)
-        self.assign_end_branch = is_root
+        self.add_bblock_next = is_root
 
     def iteration(self, node_w: Wrapper[IterationStatement]):
         """
@@ -108,6 +108,5 @@ class BasicBlockVisitor(ASTVisitor):
         self.visit(self.create_bblock(node_w.n.condition_w))
         self.visit(self.create_bblock(node_w.n.body_w))
         self.statement_stack.append(node_w)
-        self.assign_end_branch = is_root
-        self.add_bblock_next = True
+        self.add_bblock_next = is_root
 

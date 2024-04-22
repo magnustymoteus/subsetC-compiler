@@ -48,9 +48,10 @@ class ConstantPropagationVisitor(ASTVisitor):
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
         if node_w.n.operator in ["++", "--"]:
-            symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.operand_w.n.name)
-            symbol.stopped_propagating = True
+            self.stop_propagation()
         super().un_op(node_w)
+        if node_w.n.operator in ["++", "--"]:
+            self.start_propagation()
 
     def assign(self, node_w: Wrapper[Assignment]):
         self.visit(node_w.n.value_w)

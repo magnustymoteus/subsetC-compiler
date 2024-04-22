@@ -314,24 +314,26 @@ class CSTToASTVisitor(C_GrammarVisitor):
             The AST node representing the declaration.
         """
         declaration_spec = self.visit(ctx.getChild(0))
-        declarator_result = self.visitFirstMatch(ctx, C_GrammarParser.DeclaratorContext)
+        declarator_result: dict = self.visitFirstMatch(ctx, C_GrammarParser.DeclaratorContext)
         storage_class_specifier = declaration_spec[0]
         type_specifier = declaration_spec[1]
         if declarator_result is not None:
             identifier_node = declarator_result[0]
-            dimension = []
+            dimension: list[int] = []
             if declarator_result[1] is not None:
-                if len(declarator_result[1]) == 1:
-                    parameters = declarator_result[1][0]
-                    type = FunctionType(type_specifier, [param_w.n.type for param_w in parameters])
-                    result = FunctionDeclaration(identifier_node.n.name, type, parameters)
-                    return wrap(result)
-                dimension = declarator_result[1][1]
+                match declarator_result[1]["type"]:
+                    case "function":
+                        parameters = declarator_result[1]["parameters"]
+                        type = FunctionType(type_specifier, [param_w.n.type for param_w in parameters])
+                        result = FunctionDeclaration(identifier_node.n.name, type, parameters)
+                        return wrap(result)
+                    case "init":
+                        dimension = declarator_result[1]["dimension"]
             if len(dimension) > 0:
                 type_specifier = ArrayType(type_specifier, dimension)
             result = VariableDeclaration(identifier_node.n.name, type_specifier, storage_class_specifier)
-            if declarator_result[1] is not None and declarator_result[1][0] is not None:
-                result.definition_w = declarator_result[1][0]
+            if declarator_result[1] is not None and declarator_result[1]["initializer"] is not None:
+                result.definition_w = declarator_result[1]["initializer"]
             return wrap(result)
         elif isinstance(type_specifier.n, Enumeration):
             return type_specifier
@@ -410,15 +412,15 @@ class CSTToASTVisitor(C_GrammarVisitor):
         return wrap(result)
 
     def visitInitDeclarator(self, ctx:C_GrammarParser.InitDeclaratorContext):
-        dimensions = [lit.n.value for lit in self.visitAllMatches(ctx, C_GrammarParser.IntLiteralContext)]
+        dimension: list[int] = [lit.n.value for lit in self.visitAllMatches(ctx, C_GrammarParser.IntLiteralContext)]
         initializer = self.visitFirstMatch(ctx, C_GrammarParser.InitializerContext)
-        return initializer, dimensions
+        return {"type": "init", "initializer": initializer, "dimension": dimension}
     def visitFunctionDeclarator(self, ctx:C_GrammarParser.FunctionDeclaratorContext):
         parameters: list[Wrapper[VariableDeclaration]] | None = self.visitFirstMatch(ctx,
                                                                         C_GrammarParser.ParameterListContext)
         if parameters is None:
             parameters = []
-        return parameters
+        return {"type": "function", "parameters": parameters}
     def visitDeclarator(self, ctx: C_GrammarParser.DeclaratorContext):
         identifier = self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext)
         return identifier, self.visitFirstMatch(ctx, [C_GrammarParser.InitDeclaratorContext, C_GrammarParser.FunctionDeclaratorContext])
