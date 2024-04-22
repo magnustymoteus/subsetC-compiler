@@ -2,8 +2,7 @@ from src.compilation.visitor.AST_visitor import *
 from src.constructs import *
 
 class ConstantPropagationVisitor(ASTVisitor):
-    """Traverses the AST tree in pre-order to perform constant propagation along other small optimizations (operator
-    assignments, removing code after jump statements)"""
+    """Traverses the AST tree in pre-order to perform constant propagation"""
 
     def __init__(self, ast: Ast):
         self.propagation_counter: int = 0
@@ -38,11 +37,14 @@ class ConstantPropagationVisitor(ASTVisitor):
         return entry
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
-        if node_w.n.type.ptr_count > 0:
+        is_pointer: bool = node_w.n.type.ptr_count > 0
+        if is_pointer:
             self.stop_propagation()
-            node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.identifier).stopped_propagating = True
         super().variable_decl(node_w)
-        self.start_propagation()
+        if self.stop_propagating:
+            node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.identifier).stopped_propagating = True
+        if is_pointer:
+            self.start_propagation()
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
         if node_w.n.operator in ["++", "--"]:
@@ -51,32 +53,15 @@ class ConstantPropagationVisitor(ASTVisitor):
         super().un_op(node_w)
 
     def assign(self, node_w: Wrapper[Assignment]):
-        if len(node_w.n.operator) > 1:
-            operator: str = node_w.n.operator[0]
-            node_w.n.operator = "="
-            assignee_copy_w: Wrapper[Identifier] = wrap((node_w.n.assignee_w.n))
-            value_copy_w: Wrapper[Expression] = wrap((node_w.n.value_w.n))
-            CopyVisitor().visit(assignee_copy_w)
-            CopyVisitor().visit(value_copy_w)
-
-            bin_op: BinaryOp = BinaryOp(operator)
-            bin_op.lhs_w = assignee_copy_w
-            bin_op.rhs_w = value_copy_w
-            bin_op.type = node_w.n.type
-            bin_op.local_symtab_w.n = node_w.n.local_symtab_w.n
-
-            node_w.n.value_w.n = bin_op
-            self.visit(node_w)
+        self.visit(node_w.n.value_w)
+        if isinstance(node_w.n.assignee_w.n, Identifier):
+            symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.assignee_w.n.name)
+            symbol.value_w = node_w.n.value_w
+            symbol.stopped_propagating = self.stop_propagating
         else:
-            self.visit(node_w.n.value_w)
-            if isinstance(node_w.n.assignee_w.n, Identifier):
-                symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.assignee_w.n.name)
-                symbol.value_w = node_w.n.value_w
-                symbol.stopped_propagating = self.stop_propagating
-            else:
-                self.stop_propagation()
-                self.visit(node_w.n.assignee_w)
-                self.start_propagation()
+            self.stop_propagation()
+            self.visit(node_w.n.assignee_w)
+            self.start_propagation()
 
 
     def deref_op(self, node_w: Wrapper[DerefOp]):

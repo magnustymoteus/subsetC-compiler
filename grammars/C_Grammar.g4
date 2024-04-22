@@ -128,6 +128,7 @@ ID: [a-zA-Z_] [a-zA-Z_0-9]*;
 INT: '0' | [1-9][0-9]*;
 FLOAT: INT* '.' [0-9]*;
 CHAR: '\'' . '\'' | '\'' '\\' ([abefnrtv0]|'\\'|'\''|'"'|'?') '\'';
+STRING: '"' CHAR+ '"';
 
 WS: [ \t\r\n]+ -> channel(HIDDEN);
 

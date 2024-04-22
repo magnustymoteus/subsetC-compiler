@@ -188,7 +188,7 @@ class TypeCheckerVisitor(ASTVisitor):
         resulting_dim: int = ptr_count - len(node_w.n.indices)
         if resulting_dim < 0:
             self.raiseSemanticErr(f"Cannot access array {node_w.n.identifier_w.n.name}: trying to access dimension {len(node_w.n.indices)} but array has {ptr_count}")
-        node_w.n.type = PrimitiveType(node_w.n.identifier_w.n.type.type, node_w.n.identifier_w.n.type.is_constant, resulting_dim)
+        node_w.n.type = PrimitiveType(node_w.n.identifier_w.n.type.type, node_w.n.identifier_w.n.type.is_constant, ptr_count-1)
 
     def array_lit(self, node_w: Wrapper[ArrayLiteral]):
         super().array_lit(node_w)

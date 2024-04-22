@@ -109,17 +109,18 @@ def main(argv):
             SymbolTableVisitor(ast)
             TypeCheckerVisitor(ast)
 
+            SimplifierVisitor(ast)
+
             if not args.disable_cprop:
                 ConstantPropagationVisitor(ast)
 
             if not args.disable_cfold:
                 ConstantFoldingVisitor(ast)
 
+            DeadCodeVisitor(ast)
 
             if args.viz_ast or args.viz_all:
                 visualizeAST(ast, f"./{filename}-viz/ast.gv")
-
-            DeadCodeVisitor(ast)
 
 
             cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
@@ -134,9 +135,8 @@ def main(argv):
 
             if args.viz_cfg or args.viz_all:
                 for function in llvm.module.functions:
-                    pass
-                    '''s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
-                    s.save()'''
+                    s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
+                    s.save()
 
             for target in args.targets:
                 match target:

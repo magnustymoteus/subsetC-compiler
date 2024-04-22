@@ -98,7 +98,7 @@ class TACVisitor(CFGVisitor):
                         arr_access = ArrayAccess(identifier_w, index_list)
                         assign_node.assignee_w.n = arr_access
                         assign_node.value_w = val_w
-                        assign_node.type = val_w.n.type
+                        assign_node.type = array_lit.type.element_type
                         assign_node.local_symtab_w = node_w.n.local_symtab_w
                         statements.append(wrap(assign_node))
 

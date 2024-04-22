@@ -53,6 +53,9 @@ class LLVMVisitor(CFGVisitor):
 
     def _load_if_pointer(self, value: ir.Instruction):
         if value.type.is_pointer:
+            if isinstance(value.type.pointee, ir.ArrayType):
+                result =  self.builder.gep(value, [ir.Constant(ir.IntType(64), 0), ir.Constant(ir.IntType(64), 0)], self._create_reg())
+                return result
             return self.builder.load(value, self._create_reg(), 4)
         return value
 
@@ -227,8 +230,10 @@ class LLVMVisitor(CFGVisitor):
         return self._get_llvm_type(node_w.n.type)[0](node_w.n.value)
 
     def identifier(self, node_w: Wrapper[Identifier]) -> ir.Instruction:
-        return self._load_if_pointer(self.regs[node_w.n.name]) if not (self.no_load or node_w.n.name in self.refs) else \
-        self.regs[node_w.n.name]
+        if not (self.no_load or node_w.n.name in self.refs):
+            result = self._load_if_pointer(self.regs[node_w.n.name])
+            return result
+        return self.regs[node_w.n.name]
 
     def _cast(self, value, from_type: PrimitiveType, to_type: PrimitiveType):
         result = do_cast(self.builder, from_type, to_type)
@@ -271,8 +276,8 @@ class LLVMVisitor(CFGVisitor):
 
     def array_access(self, node_w: Wrapper[ArrayAccess]):
         indices = [wrap(IntLiteral(0))]+node_w.n.indices
-        current_index = self.builder.gep(self.regs[node_w.n.identifier_w.n.name], [self.visit(index_w) for index_w in indices], True, self._create_reg())
-        return self._load_if_pointer(current_index) if not self.no_load else current_index
+        current_index: ir.GEPInstr = self.builder.gep(self.regs[node_w.n.identifier_w.n.name], [self.visit(index_w) for index_w in indices], True, self._create_reg())
+        return self._load_if_pointer(current_index) if not (self.no_load or node_w.n.identifier_w.n.name in self.refs) else current_index
     def un_op(self, node_w: Wrapper[UnaryOp]):
         self.no_load = node_w.n.operator in ["++", "--"]
         operand = self.visit(node_w.n.operand_w)

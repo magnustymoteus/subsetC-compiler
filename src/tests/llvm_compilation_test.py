@@ -20,6 +20,7 @@ def compile(path, cfold: bool = True, cprop: bool = True):
     #visualizeAST(ast, "./viz/ast/symtab-ast/" + str(os.path.basename(path)) + ".gv")
     TypeCheckerVisitor(ast)
     #visualizeAST(ast, "viz/ast/type-checked-ast/" + str(os.path.basename(path)) + ".gv")
+    SimplifierVisitor(ast)
     if cprop:
         ConstantPropagationVisitor(ast)
         #visualizeAST(ast, "viz/ast/cpropped-ast/" + str(os.path.basename(path)) + ".gv")
@@ -33,8 +34,13 @@ def compile(path, cfold: bool = True, cprop: bool = True):
     llvm = LLVMVisitor(ast, os.path.basename(path))
     for function in llvm.module.functions:
         if function.name == 'main':
-            s = graphviz.Source(binding.get_function_cfg(function), filename=f"./viz/{str(os.path.basename(path))}_llvm_cfg.gv")
+            s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{str(os.path.basename(path))}/viz/llvm_cfg.gv")
             s.save()
+    llvm_file = Path(f"./{str(os.path.basename(path))}/llvm.ll")
+    llvm_file.parent.mkdir(parents=True, exist_ok=True)
+    f = open(f"./{str(os.path.basename(path))}/llvm.ll", "w")
+    f.write(str(llvm.module))
+    f.close()
     return ast
 def success(glob_path):
     failed = False

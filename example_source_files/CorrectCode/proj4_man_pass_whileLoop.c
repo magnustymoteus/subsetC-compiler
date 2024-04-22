@@ -4,4 +4,5 @@ int main() {
         printf("%d", x);
         x -= 2;
     }
- return 0; }
+ return 0;
+ }

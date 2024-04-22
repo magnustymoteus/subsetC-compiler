@@ -1,4 +1,4 @@
-grammar C_project5;
+grammar C_project6;
 
 program: (functionDef | declaration)* EOF;
 
@@ -7,12 +7,15 @@ functionDef: declarationSpec identifier LPAREN (parameterList)? RPAREN compoundS
 parameterList: parameterDeclaration (',' parameterDeclaration)*;
 parameterDeclaration: declarationSpec declarator?;
 
-typeSpec: 'char' | 'int' | 'float' | typedefName | enumSpec;
+typeSpec: 'char' | 'int' | 'float' | 'void' | typedefName | enumSpec;
 typeQual: 'const';
 storageClassSpec: 'typedef';
 declarationSpec: storageClassSpec? typeQual? typeSpec pointer?;
 declaration: declarationSpec declarator? SEMICOL; //(',' declarator)*;
-declarator: identifier | identifier EQ assignmentExpr | identifier LPAREN parameterList? RPAREN;
+declarator: identifier (initDeclarator | functionDeclarator)?;
+functionDeclarator: LPAREN parameterList? RPAREN;
+initDeclarator: EQ initializer | (LBRACK intLiteral RBRACK)+ (EQ initializer)?;
+initializer: assignmentExpr | LBRACE (initializer (',' initializer)*)? RBRACE;
 
 enumSpec: 'enum' identifier (LBRACE enum (',' enum)* RBRACE)?;
 enum: identifier;
@@ -20,8 +23,6 @@ enum: identifier;
 typedefName: identifier;
 
 pointer: (ARISK typeQual?)+;
-initializer: assignmentExpr;
-
 
 stmt: exprStmt | compoundStmt | printfStmt | iterationStmt | jumpStmt | selectionStmt;
 
@@ -63,9 +64,10 @@ addExpr: multExpr | addExpr (PLUS | MINUS) multExpr;
 multExpr: castExpr | multExpr (ARISK | DIV | MOD) castExpr;
 castExpr: unaryExpr | LPAREN typeSpec RPAREN castExpr;
 unaryExpr: postfixExpr | unaryOp castExpr;
-postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr postfixOp | functionCallExpr;
+postfixExpr: primaryExpr | postfixExpr (DOT | ARROW) identifier | postfixExpr postfixOp | functionCallExpr | arrayAccessExpr;
 
 functionCallExpr: identifier LPAREN (assignmentExpr (',' assignmentExpr)*)? RPAREN;
+arrayAccessExpr: identifier (LBRACK assignmentExpr RBRACK)+;
 
 postfixOp: DPLUS | DMINUS;
 primaryExpr: identifier | literal | LPAREN expr RPAREN;
@@ -127,7 +129,6 @@ INT: '0' | [1-9][0-9]*;
 FLOAT: INT* '.' [0-9]*;
 CHAR: '\'' . '\'' | '\'' '\\' ([abefnrtv0]|'\\'|'\''|'"'|'?') '\'';
 
-// the space in [] is important
 WS: [ \t\r\n]+ -> channel(HIDDEN);
 
 BLOCKCMT: '/*' .*? '*/' -> channel(HIDDEN);
