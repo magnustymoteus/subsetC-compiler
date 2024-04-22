@@ -1,5 +1,5 @@
 from .basic import *
-from .str_lit import *
+from src.constructs.AST.node.expr.str_lit import *
 from .program import *
 from .func_decl import *
 from .variable_decl import *

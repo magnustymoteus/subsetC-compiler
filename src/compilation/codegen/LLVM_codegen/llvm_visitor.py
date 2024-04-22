@@ -20,6 +20,13 @@ class LLVMVisitor(CFGVisitor):
     def reg_counter(self, value: int):
         self.reg_counters[-1] = value
 
+    def _get_reg(self, key: str) -> ir.Instruction:
+        result = self.regs.get(key, None)
+        if result is None:
+            # check if its global
+            result = self.regs_stack[0][key]
+        return result
+
     def _create_reg(self) -> str:
         result: str = str(self.reg_counter)
         self.reg_counter += 1
@@ -35,7 +42,7 @@ class LLVMVisitor(CFGVisitor):
     def __init__(self, ast: Ast, name: str, disable_comments: bool = False):
         self.disable_comments: bool = disable_comments
         self.no_load: bool = False
-        self.regs_stack: list[dict[str, ir.Instruction | ir.Function]] = [{}]
+        self.regs_stack: list[dict[str, ir.Instruction | ir.Function | ir.GlobalVariable]] = [{}]
         self.reg_counters: list[int] = [0]
         self.refs: set[str] = set()
 
@@ -45,10 +52,13 @@ class LLVMVisitor(CFGVisitor):
         self.module: ir.Module = ir.Module(name=name)
         self.module.triple = binding.get_default_triple()
 
-        printf_type = ir.FunctionType(ir.IntType(32), [ir.IntType(8).as_pointer()], var_arg=True)
-        self.printf = ir.Function(self.module, printf_type, name="printf")
+        self.io_functions: dict[str, ir.Function] = {}
 
-        self.builder = None
+        io_type = ir.FunctionType(ir.IntType(32), [ir.IntType(8).as_pointer()], var_arg=True)
+        self.io_functions["printf"] = ir.Function(self.module, io_type, name="printf")
+        self.io_functions["scanf"] = ir.Function(self.module, io_type, name="scanf")
+
+        self.builder: ir.IRBuilder | None = None
         self.visit(ast.root_w)
 
     def _load_if_pointer(self, value: ir.Instruction):
@@ -208,21 +218,22 @@ class LLVMVisitor(CFGVisitor):
         self.builder.position_at_end(false_block)
         self.jump_stack.pop()
 
-    # probably here until proper function calls get implemented
-    def print(self, node_w: Wrapper[PrintStatement]):
-        format_string = ir.GlobalVariable(self.module, ir.ArrayType(ir.IntType(8), len(node_w.n.format) + 1),
+    def io(self, node_w: Wrapper[IOStatement]):
+        format_string = ir.GlobalVariable(self.module, ir.ArrayType(ir.IntType(8), len(node_w.n.contents) + 1),
                                           self._create_global_reg())
+        format_string.linkage = "private"
         format_string.global_constant = True
-        format_string.initializer = ir.Constant(ir.ArrayType(ir.IntType(8), len(node_w.n.format) + 1),
-                                                [ir.IntType(8)(ord(c)) for c in f"{node_w.n.format}\00"])
+        format_string.initializer = ir.Constant(ir.ArrayType(ir.IntType(8), len(node_w.n.contents) + 1),
+                                                bytearray(f"{node_w.n.contents}\00".encode("utf8")))
 
         # Get a pointer to the first element of the array
         format_string_ptr = self.builder.gep(format_string,
                                              [ir.Constant(ir.IntType(64), 0), ir.Constant(ir.IntType(64), 0)])
-        argument = self.visit(node_w.n.argument_w)
-        if isinstance(argument.type, ir.FloatType):
-            argument = self.builder.fpext(argument, ir.DoubleType(), self._create_reg())
-        return self.builder.call(self.printf, [format_string_ptr, argument])
+        arguments = [self.visit(argument_w) for argument_w in node_w.n.arguments]
+        for i, argument in enumerate(arguments):
+            if isinstance(argument.type, ir.FloatType):
+                arguments[i] = self.builder.fpext(argument, ir.DoubleType(), self._create_reg())
+        return self.builder.call(self.io_functions[node_w.n.name], [format_string_ptr]+arguments)
 
     def array_lit(self, node_w: Wrapper[ArrayLiteral]):
         return self._get_llvm_type(node_w.n.type)[0]([self.visit(value_w) for value_w in node_w.n.value])
@@ -231,9 +242,9 @@ class LLVMVisitor(CFGVisitor):
 
     def identifier(self, node_w: Wrapper[Identifier]) -> ir.Instruction:
         if not (self.no_load or node_w.n.name in self.refs):
-            result = self._load_if_pointer(self.regs[node_w.n.name])
+            result = self._load_if_pointer(self._get_reg(node_w.n.name))
             return result
-        return self.regs[node_w.n.name]
+        return self._get_reg(node_w.n.name)
 
     def _cast(self, value, from_type: PrimitiveType, to_type: PrimitiveType):
         result = do_cast(self.builder, from_type, to_type)
@@ -276,7 +287,7 @@ class LLVMVisitor(CFGVisitor):
 
     def array_access(self, node_w: Wrapper[ArrayAccess]):
         indices = [wrap(IntLiteral(0))]+node_w.n.indices
-        current_index: ir.GEPInstr = self.builder.gep(self.regs[node_w.n.identifier_w.n.name], [self.visit(index_w) for index_w in indices], True, self._create_reg())
+        current_index: ir.GEPInstr = self.builder.gep(self._get_reg(node_w.n.identifier_w.n.name), [self.visit(index_w) for index_w in indices], True, self._create_reg())
         return self._load_if_pointer(current_index) if not (self.no_load or node_w.n.identifier_w.n.name in self.refs) else current_index
     def un_op(self, node_w: Wrapper[UnaryOp]):
         self.no_load = node_w.n.operator in ["++", "--"]
@@ -324,7 +335,7 @@ class LLVMVisitor(CFGVisitor):
                 if isinstance(node_w.n.definition_w.n, AddressOfOp):
                     self.refs.add(node_w.n.identifier)
                 self.no_load = False
-                return self.regs[node_w.n.identifier]
+                return self._get_reg(node_w.n.identifier)
             else:
                 allocaInstr = self.builder.alloca(decl_ir_type[0], decl_ir_type[1], node_w.n.identifier)
                 self.regs[node_w.n.identifier] = allocaInstr
@@ -333,9 +344,10 @@ class LLVMVisitor(CFGVisitor):
         else:
             type = self._get_llvm_type(node_w.n.type)
             result = ir.GlobalVariable(self.module, type[0], node_w.n.identifier)
+            result.linkage = "dso_local"
             if node_w.n.definition_w.n is not None:
-                self.regs[node_w.n.identifier] = self.visit(node_w.n.definition_w)
-                result.initializer = self.regs[node_w.n.identifier]
+                result.initializer = self.visit(node_w.n.definition_w)
+            self.regs[node_w.n.identifier] = result
             return result
 
     def assign(self, node_w: Wrapper[Assignment]):

@@ -231,28 +231,15 @@ class CSTToASTVisitor(C_GrammarVisitor):
             parameters = []
         result = FunctionDeclaration(function_name, FunctionType(return_type, [parameter_w.n.type for parameter_w in parameters]), parameters, body_w)
         return wrap(result)
+    def visitScanfStmt(self, ctx:C_GrammarParser.ScanfStmtContext):
+        contents_w: Wrapper[StringLiteral] = self.visitFirstMatch(ctx, C_GrammarParser.StringLiteralContext)
+        arguments: list[Wrapper[Expression]] = self.visitAllMatches(ctx, C_GrammarParser.AssignmentExprContext)
+        return wrap(IOStatement("scanf", contents_w.n.string, arguments))
 
     def visitPrintfStmt(self, ctx: C_GrammarParser.PrintfStmtContext):
-        """
-        Visits the given printf statement context and converts it to an AST node.
-
-        Args:
-            ctx: The printf statement context.
-
-        Returns:
-            The AST node representing the printf statement.
-        """
-        format: str = ""
-        argument: Wrapper[Basic] | None = None
-        for child in ctx.getChildren():
-            match child:
-                case C_GrammarParser.PrintfFormatContext():
-                    format = child.getChild(0).getText()
-                case C_GrammarParser.IdentifierContext():
-                    argument = self.visit(child)
-                case C_GrammarParser.LiteralContext():
-                    argument = self.visit(child)
-        return wrap(PrintStatement(format, argument))
+        contents_w: Wrapper[StringLiteral] = self.visitFirstMatch(ctx, C_GrammarParser.StringLiteralContext)
+        arguments: list[Wrapper[Expression]] = self.visitAllMatches(ctx, C_GrammarParser.AssignmentExprContext)
+        return wrap(IOStatement("printf", contents_w.n.string, arguments))
 
     def visitPostfixExpr(self, ctx: C_GrammarParser.PostfixExprContext):
         """
@@ -343,7 +330,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
             if len(dimension) > 0:
                 type_specifier = ArrayType(type_specifier, dimension)
             result = VariableDeclaration(identifier_node.n.name, type_specifier, storage_class_specifier)
-            if declarator_result[1] is not None:
+            if declarator_result[1] is not None and declarator_result[1][0] is not None:
                 result.definition_w = declarator_result[1][0]
             return wrap(result)
         elif isinstance(type_specifier.n, Enumeration):
@@ -551,8 +538,12 @@ class CSTToASTVisitor(C_GrammarVisitor):
             return node
         return self.visitChildren(ctx)
 
+    def visitStringLiteral(self, ctx:C_GrammarParser.StringLiteralContext):
+        str_value = ctx.getText()[1:-1]
+        return wrap(StringLiteral(str_value))
+
     def visitCharLiteral(self, ctx: C_GrammarParser.CharLiteralContext):
-        char_value = ctx.getChild(0).getText()[1:-1].encode('utf-8').decode('unicode_escape')
+        char_value = ctx.getText()[1:-1].encode('utf-8').decode('unicode_escape')
         node: Wrapper[CharLiteral] = wrap(CharLiteral(char_value))
         return node
 

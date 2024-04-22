@@ -63,8 +63,8 @@ class ASTVisitor():
                 return self.lit(node_w)
             case Identifier():
                 return self.identifier(node_w)
-            case PrintStatement():
-                return self.print(node_w)
+            case IOStatement():
+                return self.io(node_w)
             case Enumeration():
                 return self.enum(node_w)
             case SwitchStatement():
@@ -338,14 +338,15 @@ class ASTVisitor():
         if node_w.n.definition_w.n is not None:
             self.visit(node_w.n.definition_w)
 
-    def print(self, node_w: Wrapper[PrintStatement]):
+    def io(self, node_w: Wrapper[IOStatement]):
         """
-        Method called when encountering a PrintStatement node.
+        Method called when encountering a IOStatement node.
 
         Args:
-            node_w (Wrapper[PrintStatement]): The PrintStatement node wrapper.
+            node_w (Wrapper[IOStatement]): The IOStatement node wrapper.
 
         Returns:
             None
         """
-        self.visit(node_w.n.argument_w)
+        for arg_w in node_w.n.arguments:
+            self.visit(arg_w)

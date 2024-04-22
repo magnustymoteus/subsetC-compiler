@@ -12,3 +12,4 @@ from .cast_op import *
 from .func_call import *
 from .array_lit import *
 from .array_access import *
+from .str_lit import *
