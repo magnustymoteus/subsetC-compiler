@@ -59,6 +59,16 @@ class FunctionType(SymbolType):
     def __repr__(self):
         return f"{self.return_type} ({self.parameter_types})"
 
+# struct or union type
+class CompositeType(SymbolType):
+    def __init__(self, name: str, type: str):
+        assert type in ["union", "struct"]
+        self.type: str = type
+        self.name: str = name
+        super().__init__()
+    def __repr__(self):
+        return f"{self.type} {self.name}"
+
 
 class ArrayType(PrimitiveType):
     def __init__(self, element_type: PrimitiveType, dimension: list[int]):

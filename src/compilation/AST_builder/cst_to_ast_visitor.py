@@ -246,6 +246,22 @@ class CSTToASTVisitor(C_GrammarVisitor):
         arguments: list[Wrapper[Expression]] = self.visitAllMatches(ctx, C_GrammarParser.AssignmentExprContext)
         return wrap(IOStatement("printf", contents_w, arguments))
 
+    def visitStructOrUnion(self, ctx:C_GrammarParser.StructOrUnionContext):
+        return ctx.getText()
+    def visitObjectAccess(self, ctx:C_GrammarParser.ObjectAccessContext):
+        identifier_w = self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext)
+        object_access_w = self.visitFirstMatch(ctx, C_GrammarParser.ObjectAccessContext)
+        if object_access_w is None:
+            return identifier_w
+        return wrap(ObjectAccess(identifier_w, object_access_w))
+    def visitStructUnionSpec(self, ctx:C_GrammarParser.StructUnionSpecContext):
+        return CompositeType(self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext).n.name, self.visitFirstMatch(ctx, C_GrammarParser.StructOrUnionContext))
+    def visitStructUnionDeclaration(self, ctx:C_GrammarParser.StructUnionDeclarationContext):
+        result = CompositeDeclaration(self.visitFirstMatch(ctx, C_GrammarParser.StructUnionSpecContext))
+        if ctx.getChild(2).getText() == "{":
+            result.definition_w = wrap(CompoundStatement(self.visitAllMatches(ctx, C_GrammarParser.DeclarationContext)))
+        return wrap(result)
+
     def visitPostfixExpr(self, ctx: C_GrammarParser.PostfixExprContext):
         """
         Visits the given postfix expression context and converts it to an AST node.
@@ -383,7 +399,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
                     is_constant = True
                 case C_GrammarParser.TypeSpecContext():
                     type_specifier = visitedChild
-                    if isinstance(type_specifier, Wrapper):
+                    if not isinstance(type_specifier, str):
                         return None, type_specifier
                 case C_GrammarParser.PointerContext():
                     ptr_count = visitedChild[0]
@@ -404,7 +420,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
             The AST node representing the type specification.
         """
         visitedChild = self.visit(ctx.getChild(0))
-        is_enum: bool = isinstance(ctx.getChild(0), C_GrammarParser.EnumSpecContext)
+        is_enum: bool = isinstance(ctx.getChild(0), (C_GrammarParser.EnumSpecContext, C_GrammarParser.StructUnionSpecContext))
         return visitedChild if is_enum else ctx.getText()
 
     def visitInitializer(self, ctx:C_GrammarParser.InitializerContext):

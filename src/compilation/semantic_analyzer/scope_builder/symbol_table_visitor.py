@@ -85,6 +85,13 @@ class SymbolTableVisitor(ASTVisitor):
         if node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name) is None:
             self.raiseSemanticErr(f"Undeclared variable {node_w.n.name}")
 
+    def object_access(self, node_w: Wrapper[ObjectAccess]):
+        self.visit(node_w.n.identifier_w)
+        symtab_entry: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.identifier_w.n.name)
+        composite_decl_w: Wrapper[CompositeDeclaration] = symtab_entry.value_w
+        members = composite_decl_w.n.definition_w.n.statements
+        if composite_decl_w not in members:
+            self.raiseSemanticErr(f"{node_w.n.identifier_w.n} has no member {node_w.n.member_w.n}")
 
     def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
         """
@@ -109,15 +116,6 @@ class SymbolTableVisitor(ASTVisitor):
         self.visit(node_w.n.body_w)
         node_w.n.body_w.n.statements = statements
         self.stack.pop()
-
-    def cast_op(self, node_w: Wrapper[CastOp]):
-        """
-        Visits a cast operation node in the AST.
-
-        Args:
-            node_w (Wrapper[CastOp]): The wrapped cast operation node to visit.
-        """
-        super().cast_op(node_w)
 
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):

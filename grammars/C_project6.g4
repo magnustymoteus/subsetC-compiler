@@ -11,10 +11,10 @@ typeSpec: 'char' | 'int' | 'float' | 'void' | typedefName | enumSpec;
 typeQual: 'const';
 storageClassSpec: 'typedef';
 declarationSpec: storageClassSpec? typeQual? typeSpec pointer?;
-declaration: declarationSpec declarator? SEMICOL; //(',' declarator)*;
+declaration: declarationSpec declarator? SEMICOL;
 declarator: identifier (initDeclarator | functionDeclarator)?;
 functionDeclarator: LPAREN parameterList? RPAREN;
-initDeclarator: EQ initializer | (LBRACK intLiteral RBRACK)+ (EQ initializer)?;
+initDeclarator: EQ initializer | (LBRACK intLiteral? RBRACK)+ (EQ initializer)?;
 initializer: assignmentExpr | LBRACE (initializer (',' initializer)*)? RBRACE;
 
 enumSpec: 'enum' identifier (LBRACE enum (',' enum)* RBRACE)?;
@@ -24,7 +24,7 @@ typedefName: identifier;
 
 pointer: (ARISK typeQual?)+;
 
-stmt: exprStmt | compoundStmt | printfStmt | iterationStmt | jumpStmt | selectionStmt;
+stmt: exprStmt | compoundStmt | iterationStmt | jumpStmt | selectionStmt | printfStmt | scanfStmt;
 
 selectionStmt: 'if' LPAREN expr RPAREN compoundStmt ('else' (compoundStmt | selectionStmt))? | 'switch' LPAREN expr RPAREN LBRACE labeledStmt* RBRACE;
 
@@ -36,10 +36,8 @@ labeledStmt: 'case' constantExpr COL blockItem* | 'default' COL blockItem*;
 
 jumpStmt: 'continue' SEMICOL | 'break' SEMICOL | 'return' expr? SEMICOL;
 
-// temporary, remove when introducing function calls (?)
-printfStmt: 'printf' LPAREN '"' printfFormat '"' ',' (identifier | literal) RPAREN SEMICOL;
-printfFormat: PRINTF_FORMATTING;
-//
+printfStmt: 'printf' LPAREN stringLiteral (',' assignmentExpr)* RPAREN SEMICOL;
+scanfStmt: 'scanf' LPAREN stringLiteral (',' assignmentExpr)* RPAREN SEMICOL;
 
 compoundStmt: LBRACE blockItem* RBRACE;
 blockItem: declaration | stmt;
@@ -74,10 +72,11 @@ primaryExpr: identifier | literal | LPAREN expr RPAREN;
 unaryOp: PLUS | MINUS | NOT | BITNOT | DPLUS | DMINUS | AMP | ARISK;
 
 identifier: ID;
-literal: intLiteral | charLiteral | floatLiteral;
+literal: intLiteral | charLiteral | floatLiteral | stringLiteral;
 intLiteral: INT;
-charLiteral: CHAR;
+charLiteral: CHARLIT;
 floatLiteral: FLOAT;
+stringLiteral: STRING;
 
 // Lexer rules
 SEMICOL: ';';
@@ -123,15 +122,16 @@ BITXOR: '^';
 SL: '<<';
 SR: '>>';
 
-ID: [a-zA-Z_] [a-zA-Z_0-9]*;
 
-INT: '0' | [1-9][0-9]*;
-FLOAT: INT* '.' [0-9]*;
-CHAR: '\'' . '\'' | '\'' '\\' ([abefnrtv0]|'\\'|'\''|'"'|'?') '\'';
+ID: [a-zA-Z_] [a-zA-Z_0-9]*;
 
 WS: [ \t\r\n]+ -> channel(HIDDEN);
 
 BLOCKCMT: '/*' .*? '*/' -> channel(HIDDEN);
 LINECMT: '//' ~[\r\n]* -> channel(HIDDEN);
 
-PRINTF_FORMATTING: '%' [sdxfc];
+INT: '0' | [1-9][0-9]*;
+FLOAT: INT* '.' [0-9]*;
+CHAR: (~["\r\n]  | '\\' ([abefnrtv0]|'\\'|'\''|'"'|'?'));
+CHARLIT: '\'' CHAR '\'';
+STRING: '"' CHAR+ '"';

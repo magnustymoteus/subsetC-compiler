@@ -73,6 +73,9 @@ class Compiler():
         ast = Compiler.getAST(tree, tokens)
         ResolverVisitor(ast, preprocessor.included_stdio)
 
+        if self.do_viz("ast"):
+            Compiler.visualizeAST(ast, f"./{filename}-viz/ast.gv")
+
         # Makes symbol table entries of the ast nodes
         SymbolTableVisitor(ast)
         TypeCheckerVisitor(ast)

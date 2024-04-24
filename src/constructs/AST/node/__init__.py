@@ -7,3 +7,4 @@ from .expr import *
 from .block_item import *
 from .stmt import *
 from .enum import *
+from .composite_decl import *

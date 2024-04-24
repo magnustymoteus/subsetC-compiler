@@ -7,7 +7,8 @@ from src.compilation.compiler import *
 # TODO: line numbers in errors/warnings for source code with includes is off
 # TODO: check if return is called for non void functions in all paths
 # TODO: make output checking tests
-
+# TODO: forward decl for struct/union
+# TODO: type checking for struct/union
 def c_file(param):
     base, ext = os.path.splitext(param)
     if ext.lower() not in ('.c'):

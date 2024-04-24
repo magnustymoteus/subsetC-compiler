@@ -24,7 +24,7 @@ class TypeCheckerVisitor(ASTVisitor):
         return operator in ['<', '>', '>=', '<=', '==', '!=', '&&', '||', '!']
 
 
-    def checkValidPrimitiveType(self, type: PrimitiveType):
+    def checkValidType(self, type: SymbolType):
         """
         Check if the given primitive type is valid.
 
@@ -34,7 +34,7 @@ class TypeCheckerVisitor(ASTVisitor):
         Raises:
             SemanticError: If the type is not valid.
         """
-        if type.type not in PrimitiveType.type_ranks:
+        if not (isinstance(type, CompositeType) or type.type in PrimitiveType.type_ranks):
             self.raiseSemanticErr(f"Unknown type {type}")
 
     def checkImplicitDemotion(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
@@ -171,7 +171,7 @@ class TypeCheckerVisitor(ASTVisitor):
         node_w.n.type = deepcopy(node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).type)
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
-        self.checkValidPrimitiveType(node_w.n.type)
+        self.checkValidType(node_w.n.type)
         super().variable_decl(node_w)
         if node_w.n.definition_w.n is not None:
             self.checkPointerTypes(node_w.n.type, node_w.n.definition_w.n.type)
@@ -179,6 +179,13 @@ class TypeCheckerVisitor(ASTVisitor):
             self.checkDiscardedPointerQualifier(node_w.n.type, node_w.n.definition_w.n.type)
             if isinstance(node_w.n.type, ArrayType):
                 self.checkArrayInitialization(node_w)
+    def object_access(self, node_w: Wrapper[ObjectAccess]):
+        self.visit(node_w.n.identifier_w)
+        if isinstance(node_w.n.member_w.n, ObjectAccess):
+            self.visit(node_w.n.member_w)
+        else:
+            pass
+
     def array_access(self, node_w: Wrapper[ArrayAccess]):
         super().array_access(node_w)
         for index_w in node_w.n.indices:
