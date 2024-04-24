@@ -14,7 +14,7 @@ declarationSpec: storageClassSpec? typeQual? typeSpec pointer?;
 declaration: declarationSpec declarator? SEMICOL;
 declarator: identifier (initDeclarator | functionDeclarator)?;
 functionDeclarator: LPAREN parameterList? RPAREN;
-initDeclarator: EQ initializer | (LBRACK intLiteral RBRACK)+ (EQ initializer)?;
+initDeclarator: EQ initializer | (LBRACK intLiteral? RBRACK)+ (EQ initializer)?;
 initializer: assignmentExpr | LBRACE (initializer (',' initializer)*)? RBRACE;
 
 enumSpec: 'enum' identifier (LBRACE enum (',' enum)* RBRACE)?;

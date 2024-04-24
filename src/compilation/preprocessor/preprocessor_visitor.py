@@ -19,6 +19,7 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
         self.defines: dict[str, str] = defines
         self.rewriter = TokenStreamRewriter(buffered_tokens_stream)
         self.ifndef_stack_stack: list[tuple[int, bool]] = [] # contains line for the end of the endif directive token
+        self.included_stdio = False
     def visitProgram(self, ctx: C_PreprocessorParser.ProgramContext):
         super().visitProgram(ctx)
         if len(self.ifndef_stack_stack) > 0:
@@ -30,8 +31,8 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
         self.rewriter.delete("default", ctx.start.tokenIndex, ctx.stop.tokenIndex)
     def visitIncludeDirective(self, ctx:C_PreprocessorParser.IncludeDirectiveContext):
         is_library: bool = ctx.getChild(1).getText()[0] == '<'
+        incomplete_path: str = ctx.getChild(1).getText()[1:-1]
         if not is_library:
-            incomplete_path: str = ctx.getChild(1).getText()[1:-1]
             included_path = os.path.join(os.path.dirname(self.filepath), incomplete_path)
             if not os.path.exists(included_path):
                 self.raise_preprocessing_error(f"{included_path}: No such file", ctx)
@@ -46,7 +47,7 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
             self.rewriter.replace("default", ctx.start.tokenIndex, ctx.stop.tokenIndex, sub_preprocessor.get_processed_result())
 
         else:
-            # TODO: stdio.h => enable printf, scanf, ...
+            self.included_stdio = incomplete_path == "stdio.h"
             self.rewriter.delete("default", ctx.start.tokenIndex, ctx.stop.tokenIndex)
     def visitTerminal(self, node):
         defined = self.defines.get(node.getText(), False)

@@ -2,46 +2,11 @@ import os.path
 
 import pytest
 from src.__main__ import *
-from llvmlite import binding
+from src.compilation.compiler import *
 
-def compile(path, cfold: bool = True, cprop: bool = True):
-    path_in_str = str(path)
-    preprocessed_code = getPreprocessedCode(path_in_str)
-    # Lexes the input file
-    tokens = getTokens(preprocessed_code)
-    parser = C_GrammarParser(tokens)
-    parser.addErrorListener(MyErrorListener())
-    tree = parser.program()
-    #visualizeCST(tree, parser.ruleNames, "./viz/cst/"+str(os.path.basename(path)))
-    ast = getAST(tree, tokens)
-    ResolverVisitor(ast)
-    #visualizeAST(ast, "./viz/ast/ast-viz/" + str(os.path.basename(path)) + ".gv")
-    SymbolTableVisitor(ast)
-    #visualizeAST(ast, "./viz/ast/symtab-ast/" + str(os.path.basename(path)) + ".gv")
-    TypeCheckerVisitor(ast)
-    #visualizeAST(ast, "viz/ast/type-checked-ast/" + str(os.path.basename(path)) + ".gv")
-    SimplifierVisitor(ast)
-    if cprop:
-        ConstantPropagationVisitor(ast)
-        #visualizeAST(ast, "viz/ast/cpropped-ast/" + str(os.path.basename(path)) + ".gv")
-    if cfold:
-        ConstantFoldingVisitor(ast)
-    DeadCodeVisitor(ast)
-    #visualizeAST(ast, "viz/ast/optimized-ast/" + str(os.path.basename(path)) + ".gv")
-    cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
-    TACVisitor(cfg)
-    #visualizeCFG(cfg, "viz/cfg/tac-cfg/" + str(os.path.basename(path)) + ".gv")
-    llvm = LLVMVisitor(ast, os.path.basename(path))
-    for function in llvm.module.functions:
-        if function.name == 'main':
-            s = graphviz.Source(binding.get_function_cfg(function), filename=f"./{str(os.path.basename(path))}/viz/llvm_cfg.gv")
-            s.save()
-    llvm_file = Path(f"./{str(os.path.basename(path))}/llvm.ll")
-    llvm_file.parent.mkdir(parents=True, exist_ok=True)
-    f = open(f"./{str(os.path.basename(path))}/llvm.ll", "w")
-    f.write(str(llvm.module))
-    f.close()
-    return ast
+def compile(path):
+    compiler = Compiler()
+    compiler.compile_llvm(path)
 def success(glob_path):
     failed = False
     for path in glob_path:

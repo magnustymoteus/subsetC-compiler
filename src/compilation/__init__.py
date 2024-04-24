@@ -6,3 +6,4 @@ from .optimizer import *
 from .preprocessor import *
 from .semantic_analyzer import *
 from .visitor import *
+from .compiler import *

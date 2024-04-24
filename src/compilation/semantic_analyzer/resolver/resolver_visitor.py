@@ -3,8 +3,9 @@ from src.compilation.visitor.AST_visitor import ASTVisitor
 
 '''Semantic analysis of declarations (resolving forward declarations) '''
 class ResolverVisitor(ASTVisitor):
-    def __init__(self, ast: Ast):
+    def __init__(self, ast: Ast, stdio_included: bool = False):
         self.is_main_defined: bool = False
+        self.stdio_included: bool = stdio_included
         self.func_decls: dict[str, Wrapper[FunctionDeclaration]] = {}
         self.func_decl_instances: dict[str, list[Wrapper[FunctionDeclaration]]] = {}
         super().__init__(ast)
@@ -24,7 +25,12 @@ class ResolverVisitor(ASTVisitor):
     def signature_match(self, type1: FunctionType, type2: FunctionType) -> bool:
         return type1.parameter_types == type2.parameter_types and type1.return_type == type2.return_type
 
+    def io(self, node_w: Wrapper[IOStatement]):
+        if not self.stdio_included:
+            self.raiseSemanticErr(f"undefined reference to {node_w.n.name}: stdio.h not included")
+
     def func_decl(self, node_w: Wrapper[FunctionDeclaration]):
+        super().func_decl(node_w)
         if node_w.n.name == 'main':
             self.is_main_defined = True
         found = self.func_decls.get(node_w.n.name, False)

@@ -7,7 +7,14 @@ class CSTToASTVisitor(C_GrammarVisitor):
     This class represents a visitor that converts a Concrete Syntax Tree (CST) to an Abstract Syntax Tree (AST).
     It inherits from the C_GrammarVisitor class.
     """
-
+    def getFirstMatch(self, ctx, match_type):
+        if isinstance(match_type, list):
+            return next((child for child in ctx.getChildren() if type(child) in match_type), None)
+        return next((child for child in ctx.getChildren() if isinstance(child, match_type)), None)
+    def getAllMatches(self, ctx, match_type):
+        if isinstance(match_type, list):
+            return [child for child in ctx.getChildren() if type(child) in match_type]
+        return [child for child in ctx.getChildren() if isinstance(child, match_type)]
     def visitFirstMatch(self, ctx, match_type):
         """
         Visits the first child node of the given context that matches the specified type.
@@ -19,9 +26,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
         Returns:
             The result of visiting the first matching child node, or None if no matching child node is found.
         """
-        if isinstance(match_type, list):
-            return next((self.visit(child) for child in ctx.getChildren() if type(child) in match_type), None)
-        return next((self.visit(child) for child in ctx.getChildren() if isinstance(child, match_type)), None)
+        match = self.getFirstMatch(ctx, match_type)
+        return self.visit(match) if match is not None else None
 
     def visitAllMatches(self, ctx, match_type):
         """
@@ -34,9 +40,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
         Returns:
             A list of results from visiting the matching child nodes.
         """
-        if isinstance(match_type, list):
-            return [self.visit(child) for child in ctx.getChildren() if type(child) in match_type]
-        return [self.visit(child) for child in ctx.getChildren() if isinstance(child, match_type)]
+        matches = self.getAllMatches(ctx, match_type)
+        return [self.visit(match) for match in matches]
 
     def __init__(self, tokens):
         """
@@ -234,12 +239,12 @@ class CSTToASTVisitor(C_GrammarVisitor):
     def visitScanfStmt(self, ctx:C_GrammarParser.ScanfStmtContext):
         contents_w: Wrapper[StringLiteral] = self.visitFirstMatch(ctx, C_GrammarParser.StringLiteralContext)
         arguments: list[Wrapper[Expression]] = self.visitAllMatches(ctx, C_GrammarParser.AssignmentExprContext)
-        return wrap(IOStatement("scanf", contents_w.n.string, arguments))
+        return wrap(IOStatement("scanf", contents_w, arguments))
 
     def visitPrintfStmt(self, ctx: C_GrammarParser.PrintfStmtContext):
         contents_w: Wrapper[StringLiteral] = self.visitFirstMatch(ctx, C_GrammarParser.StringLiteralContext)
         arguments: list[Wrapper[Expression]] = self.visitAllMatches(ctx, C_GrammarParser.AssignmentExprContext)
-        return wrap(IOStatement("printf", contents_w.n.string, arguments))
+        return wrap(IOStatement("printf", contents_w, arguments))
 
     def visitPostfixExpr(self, ctx: C_GrammarParser.PostfixExprContext):
         """
@@ -413,7 +418,12 @@ class CSTToASTVisitor(C_GrammarVisitor):
 
     def visitInitDeclarator(self, ctx:C_GrammarParser.InitDeclaratorContext):
         dimension: list[int] = [lit.n.value for lit in self.visitAllMatches(ctx, C_GrammarParser.IntLiteralContext)]
-        initializer = self.visitFirstMatch(ctx, C_GrammarParser.InitializerContext)
+        initializer = self.getFirstMatch(ctx, C_GrammarParser.InitializerContext)
+        if initializer is not None:
+            if not len(dimension):
+                initializer = self.visitFirstMatch(initializer, [C_GrammarParser.InitializerContext, C_GrammarParser.AssignmentExprContext])
+            else:
+                initializer = self.visit(initializer)
         return {"type": "init", "initializer": initializer, "dimension": dimension}
     def visitFunctionDeclarator(self, ctx:C_GrammarParser.FunctionDeclaratorContext):
         parameters: list[Wrapper[VariableDeclaration]] | None = self.visitFirstMatch(ctx,

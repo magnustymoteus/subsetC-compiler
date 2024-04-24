@@ -119,6 +119,14 @@ class LLVMVisitor(CFGVisitor):
             case _:
                 raise ValueError(f"Unrecognized LLVM type")
 
+    def string_lit(self, node_w: Wrapper[StringLiteral]):
+        str = ir.Constant(ir.ArrayType(ir.IntType(8), len(node_w.n.string) + 1),
+                    bytearray(f"{node_w.n.string}\00".encode("utf8")))
+        var = ir.GlobalVariable(self.module, str.type, self._create_global_reg())
+        var.initializer = str
+        var.linkage = 'private'
+        var.align = 1
+        return self.builder.gep(var, [ir.Constant(ir.IntType(64),0)]*2, True, self._create_reg())
 
     def func_call(self, node_w: Wrapper[FunctionCall]):
         args = [self.visit(arg) for arg in node_w.n.arguments]
@@ -226,21 +234,12 @@ class LLVMVisitor(CFGVisitor):
         self.jump_stack.pop()
 
     def io(self, node_w: Wrapper[IOStatement]):
-        format_string = ir.GlobalVariable(self.module, ir.ArrayType(ir.IntType(8), len(node_w.n.contents) + 1),
-                                          self._create_global_reg())
-        format_string.linkage = "private"
-        format_string.global_constant = True
-        format_string.initializer = ir.Constant(ir.ArrayType(ir.IntType(8), len(node_w.n.contents) + 1),
-                                                bytearray(f"{node_w.n.contents}\00".encode("utf8")))
-
         # Get a pointer to the first element of the array
-        format_string_ptr = self.builder.gep(format_string,
-                                             [ir.Constant(ir.IntType(64), 0), ir.Constant(ir.IntType(64), 0)])
         arguments = [self.visit(argument_w) for argument_w in node_w.n.arguments]
         for i, argument in enumerate(arguments):
             if isinstance(argument.type, ir.FloatType):
                 arguments[i] = self.builder.fpext(argument, ir.DoubleType(), self._create_reg())
-        return self.builder.call(self.io_functions[node_w.n.name], [format_string_ptr]+arguments)
+        return self.builder.call(self.io_functions[node_w.n.name], [self.visit(node_w.n.contents_w)]+arguments)
 
     def array_lit(self, node_w: Wrapper[ArrayLiteral]):
         return self._get_llvm_type(node_w.n.type)[0]([self.visit(value_w) for value_w in node_w.n.value])

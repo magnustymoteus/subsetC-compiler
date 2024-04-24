@@ -57,6 +57,8 @@ class ASTVisitor():
                 return self.func_decl(node_w)
             case VariableDeclaration():
                 return self.variable_decl(node_w)
+            case StringLiteral():
+                return self.string_lit(node_w)
             case ArrayLiteral():
                 return self.array_lit(node_w)
             case Literal():
@@ -256,6 +258,8 @@ class ASTVisitor():
             None
         """
         self.visit(node_w.n.expression_w)
+    def string_lit(self, node_w: Wrapper[StringLiteral]):
+        self.array_lit(node_w)
 
     def array_lit(self, node_w: Wrapper[ArrayLiteral]):
         for elem_w in node_w.n.value:
