@@ -107,10 +107,10 @@ class TypeCheckerVisitor(ASTVisitor):
             # case where two pointers dont match
             self.raiseSemanticErr(f"Incompatible pointer types {left_copy} and {right_copy}")
     def checkReturnType(self, return_type: PrimitiveType, returned_type: PrimitiveType):
-        self.checkImplicitDemotion(return_type, returned_type)
-        self.checkPointerTypes(return_type, returned_type)
         if return_type.type == "void" and returned_type != return_type:
             self.raiseSemanticErr(f"Cannot return type {returned_type} as void")
+        self.checkImplicitDemotion(return_type, returned_type)
+        self.checkPointerTypes(return_type, returned_type)
     def checkArrayInitialization(self, node_w: Wrapper[VariableDeclaration]):
         arr_type: ArrayType = node_w.n.type
         definition_type = node_w.n.definition_w.n.type

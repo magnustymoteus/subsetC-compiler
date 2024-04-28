@@ -46,10 +46,26 @@ def semanticErr(glob_path):
         failed = True
     if failed:
         pytest.fail("Expected to have semantic errors for a test")
+def preprocessingErr(glob_path):
+    failed = False
+    for path in glob_path:
+        try:
+            compile(path)
+        except PreprocessingError as e:
+            print(f"\n✔ {e} for {str(os.path.basename(path))}", end='')
+            continue
+        except:
+            continue
+        print(f"\nX Expected to have a preprocessing error for {str(os.path.basename(path))}", end='')
+        failed = True
+    if failed:
+        pytest.fail("Expected to have preprocessing errors for a test")
 
 pass_tests_all = Path("../../example_source_files/CorrectCode").glob('*.c')
 syntaxErr_tests_all = Path("../../example_source_files/SyntaxError").glob('*.c')
 semanticErr_tests_all = Path("../../example_source_files/SemanticError").glob('*.c')
+preprocessingErr_tests_all = Path("../../example_source_files/PreprocessingError").glob('*.c')
+
 
 pass_tests_fundamental = Path("../../example_source_files/CorrectCode/").glob('*pass*.c')
 syntaxErr_tests_fundamental = Path("../../example_source_files/SyntaxError").glob('*syntaxErr*.c')
@@ -66,3 +82,5 @@ def test_syntaxErr_all():
     syntaxErr(syntaxErr_tests_all)
 def test_semanticErr_all():
     semanticErr(semanticErr_tests_all)
+def test_preprocessingErr_all():
+    preprocessingErr(preprocessingErr_tests_all)

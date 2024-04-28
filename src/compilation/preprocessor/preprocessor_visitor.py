@@ -48,6 +48,8 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
 
         else:
             self.included_stdio = incomplete_path == "stdio.h"
+            if not self.included_stdio:
+                self.raise_preprocessing_error(f"library {incomplete_path} not supported", ctx)
             self.rewriter.delete("default", ctx.start.tokenIndex, ctx.stop.tokenIndex)
     def visitTerminal(self, node):
         defined = self.defines.get(node.getText(), False)

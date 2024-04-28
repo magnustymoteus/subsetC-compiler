@@ -91,6 +91,8 @@ class Compiler():
 
         DeadCodeVisitor(ast)
 
+        MainChecker(ast)
+
         if self.do_viz("ast"):
             Compiler.visualizeAST(ast, f"./{filename}-viz/ast.gv")
 

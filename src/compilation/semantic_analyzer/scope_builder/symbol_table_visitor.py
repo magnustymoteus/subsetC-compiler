@@ -134,6 +134,7 @@ class SymbolTableVisitor(ASTVisitor):
         self.stack.pop()
 
 
+
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         """
         Visits a variable declaration node in the AST and adds the symbol to the symbol table.
