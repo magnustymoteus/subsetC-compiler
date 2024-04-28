@@ -44,7 +44,6 @@ class TACVisitor(CFGVisitor):
         else:
             self.tacs[subject[0]].append((node_w, custom_index))
 
-
     def addTACNode(self, node_w: Wrapper[Expression], custom_index: int | None = None) -> Wrapper[Identifier]:
         symbol_name: str = f"tac{self.interm_var_count}"
         new_type: PrimitiveType = copy(node_w.n.type)
@@ -81,8 +80,8 @@ class TACVisitor(CFGVisitor):
         super().cast_op(node_w)
         if not isinstance(node_w.n.expression_w.n, (Identifier, Literal, ArrayAccess)):
             node_w.n.expression_w = self.addTACNode(node_w.n.expression_w)
-
-
+    def object_access(self, node_w: Wrapper[ObjectAccess]):
+        pass
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         super().variable_decl(node_w)
         if node_w.n.local_symtab_w.n.has_parent:

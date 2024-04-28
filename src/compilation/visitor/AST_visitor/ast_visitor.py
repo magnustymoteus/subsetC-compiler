@@ -55,6 +55,8 @@ class ASTVisitor():
                 return self.compound_stmt(node_w)
             case FunctionDeclaration():
                 return self.func_decl(node_w)
+            case CompositeDeclaration():
+                return self.composite_decl(node_w)
             case VariableDeclaration():
                 return self.variable_decl(node_w)
             case StringLiteral():
@@ -128,7 +130,8 @@ class ASTVisitor():
         self.visit(node_w.n.identifier_w)
         for index_w in node_w.n.indices:
             self.visit(index_w)
-
+    def composite_decl(self, node_w: Wrapper[CompositeDeclaration]):
+        self.variable_decl(node_w)
     def func_call(self, node_w: Wrapper[FunctionCall]):
         for arg_w in node_w.n.arguments:
             self.visit(arg_w)

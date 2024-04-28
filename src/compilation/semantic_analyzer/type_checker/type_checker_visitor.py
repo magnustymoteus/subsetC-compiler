@@ -76,7 +76,7 @@ class TypeCheckerVisitor(ASTVisitor):
         Raises:
             SemanticError: If the assignee is not valid.
         """
-        is_lvalue = isinstance(assignee_w.n, (Identifier, DerefOp, ArrayAccess))
+        is_lvalue = isinstance(assignee_w.n, (Identifier, DerefOp, ArrayAccess, ObjectAccess))
         if is_lvalue:
             symtype = assignee_w.n.type
             # TODO: with constant pointers?
@@ -173,7 +173,7 @@ class TypeCheckerVisitor(ASTVisitor):
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         self.checkValidType(node_w.n.type)
         super().variable_decl(node_w)
-        if node_w.n.definition_w.n is not None:
+        if node_w.n.definition_w.n is not None and not isinstance(node_w.n, CompositeDeclaration):
             self.checkPointerTypes(node_w.n.type, node_w.n.definition_w.n.type)
             self.checkImplicitDemotion(node_w.n.type, node_w.n.definition_w.n.type)
             self.checkDiscardedPointerQualifier(node_w.n.type, node_w.n.definition_w.n.type)
@@ -181,10 +181,28 @@ class TypeCheckerVisitor(ASTVisitor):
                 self.checkArrayInitialization(node_w)
     def object_access(self, node_w: Wrapper[ObjectAccess]):
         self.visit(node_w.n.identifier_w)
-        if isinstance(node_w.n.member_w.n, ObjectAccess):
-            self.visit(node_w.n.member_w)
-        else:
-            pass
+        current_object_access = node_w.n
+        current_symtab = current_object_access.local_symtab_w.n
+        while isinstance(current_object_access, ObjectAccess):
+            symtab_entry: SymbolTableEntry = current_symtab.lookup_symbol(current_object_access.identifier_w.n.name)
+            current_object_access.identifier_w.n.type = symtab_entry.type
+            composite_decl_w: Wrapper[CompositeDeclaration] = current_symtab.lookup_symbol(
+                symtab_entry.type.name).value_w
+            members = composite_decl_w.n.statements
+            found_member: bool = False
+            member_name = current_object_access.member_w.n.name if isinstance(current_object_access.member_w.n,
+                                                                              Identifier) else current_object_access.member_w.n.identifier_w.n.name
+            for member_w in members:
+                if member_w.n.identifier == member_name:
+                    current_symtab = member_w.n.local_symtab_w.n
+                    current_object_access.type = member_w.n.type
+                    current_object_access.member_w.n.type = member_w.n.type
+                    found_member = True
+            if not found_member:
+                self.raiseSemanticErr(
+                    f"{current_object_access.identifier_w.n} has no member {current_object_access.member_w.n}")
+            current_object_access = current_object_access.member_w.n
+        node_w.n.type = current_object_access.type
 
     def array_access(self, node_w: Wrapper[ArrayAccess]):
         super().array_access(node_w)

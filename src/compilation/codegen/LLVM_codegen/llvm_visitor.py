@@ -77,7 +77,7 @@ class LLVMVisitor(CFGVisitor):
                     self.builder.comment(subcomment)
         return super().visit(node_w)
 
-    def _get_llvm_type(self, type: PrimitiveType) -> tuple[ir.Type, int]:
+    def _get_llvm_type(self, type: PrimitiveType | CompositeType) -> tuple[ir.Type, int]:
         result: list[ir.Type, int] = [None, 0]
         if isinstance(type, ArrayType):
             for i, dim in enumerate(reversed(type.dimension)):
@@ -98,6 +98,8 @@ class LLVMVisitor(CFGVisitor):
                     result = [ir.FloatType(), 4]
                 case "void":
                     result = [ir.VoidType(), 0]
+                case "struct":
+                    result = [self._get_reg(type.name), 4]
                 case _:
                     raise ValueError(f"Critical Error: unrecognized type")
             for ptr in range(0, type.ptr_count):
@@ -279,9 +281,10 @@ class LLVMVisitor(CFGVisitor):
                                      node_w.n.operator)()
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
+        no_load = self.no_load
         self.no_load = True
         result = self.visit(node_w.n.operand_w)
-        self.no_load = False
+        self.no_load = no_load
         return result
 
     def deref_op(self, node_w: Wrapper[DerefOp]):
@@ -296,9 +299,10 @@ class LLVMVisitor(CFGVisitor):
         current_index: ir.GEPInstr = self.builder.gep(self._get_reg(node_w.n.identifier_w.n.name), [self.visit(index_w) for index_w in indices], True, self._create_reg())
         return self._load_if_pointer(current_index) if not (self.no_load or node_w.n.identifier_w.n.name in self.refs) else current_index
     def un_op(self, node_w: Wrapper[UnaryOp]):
+        no_load = self.no_load
         self.no_load = node_w.n.operator in ["++", "--"]
         operand = self.visit(node_w.n.operand_w)
-        self.no_load = False if node_w.n.operator in ["++", "--"] else self.no_load
+        self.no_load = no_load if node_w.n.operator in ["++", "--"] else self.no_load
         operand_value = operand
         match node_w.n.operator:
             case "+":
@@ -330,17 +334,52 @@ class LLVMVisitor(CFGVisitor):
                 return loaded_operand
             case _:
                 raise ValueError(f"Unrecognized unary operator")
+    def composite_decl(self, node_w: Wrapper[CompositeDeclaration]):
+        member_types = [self._get_llvm_type(member_w.n.type)[0] for member_w in node_w.n.definition_w.n.statements]
+        context = ir.global_context
+
+        result = context.get_identified_type(node_w.n.identifier)
+        result.set_body(*member_types)
+
+        self.regs[node_w.n.identifier] = result
+        return result
+
+    def object_access(self, node_w: Wrapper[ObjectAccess]):
+        no_load: bool = self.no_load
+        self.no_load = True
+        obj = self.visit(node_w.n.identifier_w)
+        self.no_load = no_load
+        current_object_access = node_w.n
+        current_symtab = current_object_access.local_symtab_w.n
+        current_gep = obj
+        while isinstance(current_object_access, ObjectAccess):
+            members = current_symtab.lookup_symbol(current_object_access.identifier_w.n.type.name).value_w.n.statements
+            member_name = current_object_access.member_w.n.name if isinstance(current_object_access.member_w.n,
+                                                                              Identifier) else current_object_access.member_w.n.identifier_w.n.name
+            for i, member_w in enumerate(members):
+                if member_w.n.identifier == member_name:
+                    current_symtab = member_w.n.local_symtab_w.n
+                    current_gep = self.builder.gep(current_gep,
+                                                   [ir.Constant(ir.IntType(32), 0),
+                                                    ir.Constant(ir.IntType(32), i)],
+                                                   True,
+                                                   self._create_reg())
+            current_object_access = current_object_access.member_w.n
+        result = current_gep if no_load else self._load_if_pointer(current_gep)
+        return result
+
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
+        no_load = self.no_load
         if node_w.n.local_symtab_w.n.has_parent():
             decl_ir_type = self._get_llvm_type(node_w.n.type)
             if node_w.n.definition_w.n is not None:
-                if isinstance(node_w.n.definition_w.n, DerefOp):
+                if isinstance(node_w.n.definition_w.n, (DerefOp, ObjectAccess)):
                     self.no_load = True
                 self.regs[node_w.n.identifier] = self.visit(node_w.n.definition_w)
                 if isinstance(node_w.n.definition_w.n, AddressOfOp):
                     self.refs.add(node_w.n.identifier)
-                self.no_load = False
+                self.no_load = no_load
                 return self._get_reg(node_w.n.identifier)
             else:
                 allocaInstr = self.builder.alloca(decl_ir_type[0], decl_ir_type[1], node_w.n.identifier)
@@ -357,9 +396,10 @@ class LLVMVisitor(CFGVisitor):
             return result
 
     def assign(self, node_w: Wrapper[Assignment]):
+        no_load = self.no_load
         self.no_load = True
         assignee = self.visit(node_w.n.assignee_w)
-        self.no_load = False
+        self.no_load = no_load
 
         value = self.visit(node_w.n.value_w)
         if not self.types_compatible(node_w.n.type, node_w.n.value_w.n.type):

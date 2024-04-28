@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 int main() {
     float x = 10371.192;
     if(x <= 500.123) {

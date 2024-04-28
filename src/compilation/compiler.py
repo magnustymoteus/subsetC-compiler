@@ -73,6 +73,7 @@ class Compiler():
         ast = Compiler.getAST(tree, tokens)
         ResolverVisitor(ast, preprocessor.included_stdio)
 
+
         if self.do_viz("ast"):
             Compiler.visualizeAST(ast, f"./{filename}-viz/ast.gv")
 
@@ -97,6 +98,9 @@ class Compiler():
 
         TACVisitor(cfg)
 
+        if self.do_viz("ast"):
+            Compiler.visualizeAST(ast, f"./{filename}-viz/tac.gv")
+
         if self.do_viz("cfg"):
             Compiler.visualizeCFG(cfg, f"./{filename}-viz/cfg.gv")
 
@@ -104,8 +108,9 @@ class Compiler():
 
         if self.do_viz("cfg"):
             for function in llvm.module.functions:
-                s = graphviz.Source(get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
-                s.save()
+                pass
+                '''s = graphviz.Source(get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
+                s.save()'''
 
         return llvm.module
 

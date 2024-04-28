@@ -258,7 +258,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
         return CompositeType(self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext).n.name, self.visitFirstMatch(ctx, C_GrammarParser.StructOrUnionContext))
     def visitStructUnionDeclaration(self, ctx:C_GrammarParser.StructUnionDeclarationContext):
         result = CompositeDeclaration(self.visitFirstMatch(ctx, C_GrammarParser.StructUnionSpecContext))
-        if ctx.getChild(2).getText() == "{":
+        if ctx.getChild(1).getText() == "{":
             result.definition_w = wrap(CompoundStatement(self.visitAllMatches(ctx, C_GrammarParser.DeclarationContext)))
         return wrap(result)
 
@@ -356,6 +356,8 @@ class CSTToASTVisitor(C_GrammarVisitor):
             if declarator_result[1] is not None and declarator_result[1]["initializer"] is not None:
                 result.definition_w = declarator_result[1]["initializer"]
             return wrap(result)
+        elif isinstance(type_specifier, CompositeType):
+            return wrap(CompositeDeclaration(type_specifier))
         elif isinstance(type_specifier.n, Enumeration):
             return type_specifier
     def visitArrayAccessExpr(self, ctx:C_GrammarParser.ArrayAccessExprContext):

@@ -87,8 +87,10 @@ class ConstantPropagationVisitor(ASTVisitor):
                 node_w.n.type = symbol.type
         else:
             node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).stopped_propagating = True
+    def object_access(self, node_w: Wrapper[ObjectAccess]):
+        self.stop_propagation()
     def iteration(self, node_w: Wrapper[IterationStatement]):
-        pass
+        self.stop_propagation()
     def array_access(self, node_w: Wrapper[ArrayAccess]):
         self.stop_propagation()
 

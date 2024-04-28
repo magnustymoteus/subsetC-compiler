@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 enum Day {
     MONDAY,
     TUESDAY,

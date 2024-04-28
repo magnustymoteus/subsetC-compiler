@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 enum test {yes, no};
 int main() {
     enum status {on, off};
