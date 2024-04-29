@@ -11,4 +11,6 @@
   * include guards
   * Do not generate code for conditionals that are never true.
   * Do not generate code for variables that are not used.
+* Project 7
+  * Structs that contain other structs as a value.
 * Extra Warnings
