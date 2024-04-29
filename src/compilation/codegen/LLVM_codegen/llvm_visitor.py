@@ -122,8 +122,9 @@ class LLVMVisitor(CFGVisitor):
                 raise ValueError(f"Unrecognized LLVM type")
 
     def string_lit(self, node_w: Wrapper[StringLiteral]):
-        str = ir.Constant(ir.ArrayType(ir.IntType(8), len(node_w.n.string) + 1),
-                    bytearray(f"{node_w.n.string}\00".encode("utf8")))
+        str_value = (node_w.n.string+"\00").encode("utf8").decode("unicode_escape")
+        str = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
+                    bytearray(str_value.encode("utf8")))
         var = ir.GlobalVariable(self.module, str.type, self._create_global_reg())
         var.initializer = str
         var.linkage = 'private'
@@ -382,7 +383,8 @@ class LLVMVisitor(CFGVisitor):
                 self.no_load = no_load
                 return self._get_reg(node_w.n.identifier)
             else:
-                allocaInstr = self.builder.alloca(decl_ir_type[0], decl_ir_type[1], node_w.n.identifier)
+                allocaInstr = self.builder.alloca(decl_ir_type[0], 1, node_w.n.identifier)
+                allocaInstr.align = decl_ir_type[1]
                 self.regs[node_w.n.identifier] = allocaInstr
                 return allocaInstr
 
