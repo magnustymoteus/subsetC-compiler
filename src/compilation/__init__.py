@@ -7,3 +7,4 @@ from .preprocessor import *
 from .semantic_analyzer import *
 from .visitor import *
 from .compiler import *
+from .visualization import *

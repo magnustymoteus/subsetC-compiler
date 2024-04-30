@@ -1,13 +1,13 @@
 from src.compilation import *
 from src.constructs import *
+from src.compilation.visualization import CSTVisualizer, SymbolTablesVisualizer
 
 from src.antlr_files.C_GrammarLexer import *
 from src.antlr_files.C_GrammarVisitor import *
 
 from llvmlite.binding import *
 from pathlib import Path
-from argparse import Namespace
-import graphviz
+
 
 class Compiler():
     @staticmethod
@@ -24,12 +24,16 @@ class Compiler():
         return ast
     @staticmethod
     def visualizeCST(tree, rules, filename):
-        visualizationVisitor = VisualizationVisitor()
-        visualizationVisitor.visualize(tree, rules, filename)
+        visualizer = CSTVisualizer()
+        visualizer.visualize(tree, rules, filename)
     @staticmethod
     def visualizeAST(ast: Ast, filename: str):
         graph = ast.to_dot_graph()
         graph.save(filename=filename)
+    @staticmethod
+    def visualizeSymTabs(ast: Ast, filename: str):
+        visualizer = SymbolTablesVisualizer(ast)
+        visualizer.graph.save(filename=filename)
     @staticmethod
     def visualizeCFG(cfg: ControlFlowGraph, filename: str):
         graph = cfg.to_dot_graph()
@@ -73,14 +77,8 @@ class Compiler():
         ast = Compiler.getAST(tree, tokens)
         ResolverVisitor(ast, preprocessor.included_stdio)
 
-
-        if self.do_viz("ast"):
-            Compiler.visualizeAST(ast, f"./{filename}-viz/ast.gv")
-
         # Makes symbol table entries of the ast nodes
         SymbolTableVisitor(ast)
-        if self.do_viz("ast"):
-            Compiler.visualizeAST(ast, f"./{filename}-viz/ast.gv")
         TypeCheckerVisitor(ast)
 
         SimplifierVisitor(ast)
@@ -98,12 +96,12 @@ class Compiler():
         if self.do_viz("ast"):
             Compiler.visualizeAST(ast, f"./{filename}-viz/ast.gv")
 
+        if self.do_viz("symtab"):
+            Compiler.visualizeSymTabs(ast, f"./{filename}-viz/symtab.gv")
+
         cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
 
         TACVisitor(cfg)
-
-        if self.do_viz("ast"):
-            Compiler.visualizeAST(ast, f"./{filename}-viz/tac.gv")
 
         if self.do_viz("cfg"):
             Compiler.visualizeCFG(cfg, f"./{filename}-viz/cfg.gv")
