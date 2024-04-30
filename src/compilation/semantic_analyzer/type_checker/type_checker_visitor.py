@@ -149,7 +149,7 @@ class TypeCheckerVisitor(ASTVisitor):
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
         super().addressof_op(node_w)
-        if not (isinstance(node_w.n.operand_w.n, Identifier) or isinstance(node_w.n.operand_w.n, DerefOp)):
+        if not (isinstance(node_w.n.operand_w.n, (Identifier, ObjectAccess, DerefOp))):
             self.raiseSemanticErr(f"Cannot get the address of an rvalue")
         new_type: PrimitiveType = deepcopy(node_w.n.operand_w.n.type)
         new_type.increase_ptr_count()
