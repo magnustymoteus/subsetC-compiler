@@ -249,11 +249,15 @@ class CSTToASTVisitor(C_GrammarVisitor):
     def visitStructOrUnion(self, ctx:C_GrammarParser.StructOrUnionContext):
         return ctx.getText()
     def visitObjectAccess(self, ctx:C_GrammarParser.ObjectAccessContext):
-        identifier_w = self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext)
+        if ctx.getChildCount() == 1:
+            return self.visit(ctx.getChild(0))
         object_access_w = self.visitFirstMatch(ctx, C_GrammarParser.ObjectAccessContext)
-        if object_access_w is None:
-            return identifier_w
-        return wrap(ObjectAccess(identifier_w, object_access_w))
+        identifier_w = self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext)
+        if ctx.getChild(1).getText() == "->":
+            deref_op = DerefOp()
+            deref_op.operand_w = object_access_w
+            object_access_w = wrap(deref_op)
+        return wrap(ObjectAccess(object_access_w, identifier_w))
     def visitStructUnionSpec(self, ctx:C_GrammarParser.StructUnionSpecContext):
         return CompositeType(self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext).n.name, self.visitFirstMatch(ctx, C_GrammarParser.StructOrUnionContext))
     def visitStructUnionDeclaration(self, ctx:C_GrammarParser.StructUnionDeclarationContext):

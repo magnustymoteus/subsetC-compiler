@@ -64,7 +64,9 @@ class DeadCodeVisitor(ASTVisitor):
                     branch_w.n.statements = branch_w.n.statements[:i+1]
                     break
     def object_access(self, node_w: Wrapper[ObjectAccess]):
-        node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.identifier_w.n.name).used = True
+        self.visit(node_w.n.object_w)
+        if isinstance(node_w.n.object_w.n, Identifier):
+            node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.object_w.n.name).used = True
     def composite_decl(self, node_w: Wrapper[CompositeDeclaration]):
         pass
 

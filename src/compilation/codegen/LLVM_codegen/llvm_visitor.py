@@ -348,25 +348,19 @@ class LLVMVisitor(CFGVisitor):
     def object_access(self, node_w: Wrapper[ObjectAccess]):
         no_load: bool = self.no_load
         self.no_load = True
-        obj = self.visit(node_w.n.identifier_w)
+        obj = self.visit(node_w.n.object_w)
         self.no_load = no_load
-        current_object_access = node_w.n
-        current_symtab = current_object_access.local_symtab_w.n
-        current_gep = obj
-        while isinstance(current_object_access, ObjectAccess):
-            members = current_symtab.lookup_symbol(current_object_access.identifier_w.n.type.name).value_w.n.statements
-            member_name = current_object_access.member_w.n.name if isinstance(current_object_access.member_w.n,
-                                                                              Identifier) else current_object_access.member_w.n.identifier_w.n.name
-            for i, member_w in enumerate(members):
-                if member_w.n.identifier == member_name:
-                    current_symtab = member_w.n.local_symtab_w.n
-                    current_gep = self.builder.gep(current_gep,
-                                                   [ir.Constant(ir.IntType(32), 0),
-                                                    ir.Constant(ir.IntType(32), i)],
-                                                   True,
-                                                   self._create_reg())
-            current_object_access = current_object_access.member_w.n
-        result = current_gep if no_load else self._load_if_pointer(current_gep)
+        object_type: CompositeType = node_w.n.object_w.n.type
+        composite_def: CompoundStatement = node_w.n.local_symtab_w.n.lookup_symbol(object_type.name).value_w.n
+        member_name: str = node_w.n.member_w.n.name
+        for i, member_w in enumerate(composite_def.statements):
+            if member_w.n.identifier == member_name:
+                obj = self.builder.gep(obj,
+                                 [ir.Constant(ir.IntType(32), 0),
+                                  ir.Constant(ir.IntType(32), i)],
+                                 True,
+                                 self._create_reg())
+        result = obj if no_load else self._load_if_pointer(obj)
         return result
 
 

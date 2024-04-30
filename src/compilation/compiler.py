@@ -79,6 +79,8 @@ class Compiler():
 
         # Makes symbol table entries of the ast nodes
         SymbolTableVisitor(ast)
+        if self.do_viz("ast"):
+            Compiler.visualizeAST(ast, f"./{filename}-viz/ast.gv")
         TypeCheckerVisitor(ast)
 
         SimplifierVisitor(ast)

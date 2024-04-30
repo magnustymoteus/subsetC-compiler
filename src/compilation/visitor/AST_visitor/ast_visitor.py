@@ -124,7 +124,7 @@ class ASTVisitor():
         if node_w.n.expr_w is not None:
             self.visit(node_w.n.expr_w)
     def object_access(self, node_w: Wrapper[ObjectAccess]):
-        self.visit(node_w.n.identifier_w)
+        self.visit(node_w.n.object_w)
         self.visit(node_w.n.member_w)
     def array_access(self, node_w: Wrapper[ArrayAccess]):
         self.visit(node_w.n.identifier_w)

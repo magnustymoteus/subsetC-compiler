@@ -86,28 +86,7 @@ class SymbolTableVisitor(ASTVisitor):
             self.raiseSemanticErr(f"Undeclared variable {node_w.n.name}")
 
     def object_access(self, node_w: Wrapper[ObjectAccess]):
-        self.visit(node_w.n.identifier_w)
-        current_object_access = node_w.n
-        current_symtab = current_object_access.local_symtab_w.n
-        while isinstance(current_object_access, ObjectAccess):
-            current_object_access.local_symtab_w.n = node_w.n.local_symtab_w.n
-            symtab_entry: SymbolTableEntry = current_symtab.lookup_symbol(current_object_access.identifier_w.n.name)
-            composite_decl_entry = current_symtab.lookup_symbol(symtab_entry.type.name)
-            if composite_decl_entry is None:
-                self.raiseSemanticErr(f"{symtab_entry.type} not declared")
-            if composite_decl_entry.value_w is None:
-                self.raiseSemanticErr(f"{symtab_entry.type} not defined")
-            members = composite_decl_entry.value_w.n.statements
-            found_member: bool = False
-            member_name = current_object_access.member_w.n.name if isinstance(current_object_access.member_w.n, Identifier) else current_object_access.member_w.n.identifier_w.n.name
-            for member_w in members:
-                if member_w.n.identifier == member_name:
-                    current_symtab = member_w.n.local_symtab_w.n
-                    found_member = True
-            if not found_member:
-                self.raiseSemanticErr(f"{current_object_access.identifier_w.n} has no member {current_object_access.member_w.n}")
-            current_object_access = current_object_access.member_w.n
-
+        self.visit(node_w.n.object_w)
 
     def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
         """

@@ -24,18 +24,18 @@ class TypeCheckerVisitor(ASTVisitor):
         return operator in ['<', '>', '>=', '<=', '==', '!=', '&&', '||', '!']
 
 
-    def checkValidType(self, type: SymbolType):
-        """
-        Check if the given primitive type is valid.
+    def checkValidType(self, type: SymbolType, symtab: SymbolTable):
+        if isinstance(type, CompositeType):
+            if not symtab.symbol_exists(type.name):
+                self.raiseSemanticErr(f"{type.type} {type.name} not declared")
+            entry = symtab.lookup_symbol(type.name)
+            if entry.value_w is None:
+                self.raiseSemanticErr(f"{type.type} {type.name} not defined")
+        else:
+            if not type.type in PrimitiveType.type_ranks:
+                self.raiseSemanticErr(f"Unknown type {type}")
 
-        Args:
-            type (PrimitiveType): The primitive type to check.
 
-        Raises:
-            SemanticError: If the type is not valid.
-        """
-        if not (isinstance(type, CompositeType) or type.type in PrimitiveType.type_ranks):
-            self.raiseSemanticErr(f"Unknown type {type}")
 
     def checkImplicitDemotion(self, assignee_type: SymbolType, value_type: SymbolType):
         """
@@ -172,7 +172,7 @@ class TypeCheckerVisitor(ASTVisitor):
         node_w.n.type = deepcopy(node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).type)
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
-        self.checkValidType(node_w.n.type)
+        self.checkValidType(node_w.n.type, node_w.n.local_symtab_w.n)
         super().variable_decl(node_w)
         if node_w.n.definition_w.n is not None and not isinstance(node_w.n, CompositeDeclaration):
             self.checkPointerTypes(node_w.n.type, node_w.n.definition_w.n.type)
@@ -180,30 +180,20 @@ class TypeCheckerVisitor(ASTVisitor):
             self.checkDiscardedPointerQualifier(node_w.n.type, node_w.n.definition_w.n.type)
             if isinstance(node_w.n.type, ArrayType):
                 self.checkArrayInitialization(node_w)
+
     def object_access(self, node_w: Wrapper[ObjectAccess]):
-        self.visit(node_w.n.identifier_w)
-        current_object_access = node_w.n
-        current_symtab = current_object_access.local_symtab_w.n
-        while isinstance(current_object_access, ObjectAccess):
-            symtab_entry: SymbolTableEntry = current_symtab.lookup_symbol(current_object_access.identifier_w.n.name)
-            current_object_access.identifier_w.n.type = symtab_entry.type
-            composite_decl_w: Wrapper[CompositeDeclaration] = current_symtab.lookup_symbol(
-                symtab_entry.type.name).value_w
-            members = composite_decl_w.n.statements
-            found_member: bool = False
-            member_name = current_object_access.member_w.n.name if isinstance(current_object_access.member_w.n,
-                                                                              Identifier) else current_object_access.member_w.n.identifier_w.n.name
-            for member_w in members:
-                if member_w.n.identifier == member_name:
-                    current_symtab = member_w.n.local_symtab_w.n
-                    current_object_access.type = member_w.n.type
-                    current_object_access.member_w.n.type = member_w.n.type
-                    found_member = True
-            if not found_member:
-                self.raiseSemanticErr(
-                    f"{current_object_access.identifier_w.n} has no member {current_object_access.member_w.n}")
-            current_object_access = current_object_access.member_w.n
-        node_w.n.type = current_object_access.type
+        self.visit(node_w.n.object_w)
+        object_type: CompositeType = node_w.n.object_w.n.type
+        if (not isinstance(object_type, CompositeType) or object_type.ptr_count > 0):
+            self.raiseSemanticErr(f"member access of non object {object_type}")
+        composite_def: CompoundStatement = node_w.n.local_symtab_w.n.lookup_symbol(object_type.name).value_w.n
+        member_name: str = node_w.n.member_w.n.name
+        member_lookup = composite_def.statements[-1].n.local_symtab_w.n.lookup_symbol(member_name)
+        if member_lookup is None:
+            self.raiseSemanticErr(f"member '{member_name}' of {node_w.n.object_w.n} does not exist")
+        node_w.n.member_w.n.type = member_lookup.type
+        node_w.n.type = member_lookup.type
+
 
     def array_access(self, node_w: Wrapper[ArrayAccess]):
         super().array_access(node_w)

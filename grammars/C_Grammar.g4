@@ -71,7 +71,7 @@ postfixExpr: primaryExpr | postfixExpr postfixOp | functionCallExpr | arrayAcces
 
 functionCallExpr: identifier LPAREN (assignmentExpr (',' assignmentExpr)*)? RPAREN;
 arrayAccessExpr: identifier (LBRACK assignmentExpr RBRACK)+;
-objectAccess: identifier ((DOT | ARROW) (objectAccess))+ | identifier;
+objectAccess: objectAccess (DOT | ARROW) identifier | identifier;
 
 postfixOp: DPLUS | DMINUS;
 primaryExpr: identifier | literal | LPAREN expr RPAREN;
