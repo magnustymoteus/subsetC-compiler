@@ -37,7 +37,7 @@ class TypeCheckerVisitor(ASTVisitor):
         if not (isinstance(type, CompositeType) or type.type in PrimitiveType.type_ranks):
             self.raiseSemanticErr(f"Unknown type {type}")
 
-    def checkImplicitDemotion(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
+    def checkImplicitDemotion(self, assignee_type: SymbolType, value_type: SymbolType):
         """
         Check if there is implicit demotion from the value type to the assignee type.
 
@@ -48,8 +48,9 @@ class TypeCheckerVisitor(ASTVisitor):
         Raises:
             Warning: If there is implicit demotion.
         """
-        if PrimitiveType.type_ranks.index(assignee_type.type) < PrimitiveType.type_ranks.index(value_type.type):
-            self.raiseWarning(f"Implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
+        if not (isinstance(assignee_type, CompositeType) and isinstance(value_type, CompositeType)):
+            if PrimitiveType.type_ranks.index(assignee_type.type) < PrimitiveType.type_ranks.index(value_type.type):
+                self.raiseWarning(f"Implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
 
     def checkDiscardedPointerQualifier(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
         """
@@ -85,7 +86,7 @@ class TypeCheckerVisitor(ASTVisitor):
         else:
             self.raiseSemanticErr("lvalue required as left operand of assignment")
 
-    def checkPointerTypes(self, left_type: PrimitiveType, right_type: PrimitiveType):
+    def checkPointerTypes(self, left_type: SymbolType, right_type: SymbolType):
         """
         Check if the pointer types are compatible.
 

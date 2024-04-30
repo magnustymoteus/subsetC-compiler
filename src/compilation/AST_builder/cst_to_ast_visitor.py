@@ -401,14 +401,18 @@ class CSTToASTVisitor(C_GrammarVisitor):
                     is_constant = True
                 case C_GrammarParser.TypeSpecContext():
                     type_specifier = visitedChild
-                    if not isinstance(type_specifier, str):
-                        return None, type_specifier
                 case C_GrammarParser.PointerContext():
                     ptr_count = visitedChild[0]
                     const_ptrs = visitedChild[1]
                 case C_GrammarParser.StorageClassSpecContext():
                     # assume its typedef (temporarily)
                     storage_class_specifier = child.getChild(0).getText()
+        if isinstance(type_specifier, SymbolType):
+            type_specifier.is_constant = is_constant
+            type_specifier.ptr_count = ptr_count
+            type_specifier.const_ptrs = const_ptrs
+        if not isinstance(type_specifier, str):
+            return None, type_specifier
         return storage_class_specifier, PrimitiveType(type_specifier, is_constant, ptr_count, const_ptrs)
 
     def visitTypeSpec(self, ctx:C_GrammarParser.TypeSpecContext):

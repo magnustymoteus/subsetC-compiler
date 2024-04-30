@@ -336,13 +336,13 @@ class LLVMVisitor(CFGVisitor):
             case _:
                 raise ValueError(f"Unrecognized unary operator")
     def composite_decl(self, node_w: Wrapper[CompositeDeclaration]):
-        member_types = [self._get_llvm_type(member_w.n.type)[0] for member_w in node_w.n.definition_w.n.statements]
         context = ir.global_context
 
         result = context.get_identified_type(node_w.n.identifier)
+        self.regs[node_w.n.identifier] = result
+        member_types = [self._get_llvm_type(member_w.n.type)[0] for member_w in node_w.n.definition_w.n.statements]
         result.set_body(*member_types)
 
-        self.regs[node_w.n.identifier] = result
         return result
 
     def object_access(self, node_w: Wrapper[ObjectAccess]):

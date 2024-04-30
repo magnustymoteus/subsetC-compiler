@@ -67,7 +67,7 @@ class CompositeType(SymbolType):
         self.name: str = name
         super().__init__()
     def __repr__(self):
-        return f"{self.type} {self.name}"
+        return f"{self.type} {self.name}{super().get_pointer_string()}"
 
 
 class ArrayType(PrimitiveType):
