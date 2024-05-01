@@ -83,11 +83,10 @@ class LLVMVisitor(CFGVisitor):
             for i, dim in enumerate(reversed(type.dimension)):
                 if i == 0:
                     elem_type = self._get_llvm_type(type.element_type)
-                    result[1] = dim * elem_type[1]
+                    result[1] = elem_type[1]
                     result[0] = ir.ArrayType(elem_type[0], dim)
                 else:
                     result[0] = ir.ArrayType(result[0], dim)
-                    result[1] *= dim
         else:
             match type.type:
                 case "int":

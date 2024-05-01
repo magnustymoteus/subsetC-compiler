@@ -6,7 +6,7 @@ enum boolean {
 };
 
 int main() {
-    boolean isTrue = TRUE;
+    enum boolean isTrue = TRUE;
     if (isTrue) {
         printf("%d", 1);
     } else {

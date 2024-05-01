@@ -11,7 +11,7 @@ enum Day {
 };
 
 int main() {
-    Day today = TUESDAY;
+    enum Day today = TUESDAY;
     switch (today) {
         case MONDAY:
         case TUESDAY:

@@ -8,6 +8,8 @@ from src.antlr_files.C_GrammarVisitor import *
 from llvmlite.binding import *
 from pathlib import Path
 
+import graphviz
+import subprocess
 
 class Compiler():
     @staticmethod
@@ -110,10 +112,8 @@ class Compiler():
 
         if self.do_viz("cfg"):
             for function in llvm.module.functions:
-                pass
-                '''s = graphviz.Source(get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
-                s.save()'''
-
+                s = graphviz.Source(get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
+                s.save()
         return llvm.module
 
 

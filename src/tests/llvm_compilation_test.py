@@ -4,14 +4,12 @@ import pytest
 from src.__main__ import *
 from src.compilation.compiler import *
 
-def compile(path):
-    compiler = Compiler()
-    compiler.compile_llvm(path)
 def success(glob_path):
+    compiler = Compiler()
     failed = False
     for path in glob_path:
         try:
-            compile(path)
+            compiler.compile_llvm(path)
             print(f"\n✔ {str(os.path.basename(path))} passed", end='')
         except Exception as e:
             print(f"\nX {e} for {str(os.path.basename(path))}", end='')
@@ -20,10 +18,11 @@ def success(glob_path):
         pytest.fail("Expected to have no errors")
 
 def syntaxErr(glob_path):
+    compiler = Compiler()
     failed = False
     for path in glob_path:
         try:
-            compile(path)
+            compiler.compile_llvm(path)
         except SyntaxError as e:
             print(f"\n✔ {e} for {str(os.path.basename(path))}", end='')
             continue
@@ -33,10 +32,11 @@ def syntaxErr(glob_path):
         pytest.fail("Expected to have syntax error")
 
 def semanticErr(glob_path):
+    compiler = Compiler()
     failed = False
     for path in glob_path:
         try:
-            compile(path)
+            compiler.compile_llvm(path)
         except SemanticError as e:
             print(f"\n✔ {e} for {str(os.path.basename(path))}", end='')
             continue
@@ -47,10 +47,11 @@ def semanticErr(glob_path):
     if failed:
         pytest.fail("Expected to have semantic errors for a test")
 def preprocessingErr(glob_path):
+    compiler = Compiler()
     failed = False
     for path in glob_path:
         try:
-            compile(path)
+            compiler.compile_llvm(path)
         except PreprocessingError as e:
             print(f"\n✔ {e} for {str(os.path.basename(path))}", end='')
             continue

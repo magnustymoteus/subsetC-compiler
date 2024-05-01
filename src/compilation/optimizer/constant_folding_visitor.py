@@ -53,12 +53,18 @@ class ConstantFoldingVisitor(ASTVisitor):
                     result = node_w.n.lhs.value | node_w.n.rhs.value
                 case "^":
                     result = node_w.n.lhs.value ^ node_w.n.rhs.value
+            coerced_type = PrimitiveType.typeCoercion([node_w.n.lhs_w.n.type.type, node_w.n.rhs_w.n.type.type], True)
+
             if isinstance(result, bool):
                 node_w.n = IntLiteral(1 if result else 0)
-            elif isinstance(result, float):
-                node_w.n = FloatLiteral(result)
             else:
-                node_w.n = IntLiteral(result)
+                match coerced_type.type:
+                    case "int":
+                        node_w.n = IntLiteral(int(result))
+                    case "float":
+                        node_w.n = FloatLiteral(float(result))
+                    case "char":
+                        node_w.n = IntLiteral(int(result))
     def un_op(self, node_w: Wrapper[UnaryOp]):
         self.visit(node_w.n.operand_w)
         if isinstance(node_w.n.operand, Literal) and not node_w.n.is_postfix:
