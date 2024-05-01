@@ -4,7 +4,6 @@ from src.compilation.compiler import *
 
 
 # TODO: line numbers in errors/warnings for source code with includes is off
-# TODO: make output checking tests
 def c_file(param):
     base, ext = os.path.splitext(param)
     if ext.lower() not in ('.c'):
