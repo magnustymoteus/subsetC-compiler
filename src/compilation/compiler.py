@@ -50,16 +50,14 @@ class Compiler():
         preprocessor.visit(tree)
         return preprocessor
 
-    def __init__(self):
-        self.disable: set[str] = set()
-        self.viz: set[str] = set()
+    def __init__(self, disable=None, viz=None):
+        self.disable: set[str] = disable if disable is not None else set()
+        self.viz: set[str] = viz if viz is not None else set()
 
     def do_viz(self, what: str):
-        if self.viz is not None:
-            return "all" in self.viz or what in self.viz
-        return False
+        return "all" in self.viz or what in self.viz
     def is_disabled(self, what: str):
-        return what in self.disable if self.disable is not None else False
+        return what in self.disable
 
     def compile_mips(self, llvm_module: ir.Module,filepath: Path):
         pass
@@ -93,7 +91,8 @@ class Compiler():
         if not self.is_disabled("cfold"):
             ConstantFoldingVisitor(ast)
 
-        DeadCodeVisitor(ast)
+        if not self.is_disabled("dcode"):
+            DeadCodeVisitor(ast)
 
         if self.do_viz("ast"):
             Compiler.visualizeAST(ast, f"./{filename}-viz/ast.gv")

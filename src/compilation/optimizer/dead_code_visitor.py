@@ -33,6 +33,7 @@ class DeadCodeVisitor(ASTVisitor):
                 node_w.n.statements.remove(dead_node_w)
         for false_conditional_w in self.false_conditionals:
             if false_conditional_w in node_w.n.statements:
+                self.raiseWarning(f"condition is never true.")
                 if false_conditional_w.n.false_branch_w is None:
                     node_w.n.statements.remove(false_conditional_w)
                 else:
