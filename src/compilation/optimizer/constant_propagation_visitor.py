@@ -57,8 +57,11 @@ class ConstantPropagationVisitor(ASTVisitor):
         self.visit(node_w.n.value_w)
         if isinstance(node_w.n.assignee_w.n, Identifier):
             symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.assignee_w.n.name)
-            symbol.value_w = node_w.n.value_w
+            value_w = wrap(CastOp(node_w.n.type))
+            value_w.n.expression_w = node_w.n.value_w
+            symbol.value_w = value_w
             symbol.stopped_propagating = self.stop_propagating
+
         else:
             self.stop_propagation()
             self.visit(node_w.n.assignee_w)

@@ -110,11 +110,8 @@ class Compiler():
 
         if self.do_viz("cfg"):
             for function in llvm.module.functions:
-                pass
-                '''
                 s = graphviz.Source(get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
                 s.save()
-                '''
         return llvm.module
 
 
