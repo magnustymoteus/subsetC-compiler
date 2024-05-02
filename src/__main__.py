@@ -1,8 +1,6 @@
 import argparse
 from src.compilation.compiler import *
 
-
-
 # TODO: line numbers in errors/warnings for source code with includes is off
 def c_file(param):
     base, ext = os.path.splitext(param)

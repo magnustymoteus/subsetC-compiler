@@ -55,9 +55,11 @@ class Compiler():
         self.viz: set[str] = set()
 
     def do_viz(self, what: str):
-        return "all" in self.viz or what in self.viz
+        if self.viz is not None:
+            return "all" in self.viz or what in self.viz
+        return False
     def is_disabled(self, what: str):
-        return what in self.disable
+        return what in self.disable if self.disable is not None else False
 
     def compile_mips(self, llvm_module: ir.Module,filepath: Path):
         pass
