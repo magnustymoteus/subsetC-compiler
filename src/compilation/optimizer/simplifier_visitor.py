@@ -8,8 +8,8 @@ class SimplifierVisitor(ASTVisitor):
         if len(node_w.n.operator) > 1:
             operator: str = node_w.n.operator[0]
             node_w.n.operator = "="
-            assignee_copy_w: Wrapper[Identifier] = wrap((node_w.n.assignee_w.n))
-            value_copy_w: Wrapper[Expression] = wrap((node_w.n.value_w.n))
+            assignee_copy_w: Wrapper[Identifier] = wrap(node_w.n.assignee_w.n)
+            value_copy_w: Wrapper[Expression] = wrap(node_w.n.value_w.n)
             CopyVisitor().visit(assignee_copy_w)
             CopyVisitor().visit(value_copy_w)
 

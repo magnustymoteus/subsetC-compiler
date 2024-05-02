@@ -84,7 +84,6 @@ class ConstantPropagationVisitor(ASTVisitor):
                 value = symbol.value_w
                 CopyVisitor().visit(value)
                 node_w.n = value.n
-                node_w.n.type = symbol.type
         else:
             node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).stopped_propagating = True
     def object_access(self, node_w: Wrapper[ObjectAccess]):

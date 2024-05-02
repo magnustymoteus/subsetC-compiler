@@ -18,7 +18,7 @@ def do_cast(builder: ir.IRBuilder,
         ("float", "int"): builder.fptosi,
         ("float", "char"): builder.fptosi,
         ("int", "float"): builder.sitofp,
-        ("int", "char"): builder.sext,
+        ("int", "char"): builder.trunc,
         ("char", "float"): builder.sitofp,
         ("char", "int"): builder.sext,
     }

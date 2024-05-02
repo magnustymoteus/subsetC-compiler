@@ -83,10 +83,16 @@ class Compiler():
         SymbolTableVisitor(ast)
         TypeCheckerVisitor(ast)
 
+        if self.do_viz("ast"):
+            Compiler.visualizeAST(ast, f"./{filename}-viz/before_ast.gv")
+
         SimplifierVisitor(ast)
 
         if not self.is_disabled("cprop"):
             ConstantPropagationVisitor(ast)
+
+        if self.do_viz("ast"):
+            Compiler.visualizeAST(ast, f"./{filename}-viz/after_cprop_ast.gv")
 
         if not self.is_disabled("cfold"):
             ConstantFoldingVisitor(ast)
@@ -110,8 +116,11 @@ class Compiler():
 
         if self.do_viz("cfg"):
             for function in llvm.module.functions:
+                pass
+                '''
                 s = graphviz.Source(get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
                 s.save()
+                '''
         return llvm.module
 
 
