@@ -58,7 +58,7 @@ class LLVMVisitor(CFGVisitor):
         self.io_functions["printf"] = ir.Function(self.module, io_type, name="printf")
         self.io_functions["scanf"] = ir.Function(self.module, io_type, name="scanf")
 
-        self.builder: ir.IRBuilder | None = None
+        self.builder: ir.IRBuilder = ir.IRBuilder()
         self.visit(ast.root_w)
 
     def _load_if_pointer(self, value: ir.Instruction):
@@ -70,7 +70,7 @@ class LLVMVisitor(CFGVisitor):
         return value
 
     def visit(self, node_w: Wrapper[AbstractNode]):
-        if not self.disable_comments and self.builder is not None and isinstance(node_w.n, Basic):
+        if not self.disable_comments and self.builder.block is not None:
             comments = node_w.n.comments + ([node_w.n.source_code_line] if node_w.n.source_code_line is not None else [])
             for comment in comments:
                 for subcomment in comment.split("\n"):
@@ -295,9 +295,14 @@ class LLVMVisitor(CFGVisitor):
         return self._cast(self.visit(node_w.n.expression_w), node_w.n.expression_w.n.type, node_w.n.target_type)
 
     def array_access(self, node_w: Wrapper[ArrayAccess]):
-        indices = [wrap(IntLiteral(0))]+node_w.n.indices
-        current_index: ir.GEPInstr = self.builder.gep(self._get_reg(node_w.n.identifier_w.n.name), [self.visit(index_w) for index_w in indices], True, self._create_reg())
-        return self._load_if_pointer(current_index) if not (self.no_load or node_w.n.identifier_w.n.name in self.refs) else current_index
+        indices = [self.visit(wrap(IntLiteral(0))), self.visit(node_w.n.index_w)]
+        no_load = self.no_load
+        self.no_load = True
+        accessed = self.visit(node_w.n.accessed_w)
+        current_index: ir.GEPInstr = self.builder.gep(accessed, indices, True, self._create_reg())
+        self.no_load = no_load
+        result = self._load_if_pointer(current_index) if not self.no_load else current_index
+        return result
     def un_op(self, node_w: Wrapper[UnaryOp]):
         no_load = self.no_load
         self.no_load = node_w.n.operator in ["++", "--"]
@@ -341,7 +346,6 @@ class LLVMVisitor(CFGVisitor):
         self.regs[node_w.n.identifier] = result
         member_types = [self._get_llvm_type(member_w.n.type)[0] for member_w in node_w.n.definition_w.n.statements]
         result.set_body(*member_types)
-
         return result
 
     def object_access(self, node_w: Wrapper[ObjectAccess]):

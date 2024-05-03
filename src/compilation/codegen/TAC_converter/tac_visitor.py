@@ -94,8 +94,10 @@ class TACVisitor(CFGVisitor):
                         index_list: list[Wrapper[IntLiteral]] = [wrap(IntLiteral(index)) for index in indices]
                         assign_node = Assignment("=")
                         identifier_w = wrap(Identifier(node_w.n.identifier))
-                        arr_access = ArrayAccess(identifier_w, index_list)
-                        assign_node.assignee_w.n = arr_access
+                        current_arr_access_w = wrap(ArrayAccess(identifier_w, wrap(IntLiteral(indices[0]))))
+                        for index in indices[1:]:
+                            current_arr_access_w = wrap(ArrayAccess(current_arr_access_w, wrap(IntLiteral(index))))
+                        assign_node.assignee_w.n = current_arr_access_w.n
                         assign_node.value_w = val_w
                         assign_node.type = array_lit.type.element_type
                         assign_node.local_symtab_w = node_w.n.local_symtab_w

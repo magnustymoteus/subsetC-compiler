@@ -3,8 +3,8 @@ from .expr import *
 from .identifier import *
 from .deref_op import *
 class ObjectAccess(Expression):
-    def __init__(self, object_w: Wrapper[ObjectAccess | Identifier | DerefOp], member_w: Wrapper[Identifier]):
-        self.object_w: Wrapper[ObjectAccess | Identifier] = object_w
+    def __init__(self, object_w: Wrapper[Expression], member_w: Wrapper[Identifier]):
+        self.object_w: Wrapper[Expression] = object_w
         self.member_w: Wrapper[Identifier] = member_w
         super().__init__()
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:

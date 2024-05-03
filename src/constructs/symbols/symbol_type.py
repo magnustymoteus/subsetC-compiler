@@ -61,7 +61,6 @@ class FunctionType(SymbolType):
         super().__init__()
     def __repr__(self):
         return f"{self.return_type} ({self.parameter_types})"
-
 # struct or union type
 class CompositeType(SymbolType):
     def __init__(self, name: str, type: str):
@@ -71,6 +70,8 @@ class CompositeType(SymbolType):
         super().__init__()
     def __repr__(self):
         return f"{self.type} {self.name}{super().get_pointer_string()}"
+    def __eq__(self, other: CompositeType):
+        return self.type == other.type and self.name == other.name
 
 
 class ArrayType(PrimitiveType):

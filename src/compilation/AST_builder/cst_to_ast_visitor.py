@@ -1,6 +1,9 @@
+from antlr4.Token import CommonToken
+
 from src.antlr_files.C_GrammarVisitor import *
 from src.antlr_files.C_GrammarParser import *
 from src.constructs import *
+from src.antlr_files.C_GrammarLexer import *
 
 class CSTToASTVisitor(C_GrammarVisitor):
     """
@@ -51,13 +54,13 @@ class CSTToASTVisitor(C_GrammarVisitor):
             tokens: The token stream associated with the CST.
         """
         super().__init__()
-        self.tokens = tokens
+        self.tokens: CommonTokenStream = tokens
         self.processed_indices = set()
 
     def get_comments_for_ctx(self, ctx):
         """
         Retrieves the comments associated with the given context node.
-
+ete())
         Args:
             ctx: The context node.
 
@@ -97,6 +100,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
         if isinstance(result, Wrapper):
             self.attach_comments(result, tree)
             result.n.set_line_col_nr(tree.start.line, tree.start.column)
+
         return result
 
     def visitSelectionStmt(self, ctx:C_GrammarParser.SelectionStmtContext):
@@ -248,16 +252,6 @@ class CSTToASTVisitor(C_GrammarVisitor):
 
     def visitStructOrUnion(self, ctx:C_GrammarParser.StructOrUnionContext):
         return ctx.getText()
-    def visitObjectAccess(self, ctx:C_GrammarParser.ObjectAccessContext):
-        if ctx.getChildCount() == 1:
-            return self.visit(ctx.getChild(0))
-        object_access_w = self.visitFirstMatch(ctx, C_GrammarParser.ObjectAccessContext)
-        identifier_w = self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext)
-        if ctx.getChild(1).getText() == "->":
-            deref_op = DerefOp()
-            deref_op.operand_w = object_access_w
-            object_access_w = wrap(deref_op)
-        return wrap(ObjectAccess(object_access_w, identifier_w))
     def visitStructUnionSpec(self, ctx:C_GrammarParser.StructUnionSpecContext):
         return CompositeType(self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext).n.name, self.visitFirstMatch(ctx, C_GrammarParser.StructOrUnionContext))
     def visitStructUnionDeclaration(self, ctx:C_GrammarParser.StructUnionDeclarationContext):
@@ -265,6 +259,28 @@ class CSTToASTVisitor(C_GrammarVisitor):
         if ctx.getChild(1).getText() == "{":
             result.definition_w = wrap(CompoundStatement(self.visitAllMatches(ctx, C_GrammarParser.DeclarationContext)))
         return wrap(result)
+    def visitArrayAccessor(self, ctx:C_GrammarParser.ArrayAccessorContext):
+        return self.visitFirstMatch(ctx, C_GrammarParser.AssignmentExprContext)
+    def visitObjectAccessor(self, ctx:C_GrammarParser.ObjectAccessorContext):
+        return self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext), ctx.getChild(0).getText() == '->'
+
+    def visitAccessExpr(self, ctx:C_GrammarParser.AccessExprContext):
+        if ctx.getChildCount() == 1:
+            return self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext)
+        accessor = self.getFirstMatch(ctx, [C_GrammarParser.ArrayAccessorContext,
+                                              C_GrammarParser.ObjectAccessorContext])
+        accessor_visited = self.visit(accessor)
+        access_w: Wrapper[Expression] = self.visitFirstMatch(ctx, C_GrammarParser.AccessExprContext)
+        match accessor:
+            case C_GrammarParser.ArrayAccessorContext():
+                return wrap(ArrayAccess(access_w, accessor_visited))
+            case C_GrammarParser.ObjectAccessorContext():
+                object_w = access_w
+                if accessor_visited[1]:
+                    deref_op = DerefOp()
+                    deref_op.operand_w = object_w
+                    object_w = wrap(deref_op)
+                return wrap(ObjectAccess(object_w, accessor_visited[0]))
 
     def visitPostfixExpr(self, ctx: C_GrammarParser.PostfixExprContext):
         """
@@ -278,7 +294,6 @@ class CSTToASTVisitor(C_GrammarVisitor):
         """
         if ctx.getChildCount() > 1:
             result = wrap(UnaryOp(ctx.getChild(1).getChild(0).getText(), True))
-
             result.n.operand_w = self.visit(ctx.getChild(0))
             return result
         return self.visit(ctx.getChild(0))
@@ -364,12 +379,6 @@ class CSTToASTVisitor(C_GrammarVisitor):
             return wrap(CompositeDeclaration(type_specifier))
         elif isinstance(type_specifier.n, Enumeration):
             return type_specifier
-    def visitArrayAccessExpr(self, ctx:C_GrammarParser.ArrayAccessExprContext):
-        identifier_w: Wrapper[Identifier] = self.visitFirstMatch(ctx, C_GrammarParser.IdentifierContext)
-        indices: list[Wrapper[Expression]] = self.visitAllMatches(ctx, C_GrammarParser.AssignmentExprContext)
-        result = ArrayAccess(identifier_w, indices)
-        return wrap(result)
-
     def visitForDeclaration(self, ctx:C_GrammarParser.ForDeclarationContext):
         """
         Visits the given for declaration context and converts it to an AST node.

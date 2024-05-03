@@ -8,22 +8,26 @@ class PreprocessingError(Exception):
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
+
 class PreprocessorVisitor(C_PreprocessorVisitor):
     def raise_preprocessing_error(self, message: str, ctx):
         raise PreprocessingError(f"{ctx.start.line}:{ctx.start.column}:error: {message}")
     @staticmethod
     def get_original_text(ctx) -> str:
         return ctx.parser.getInputStream().getText(ctx.start, ctx.stop)
-    def __init__(self, buffered_tokens_stream: BufferedTokenStream, filepath: str, defines: dict[str, str]={}):
+    def __init__(self, token_stream: CommonTokenStream, filepath: str, defines: dict[str, str]={}):
         self.filepath = filepath
         self.defines: dict[str, str] = defines
-        self.rewriter = TokenStreamRewriter(buffered_tokens_stream)
+        self.rewriter = TokenStreamRewriter(token_stream)
         self.ifndef_stack_stack: list[tuple[int, bool]] = [] # contains line for the end of the endif directive token
         self.included_stdio = False
+
     def visitProgram(self, ctx: C_PreprocessorParser.ProgramContext):
         super().visitProgram(ctx)
         if len(self.ifndef_stack_stack) > 0:
             self.raise_preprocessing_error("Unterminated #if", ctx)
+
+
     def visitLine(self, ctx:C_PreprocessorParser.LineContext):
         self.visitChildren(ctx)
     def visitDefineDirective(self, ctx:C_PreprocessorParser.DefineDirectiveContext):
@@ -37,8 +41,7 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
             if not os.path.exists(included_path):
                 self.raise_preprocessing_error(f"{included_path}: No such file", ctx)
 
-            included_contents = open(included_path, 'r').read()
-            tokens = C_PreprocessorLexer(InputStream(included_contents))
+            tokens = C_PreprocessorLexer(FileStream(included_path))
             stream = CommonTokenStream(tokens)
             tree = C_PreprocessorParser(stream).program()
             sub_preprocessor = PreprocessorVisitor(stream, included_path, self.defines)

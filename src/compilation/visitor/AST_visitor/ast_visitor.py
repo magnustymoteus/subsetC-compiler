@@ -127,9 +127,8 @@ class ASTVisitor():
         self.visit(node_w.n.object_w)
         self.visit(node_w.n.member_w)
     def array_access(self, node_w: Wrapper[ArrayAccess]):
-        self.visit(node_w.n.identifier_w)
-        for index_w in node_w.n.indices:
-            self.visit(index_w)
+        self.visit(node_w.n.accessed_w)
+        self.visit(node_w.n.index_w)
     def composite_decl(self, node_w: Wrapper[CompositeDeclaration]):
         self.variable_decl(node_w)
     def func_call(self, node_w: Wrapper[FunctionCall]):

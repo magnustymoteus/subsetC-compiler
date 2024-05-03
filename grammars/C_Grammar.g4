@@ -67,11 +67,12 @@ addExpr: multExpr | addExpr (PLUS | MINUS) multExpr;
 multExpr: castExpr | multExpr (ARISK | DIV | MOD) castExpr;
 castExpr: unaryExpr | LPAREN typeSpec RPAREN castExpr;
 unaryExpr: postfixExpr | unaryOp castExpr;
-postfixExpr: primaryExpr | postfixExpr postfixOp | functionCallExpr | arrayAccessExpr | objectAccess;
+postfixExpr: primaryExpr | postfixExpr postfixOp | functionCallExpr | accessExpr;
+accessExpr: accessExpr (arrayAccessor | objectAccessor) | identifier;
+arrayAccessor: LBRACK assignmentExpr RBRACK+;
+objectAccessor: (DOT | ARROW) identifier;
 
 functionCallExpr: identifier LPAREN (assignmentExpr (',' assignmentExpr)*)? RPAREN;
-arrayAccessExpr: identifier (LBRACK assignmentExpr RBRACK)+;
-objectAccess: objectAccess (DOT | ARROW) identifier | identifier;
 
 postfixOp: DPLUS | DMINUS;
 primaryExpr: identifier | literal | LPAREN expr RPAREN;

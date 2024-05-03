@@ -1,4 +1,5 @@
 from src.constructs.node import *
+import html
 
 class Basic(AbstractNode):
     """
@@ -9,6 +10,7 @@ class Basic(AbstractNode):
         super().__init__()
         self.line_nr: int | None = None
         self.col_nr: int | None = None
+        self.filename: str | None = None
         self.comments = []
         self.source_code_line: str | None = None
         self.local_symtab_w: Wrapper[SymbolTable] = wrap()
@@ -20,11 +22,11 @@ class Basic(AbstractNode):
         self.col_nr = col_nr
 
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
-        """
-        Add the node to the dot graph. The name is determined by the node's repr.
-        """
-        super().append_to_graph(graph, parent_id, label)
-
+        label_str = html.escape(str(self))
+        comment_str = str('<br></br>'.join([html.escape(comment) for comment in self.comments]))
+        graph.node(str(self.id), f"<{label_str}<br></br><FONT POINT-SIZE=\"5\">comments: {comment_str}</FONT>>")
+        if parent_id is not None:
+            graph.edge(str(parent_id), str(self.id), label)
 
 
 from src.constructs.symbols.symbol_table import SymbolTable

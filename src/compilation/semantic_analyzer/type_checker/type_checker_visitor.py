@@ -201,14 +201,12 @@ class TypeCheckerVisitor(ASTVisitor):
 
     def array_access(self, node_w: Wrapper[ArrayAccess]):
         super().array_access(node_w)
-        for index_w in node_w.n.indices:
-            if index_w.n.type.type not in ['int', 'char']:
-                self.raiseSemanticErr(f"Cannot access array {node_w.n.identifier_w.n.name}: index {index_w.n} not an integer")
-        ptr_count: int = node_w.n.identifier_w.n.type.ptr_count
-        resulting_dim: int = ptr_count - len(node_w.n.indices)
-        if resulting_dim < 0:
-            self.raiseSemanticErr(f"Cannot access array {node_w.n.identifier_w.n.name}: trying to access dimension {len(node_w.n.indices)} but array has {ptr_count}")
-        node_w.n.type = PrimitiveType(node_w.n.identifier_w.n.type.type, node_w.n.identifier_w.n.type.is_constant, ptr_count-1)
+        if node_w.n.index_w.n.type.type not in ['int', 'char']:
+            self.raiseSemanticErr(f"index {node_w.n.index_w.n} not an integer")
+        ptr_count: int = node_w.n.accessed_w.n.type.ptr_count
+        if ptr_count == 0:
+            self.raiseSemanticErr(f"Cannot access array: too many indexes")
+        node_w.n.type = PrimitiveType(node_w.n.accessed_w.n.type.type, node_w.n.accessed_w.n.type.is_constant, ptr_count-1)
 
     def array_lit(self, node_w: Wrapper[ArrayLiteral]):
         super().array_lit(node_w)
