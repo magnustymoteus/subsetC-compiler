@@ -25,7 +25,7 @@ class VoidType(SymbolType):
 class PrimitiveType(SymbolType):
     type_ranks: list[str] = ["char", "int", "float"]
     @staticmethod
-    def typeCoercion(primitive_types: list[str], is_constant: bool) -> PrimitiveType:
+    def typeCoercion(primitive_types: list[PrimitiveType], is_constant: bool) -> PrimitiveType:
         """
         Perform type coercion on a list of primitive types.
 
@@ -38,7 +38,10 @@ class PrimitiveType(SymbolType):
         """
         current_rank = 0
         for current_type in primitive_types:
-            index = PrimitiveType.type_ranks.index(current_type)
+            # check if there is a pointer, if so coerce to that pointer (doesn't do extra checks)
+            if current_type.ptr_count > 0:
+                return current_type
+            index = PrimitiveType.type_ranks.index(current_type.type)
             if index > current_rank:
                 current_rank = index
         return PrimitiveType(PrimitiveType.type_ranks[current_rank], is_constant)

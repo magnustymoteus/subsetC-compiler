@@ -261,7 +261,7 @@ class LLVMVisitor(CFGVisitor):
         return l_type.type == r_type.type and l_type.ptr_count == r_type.ptr_count
 
     def _get_bin_op_func(self, lhs_value, lhs_type, rhs_value, rhs_type, operator) -> Callable:
-        coerced_type: PrimitiveType = PrimitiveType.typeCoercion([lhs_type.type, rhs_type.type], True)
+        coerced_type: PrimitiveType = PrimitiveType.typeCoercion([lhs_type, rhs_type], True)
         lhs_is_pointer: bool = lhs_type.ptr_count > 0
         rhs_is_pointer: bool = rhs_type.ptr_count > 0
         if (lhs_type.type != coerced_type.type or rhs_type.type != coerced_type.type) and not (
@@ -400,6 +400,7 @@ class LLVMVisitor(CFGVisitor):
         if not self.types_compatible(node_w.n.type, node_w.n.value_w.n.type):
             value = self._cast(self._load_if_pointer(value), node_w.n.value_w.n.type, node_w.n.type)
         self.builder.store(value, assignee, self._get_llvm_type(node_w.n.type)[1])
+        return value
 
     def return_stmt(self, node_w: Wrapper[ReturnStatement]):
         if node_w.n.expr_w is None:

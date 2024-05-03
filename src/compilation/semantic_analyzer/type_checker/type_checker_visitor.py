@@ -86,7 +86,7 @@ class TypeCheckerVisitor(ASTVisitor):
         else:
             self.raiseSemanticErr("lvalue required as left operand of assignment")
 
-    def checkPointerTypes(self, left_type: SymbolType, right_type: SymbolType):
+    def checkPointerTypes(self, left_type: SymbolType, operator: str, right_type: SymbolType):
         """
         Check if the pointer types are compatible.
 
@@ -97,21 +97,25 @@ class TypeCheckerVisitor(ASTVisitor):
         Raises:
             SemanticError: If the pointer types are not compatible.
         """
-        left_copy = deepcopy(left_type)
-        right_copy = deepcopy(right_type)
-        if left_copy.ptr_count > 0 and right_copy.ptr_count == 0:
-            if right_copy.type != 'int':
-                # case where a pointer gets assigned to a non integer non pointer
-                self.raiseSemanticErr(f"Cannot bind pointer {left_copy} to {right_copy}")
-            # case where a pointer gets assigned to a non pointer integer
-        elif left_copy.ptr_count != right_copy.ptr_count:
-            # case where two pointers dont match
-            self.raiseSemanticErr(f"Incompatible pointer types {left_copy} and {right_copy}")
+        left_is_ptr: bool = left_type.ptr_count > 0
+        right_is_ptr: bool = right_type.ptr_count > 0
+        if left_is_ptr or right_is_ptr:
+            noRaise: bool = False
+            if operator in ['-', '=']:
+                noRaise = (left_is_ptr and right_is_ptr and left_type == right_type) or (not right_is_ptr and right_type.type == 'int')
+            elif operator == '+':
+                noRaise = ((left_is_ptr and not right_is_ptr and right_type.type == 'int')
+                           or (right_is_ptr and not left_is_ptr and left_type.type == 'int'))
+            elif self.is_comparison(operator):
+                noRaise = ((left_is_ptr and not right_is_ptr and right_type.type == 'int')
+                           or (right_is_ptr and not left_is_ptr and left_type.type == 'int')) or (left_is_ptr and right_is_ptr)
+            if not noRaise:
+                self.raiseSemanticErr(f"invalid operands to {operator} (have {left_type} and {right_type})")
     def checkReturnType(self, return_type: PrimitiveType, returned_type: PrimitiveType):
         if return_type.type == "void" and returned_type != return_type:
             self.raiseSemanticErr(f"Cannot return type {returned_type} as void")
         self.checkImplicitDemotion(return_type, returned_type)
-        self.checkPointerTypes(return_type, returned_type)
+        self.checkPointerTypes(return_type, '=', returned_type)
     def checkArrayInitialization(self, node_w: Wrapper[VariableDeclaration]):
         arr_type: ArrayType = node_w.n.type
         definition_type = node_w.n.definition_w.n.type
@@ -125,11 +129,11 @@ class TypeCheckerVisitor(ASTVisitor):
 
     def bin_op(self, node_w: Wrapper[BinaryOp]):
         super().bin_op(node_w)
-        self.checkPointerTypes(node_w.n.lhs_w.n.type, node_w.n.rhs_w.n.type)
+        self.checkPointerTypes(node_w.n.lhs_w.n.type, node_w.n.operator, node_w.n.rhs_w.n.type)
         if TypeCheckerVisitor.is_comparison(node_w.n.operator):
             node_w.n.type = PrimitiveType('int', True)
         else:
-            node_w.n.type = PrimitiveType.typeCoercion([node_w.n.lhs_w.n.type.type, node_w.n.rhs_w.n.type.type], True)
+            node_w.n.type = PrimitiveType.typeCoercion([node_w.n.lhs_w.n.type, node_w.n.rhs_w.n.type], True)
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
         super().un_op(node_w)
@@ -165,7 +169,7 @@ class TypeCheckerVisitor(ASTVisitor):
         node_w.n.type = deepcopy(node_w.n.assignee_w.n.type)
         self.checkImplicitDemotion(node_w.n.assignee_w.n.type, node_w.n.value_w.n.type)
         self.checkAssignee(node_w.n.assignee_w)
-        self.checkPointerTypes(node_w.n.assignee_w.n.type, node_w.n.value_w.n.type)
+        self.checkPointerTypes(node_w.n.assignee_w.n.type, '=', node_w.n.value_w.n.type)
         self.checkDiscardedPointerQualifier(node_w.n.assignee_w.n.type, node_w.n.value_w.n.type)
 
     def identifier(self, node_w: Wrapper[Identifier]):
@@ -175,7 +179,7 @@ class TypeCheckerVisitor(ASTVisitor):
         self.checkValidType(node_w.n.type, node_w.n.local_symtab_w.n)
         super().variable_decl(node_w)
         if node_w.n.definition_w.n is not None and not isinstance(node_w.n, CompositeDeclaration):
-            self.checkPointerTypes(node_w.n.type, node_w.n.definition_w.n.type)
+            self.checkPointerTypes(node_w.n.type, '=', node_w.n.definition_w.n.type)
             self.checkImplicitDemotion(node_w.n.type, node_w.n.definition_w.n.type)
             self.checkDiscardedPointerQualifier(node_w.n.type, node_w.n.definition_w.n.type)
             if isinstance(node_w.n.type, ArrayType):
@@ -209,7 +213,7 @@ class TypeCheckerVisitor(ASTVisitor):
     def array_lit(self, node_w: Wrapper[ArrayLiteral]):
         super().array_lit(node_w)
         values = node_w.n.value
-        types: list[str] = [elem_w.n.type.type for elem_w in values]
+        types: list[PrimitiveType] = [elem_w.n.type for elem_w in values]
         coerced_type = PrimitiveType.typeCoercion(types, False)
         array_types = [elem_w.n.type for elem_w in values if isinstance(elem_w.n.type, ArrayType)]
         dim_max = max(array_types, key=lambda type: type.dimension[0]) if len(array_types) > 0 else None
@@ -237,7 +241,7 @@ class TypeCheckerVisitor(ASTVisitor):
             arg_type = node_w.n.arguments[i].n.type
             param_type = func_type.parameter_types[i]
             self.checkImplicitDemotion(param_type, arg_type)
-            self.checkPointerTypes(param_type, arg_type)
+            self.checkPointerTypes(param_type, '=', arg_type)
             self.checkDiscardedPointerQualifier(param_type, arg_type)
 
 

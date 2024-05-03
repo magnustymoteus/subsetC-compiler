@@ -53,7 +53,7 @@ class ConstantFoldingVisitor(ASTVisitor):
                     result = node_w.n.lhs.value | node_w.n.rhs.value
                 case "^":
                     result = node_w.n.lhs.value ^ node_w.n.rhs.value
-            coerced_type = PrimitiveType.typeCoercion([node_w.n.lhs_w.n.type.type, node_w.n.rhs_w.n.type.type], True)
+            coerced_type = PrimitiveType.typeCoercion([node_w.n.lhs_w.n.type, node_w.n.rhs_w.n.type], True)
 
             if isinstance(result, bool):
                 node_w.n = IntLiteral(1 if result else 0)

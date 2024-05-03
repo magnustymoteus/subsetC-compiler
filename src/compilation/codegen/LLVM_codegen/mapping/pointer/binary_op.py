@@ -35,7 +35,9 @@ def get_pointer_binary_op(left_value: ir.Instruction | ir.Constant, right_value:
                                        True, create_reg())
         case '-':
             if is_pointer(left_value) and is_pointer(right_value):
-                pass
+                return lambda: builder.sub(builder.ptrtoint(left_value,ir.IntType(64), create_reg()),
+                                        builder.ptrtoint(right_value, ir.IntType(64), create_reg()),
+                                                            create_reg())
             return lambda: builder.gep(get_pointer(left_value, right_value),
                                        [builder.neg(get_non_pointer(left_value, right_value), create_reg())], True,
                                        create_reg())

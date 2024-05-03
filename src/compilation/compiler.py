@@ -96,7 +96,6 @@ class Compiler():
 
         if self.do_viz("ast"):
             Compiler.visualizeAST(ast, f"./{filename}-viz/ast.gv")
-
         if self.do_viz("symtab"):
             Compiler.visualizeSymTabs(ast, f"./{filename}-viz/symtab.gv")
 
