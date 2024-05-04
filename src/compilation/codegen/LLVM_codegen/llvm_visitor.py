@@ -50,6 +50,7 @@ class LLVMVisitor(CFGVisitor):
 
         self.module: ir.Module = ir.Module(name=name)
         self.module.triple = binding.get_default_triple()
+        self.module.context = ir.Context()
 
         self.io_functions: dict[str, ir.Function] = {}
 
@@ -359,14 +360,15 @@ class LLVMVisitor(CFGVisitor):
             case _:
                 raise ValueError(f"Unrecognized unary operator")
     def composite_decl(self, node_w: Wrapper[CompositeDeclaration]):
-        context = ir.global_context
+        context = self.module.context
         result = context.get_identified_type(node_w.n.identifier)
         self.regs[node_w.n.identifier] = result
         member_types = [self._get_llvm_type(member_w.n.type)[0] for member_w in node_w.n.definition_w.n.statements]
         if node_w.n.type.type == "union":
             sizes = [self._get_llvm_type_size(member_type) for member_type in member_types]
-            index = sizes.index(max(sizes))
-            member_types = [member_types[index]]
+            if len(sizes):
+                index = sizes.index(max(sizes))
+                member_types = [member_types[index]]
         result.set_body(*member_types)
         return result
 
