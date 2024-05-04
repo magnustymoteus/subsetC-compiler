@@ -45,7 +45,6 @@ class LLVMVisitor(CFGVisitor):
         self.regs_stack: list[dict[str, ir.Instruction | ir.Function | ir.GlobalVariable]] = [{}]
         self.reg_counters: list[int] = [0]
         self.refs: set[str] = set()
-
         self.jump_stack: list[tuple[
             ir.Block | None, ir.Block | None]] = []  # stack for jump statements with tuple = (continue block, break block)
 
@@ -68,6 +67,18 @@ class LLVMVisitor(CFGVisitor):
                 return result
             return self.builder.load(value, self._create_reg(), 4)
         return value
+
+    def _get_llvm_type_size(self, type: ir.Type):
+        match type:
+            case ir.PointerType():
+                return 8
+            case ir.ArrayType():
+                return type.count * self._get_llvm_type_size(type.element)
+            case ir.BaseStructType():
+                return sum([self._get_llvm_type_size(element) for element in type.elements])
+            case _:
+                return type.width
+
 
     def visit(self, node_w: Wrapper[AbstractNode]):
         if not self.disable_comments and self.builder.block is not None:
@@ -98,6 +109,8 @@ class LLVMVisitor(CFGVisitor):
                 case "void":
                     result = [ir.VoidType(), 0]
                 case "struct":
+                    result = [self._get_reg(type.name), 4]
+                case "union":
                     result = [self._get_reg(type.name), 4]
                 case _:
                     raise ValueError(f"Critical Error: unrecognized type")
@@ -347,10 +360,13 @@ class LLVMVisitor(CFGVisitor):
                 raise ValueError(f"Unrecognized unary operator")
     def composite_decl(self, node_w: Wrapper[CompositeDeclaration]):
         context = ir.global_context
-
         result = context.get_identified_type(node_w.n.identifier)
         self.regs[node_w.n.identifier] = result
         member_types = [self._get_llvm_type(member_w.n.type)[0] for member_w in node_w.n.definition_w.n.statements]
+        if node_w.n.type.type == "union":
+            sizes = [self._get_llvm_type_size(member_type) for member_type in member_types]
+            index = sizes.index(max(sizes))
+            member_types = [member_types[index]]
         result.set_body(*member_types)
         return result
 
@@ -359,16 +375,19 @@ class LLVMVisitor(CFGVisitor):
         self.no_load = True
         obj = self.visit(node_w.n.object_w)
         self.no_load = no_load
-        object_type: CompositeType = node_w.n.object_w.n.type
-        composite_def: CompoundStatement = node_w.n.local_symtab_w.n.lookup_symbol(object_type.name).value_w.n
-        member_name: str = node_w.n.member_w.n.name
-        for i, member_w in enumerate(composite_def.statements):
-            if member_w.n.identifier == member_name:
-                obj = self.builder.gep(obj,
-                                 [ir.Constant(ir.IntType(32), 0),
-                                  ir.Constant(ir.IntType(32), i)],
-                                 True,
-                                 self._create_reg())
+        if node_w.n.object_w.n.type.type == "struct":
+            object_type: CompositeType = node_w.n.object_w.n.type
+            composite_def: CompoundStatement = node_w.n.local_symtab_w.n.lookup_symbol(object_type.name).value_w.n
+            member_name: str = node_w.n.member_w.n.name
+            for i, member_w in enumerate(composite_def.statements):
+                if member_w.n.identifier == member_name:
+                    obj = self.builder.gep(obj,
+                                     [ir.Constant(ir.IntType(32), 0),
+                                      ir.Constant(ir.IntType(32), i)],
+                                     True,
+                                     self._create_reg())
+        else:
+            obj = self.builder.bitcast(obj, self._get_llvm_type(node_w.n.member_w.n.type)[0].as_pointer(), self._create_reg())
         result = obj if no_load else self._load_if_pointer(obj)
         return result
 
