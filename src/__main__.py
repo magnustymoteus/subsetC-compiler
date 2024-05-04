@@ -37,14 +37,14 @@ def main(argv):
                     case _:
                         raise ValueError(f"Unrecognized target: {target}")
         except PreprocessingError as e:
-            print(f"{path_in_str}:{e}")
+            print(f"{e}")
         except SyntaxError as e:
             print(f"{path_in_str}:{e}")
         except SemanticError as e:
-            print(f"{path_in_str}:{e}")
+            print(f"{e}")
         except Warning as w:
             if not "warnings" in args.disabled:
-                print(f"{path_in_str}:{w}")
+                print(f"{w}")
 
 
 

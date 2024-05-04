@@ -17,7 +17,8 @@ class Basic(AbstractNode):
 
 
 
-    def set_line_col_nr(self, line_nr: int, col_nr: int):
+    def set_env_data(self, filename: str, line_nr: int, col_nr: int):
+        self.filename = filename
         self.line_nr = line_nr
         self.col_nr = col_nr
 

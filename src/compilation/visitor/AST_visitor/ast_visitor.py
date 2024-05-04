@@ -13,12 +13,13 @@ class ASTVisitor():
         self.visit(ast.root_w)
         self.current_line_nr: int = 0
         self.current_col_nr: int = 0
+        self.current_file: str = ast.root_w.n.filename
 
     def raiseSemanticErr(self, message: str):
-        raise SemanticError(f"{self.current_line_nr}:{self.current_col_nr}:error: {message}")
+        raise SemanticError(f"{self.current_file}:{self.current_line_nr}:{self.current_col_nr}:error: {message}")
 
     def raiseWarning(self, message: str):
-        warnings.warn(f"{self.current_line_nr}:{self.current_col_nr}:warning: {message}")
+        warnings.warn(f"{self.current_file}:{self.current_line_nr}:{self.current_col_nr}:warning: {message}")
 
     def visit(self, node_w: Wrapper[Basic]):
         """
@@ -33,6 +34,7 @@ class ASTVisitor():
         Returns:
             None
         """
+        self.current_file = node_w.n.filename
         self.current_col_nr = node_w.n.col_nr
         self.current_line_nr = node_w.n.line_nr
         match node_w.n:

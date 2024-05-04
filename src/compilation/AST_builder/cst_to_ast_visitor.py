@@ -4,6 +4,7 @@ from src.antlr_files.C_GrammarVisitor import *
 from src.antlr_files.C_GrammarParser import *
 from src.constructs import *
 from src.antlr_files.C_GrammarLexer import *
+from src.compilation.preprocessor.preprocessor_visitor import EnvironmentNode
 
 class CSTToASTVisitor(C_GrammarVisitor):
     """
@@ -46,7 +47,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
         matches = self.getAllMatches(ctx, match_type)
         return [self.visit(match) for match in matches]
 
-    def __init__(self, tokens):
+    def __init__(self, tokens, environment_root: EnvironmentNode):
         """
         Initializes the CSTToASTVisitor object.
 
@@ -56,6 +57,7 @@ class CSTToASTVisitor(C_GrammarVisitor):
         super().__init__()
         self.tokens: CommonTokenStream = tokens
         self.processed_indices = set()
+        self.environment_root = environment_root
 
     def get_comments_for_ctx(self, ctx):
         """
@@ -99,7 +101,8 @@ ete())
         result = super().visit(tree)
         if isinstance(result, Wrapper):
             self.attach_comments(result, tree)
-            result.n.set_line_col_nr(tree.start.line, tree.start.column)
+            env_node, translated_line = self.environment_root.get_env(tree.start.line)
+            result.n.set_env_data(env_node.filename, translated_line, tree.start.column)
 
         return result
 

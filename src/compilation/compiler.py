@@ -18,9 +18,9 @@ class Compiler():
         stream = CommonTokenStream(lexer)
         return stream
     @staticmethod
-    def getAST(tree, tokens) -> Ast:
+    def getAST(tree, tokens, environment_root: EnvironmentNode) -> Ast:
         ast = Ast()
-        converterVisitor = CSTToASTVisitor(tokens)
+        converterVisitor = CSTToASTVisitor(tokens, environment_root)
         root = converterVisitor.visit(tree)
         ast.set_root(root)
         return ast
@@ -76,7 +76,7 @@ class Compiler():
         if self.do_viz("cst"):
             Compiler.visualizeCST(tree, parser.ruleNames, f"./{filename}-viz/cst")
         # conversion from CST to AST
-        ast = Compiler.getAST(tree, tokens)
+        ast = Compiler.getAST(tree, tokens, preprocessor.environment_node)
         ResolverVisitor(ast, preprocessor.included_stdio)
 
         # Makes symbol table entries of the ast nodes

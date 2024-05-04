@@ -1,3 +1,7 @@
+from __future__ import annotations
+from src.constructs.node import *
+from antlr4.Token import CommonToken
+
 from src.antlr_files.C_PreprocessorParser import *
 from src.antlr_files.C_PreprocessorLexer import *
 from src.antlr_files.C_PreprocessorVisitor import *
@@ -9,9 +13,26 @@ class PreprocessingError(Exception):
         self.message = message
         super().__init__(self.message)
 
+class EnvironmentNode():
+    def __init__(self, filename: str, line_pair: tuple[int, int]):
+        self.filename: str = filename
+        self.line_pair : tuple[int, int] = line_pair
+        self.children: list[EnvironmentNode] = []
+    # returns environment and translated line
+    def get_env(self, line: int) -> tuple[EnvironmentNode, int]:
+        result_line = line
+        for child in self.children:
+            if child.line_pair[0] <= line <= child.line_pair[1]:
+                return child.get_env(line-child.line_pair[0]+1)
+            elif child.line_pair[1] > line:
+                break
+            result_line -= (child.line_pair[1]-child.line_pair[0])
+        return self, result_line
+
+
 class PreprocessorVisitor(C_PreprocessorVisitor):
     def raise_preprocessing_error(self, message: str, ctx):
-        raise PreprocessingError(f"{ctx.start.line}:{ctx.start.column}:error: {message}")
+        raise PreprocessingError(f"{self.filepath}:{ctx.start.line}:{ctx.start.column}:error: {message}")
     @staticmethod
     def get_original_text(ctx) -> str:
         return ctx.parser.getInputStream().getText(ctx.start, ctx.stop)
@@ -19,12 +40,17 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
         self.filepath = filepath
         self.defines: dict[str, str] = defines
         self.rewriter = TokenStreamRewriter(token_stream)
-        self.ifndef_stack_stack: list[tuple[int, bool]] = [] # contains line for the end of the endif directive token
+        self.ifndef_stack: list[tuple[int, bool]] = [] # contains line for the end of the endif directive token
+
         self.included_stdio = False
 
+        self.include_sizes: list[int] = []
+
+
     def visitProgram(self, ctx: C_PreprocessorParser.ProgramContext):
+        self.environment_node: EnvironmentNode = EnvironmentNode(self.filepath, (ctx.start.line, ctx.stop.line))
         super().visitProgram(ctx)
-        if len(self.ifndef_stack_stack) > 0:
+        if len(self.ifndef_stack) > 0:
             self.raise_preprocessing_error("Unterminated #if", ctx)
 
 
@@ -46,6 +72,15 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
             tree = C_PreprocessorParser(stream).program()
             sub_preprocessor = PreprocessorVisitor(stream, included_path, self.defines)
             sub_preprocessor.visit(tree)
+
+            new_include = sub_preprocessor.rewriter.getTokenStream().get(-1).line - len(sub_preprocessor.include_sizes) + sum(sub_preprocessor.include_sizes)
+            self.include_sizes.append(new_include)
+            start_end: tuple[int, int] = (ctx.start.line + sum(self.include_sizes[:-1]) - (len(self.include_sizes) - 1),
+                                          ctx.start.line + sum(self.include_sizes) - len(self.include_sizes))
+
+            sub_preprocessor.environment_node.line_pair = start_end
+            self.environment_node.children.append(sub_preprocessor.environment_node)
+
             self.defines = self.defines | sub_preprocessor.defines
             self.rewriter.replace("default", ctx.start.tokenIndex, ctx.stop.tokenIndex, sub_preprocessor.get_processed_result())
 
@@ -63,12 +98,12 @@ class PreprocessorVisitor(C_PreprocessorVisitor):
         return self.rewriter.getDefaultText()
     def visitIfndefDirective(self, ctx:C_PreprocessorParser.IfndefDirectiveContext):
         is_not_defined: bool = self.defines.get(ctx.getChild(1).getText(), None) is None
-        self.ifndef_stack_stack.append((ctx.stop.tokenIndex, is_not_defined))
+        self.ifndef_stack.append((ctx.stop.tokenIndex, is_not_defined))
         self.rewriter.delete("default", ctx.start.tokenIndex, ctx.stop.tokenIndex)
     def visitEndifDirective(self, ctx:C_PreprocessorParser.EndifDirectiveContext):
-        if self.ifndef_stack_stack == 0:
+        if self.ifndef_stack == 0:
             self.raise_preprocessing_error(f"#endif without #if", ctx)
-        ifndef = self.ifndef_stack_stack.pop()
+        ifndef = self.ifndef_stack.pop()
         removal_start_index: int = ctx.start.tokenIndex
         if not ifndef[1]:
             removal_start_index = ifndef[0]+1
