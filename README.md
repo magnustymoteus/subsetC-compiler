@@ -17,6 +17,10 @@
 * Project 7
   * Structs that contain other structs as a value.
   * Unions.
+* Extra visualizations
+  * CFG
+  * LLVM CFG for each function
+  * CST
 * Extra Warnings
 * Detailed warnings & errors
   * format: [filename]:[line]:[column]:[preprocessing_error | syntax_error | semantic_error | semantic_warning]: [message]

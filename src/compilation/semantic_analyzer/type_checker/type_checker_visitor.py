@@ -31,6 +31,8 @@ class TypeCheckerVisitor(ASTVisitor):
             entry = symtab.lookup_symbol(type.name)
             if entry.value_w is None:
                 self.raiseSemanticErr(f"{type.type} {type.name} not defined")
+            if type != entry.type:
+                self.raiseSemanticErr(f"instance of '{type}' does not match previous declaration '{entry.type}'")
         else:
             if not type.type in PrimitiveType.type_ranks:
                 self.raiseSemanticErr(f"Unknown type {type}")
