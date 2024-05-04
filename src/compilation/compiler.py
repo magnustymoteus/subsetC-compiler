@@ -1,5 +1,6 @@
 from src.compilation import *
 from src.constructs import *
+from src.constructs.mips_program import MipsProgram
 from src.compilation.visualization import CSTVisualizer, SymbolTablesVisualizer
 
 from src.antlr_files.C_GrammarLexer import *
@@ -11,12 +12,14 @@ from pathlib import Path
 import graphviz
 import subprocess
 
-class Compiler():
+
+class Compiler:
     @staticmethod
     def getTokens(source_code: str):
         lexer = C_GrammarLexer(InputStream(source_code))
         stream = CommonTokenStream(lexer)
         return stream
+
     @staticmethod
     def getAST(tree, tokens, environment_root: EnvironmentNode) -> Ast:
         ast = Ast()
@@ -24,22 +27,27 @@ class Compiler():
         root = converterVisitor.visit(tree)
         ast.set_root(root)
         return ast
+
     @staticmethod
     def visualizeCST(tree, rules, filename):
         visualizer = CSTVisualizer()
         visualizer.visualize(tree, rules, filename)
+
     @staticmethod
     def visualizeAST(ast: Ast, filename: str):
         graph = ast.to_dot_graph()
         graph.save(filename=filename)
+
     @staticmethod
     def visualizeSymTabs(ast: Ast, filename: str):
         visualizer = SymbolTablesVisualizer(ast)
         visualizer.graph.save(filename=filename)
+
     @staticmethod
     def visualizeCFG(cfg: ControlFlowGraph, filename: str):
         graph = cfg.to_dot_graph()
         graph.save(filename=filename)
+
     @staticmethod
     def getPreprocessor(filepath):
         input_stream = FileStream(filepath)
@@ -56,11 +64,14 @@ class Compiler():
 
     def do_viz(self, what: str):
         return "all" in self.viz or what in self.viz
+
     def is_disabled(self, what: str):
         return what in self.disable
 
-    def compile_mips(self, llvm_module: ir.Module,filepath: Path):
-        pass
+    def compile_mips(self, llvm_module: ir.Module) -> MipsProgram:
+        mips_visitor = MipsVisitor()
+        mips_visitor.visit(llvm_module)
+        return mips_visitor.tree
 
     def compile_llvm(self, filepath: Path) -> ir.Module:
         filename = str(os.path.splitext(os.path.basename(filepath))[0])
@@ -110,10 +121,11 @@ class Compiler():
 
         if self.do_viz("cfg"):
             for function in llvm.module.functions:
-                s = graphviz.Source(get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv")
+                s = graphviz.Source(
+                    get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv"
+                )
                 s.save()
         return llvm.module
-
 
     def export_llvm(self, llvm_module: ir.Module, filepath: Path):
         output_path = str(os.path.splitext(os.path.basename(filepath))[0])
@@ -122,3 +134,10 @@ class Compiler():
         f = open(f"./{output_path}.ll", "w")
         f.write(str(llvm_module))
         f.close()
+
+    def export_mips(self, program: MipsProgram, filepath: Path):
+        output_path = str(os.path.splitext(os.path.basename(filepath))[0])
+        mips_file = Path(f"{output_path}.asm")
+        mips_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(f"./{output_path}.asm", "w") as f:
+            f.write(program.to_asm())
