@@ -29,10 +29,9 @@ class EnvironmentNode():
             result_line -= (child.line_pair[1]-child.line_pair[0])
         return self, result_line
 
-
 class PreprocessorVisitor(C_PreprocessorVisitor):
     def raise_preprocessing_error(self, message: str, ctx):
-        raise PreprocessingError(f"{self.filepath}:{ctx.start.line}:{ctx.start.column}:error: {message}")
+        raise PreprocessingError(f"{self.filepath}:{ctx.start.line}:{ctx.start.column}:preprocessing_error: {message}")
     @staticmethod
     def get_original_text(ctx) -> str:
         return ctx.parser.getInputStream().getText(ctx.start, ctx.stop)

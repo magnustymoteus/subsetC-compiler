@@ -16,10 +16,10 @@ class ASTVisitor():
         self.current_file: str = ast.root_w.n.filename
 
     def raiseSemanticErr(self, message: str):
-        raise SemanticError(f"{self.current_file}:{self.current_line_nr}:{self.current_col_nr}:error: {message}")
+        raise SemanticError(f"{self.current_file}:{self.current_line_nr}:{self.current_col_nr}:semantic_error: {message}")
 
     def raiseWarning(self, message: str):
-        warnings.warn(f"{self.current_file}:{self.current_line_nr}:{self.current_col_nr}:warning: {message}")
+        warnings.warn(f"{self.current_file}:{self.current_line_nr}:{self.current_col_nr}:semantic_warning: {message}")
 
     def visit(self, node_w: Wrapper[Basic]):
         """

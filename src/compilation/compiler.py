@@ -68,7 +68,7 @@ class Compiler():
         # Lexes the input file
         tokens = Compiler.getTokens(preprocessor.get_processed_result())
         parser = C_GrammarParser(tokens)
-        parser.addErrorListener(MyErrorListener())
+        parser.addErrorListener(MyErrorListener(preprocessor.environment_node))
 
         # tree: list[ProgramContext]
         tree = parser.program()
