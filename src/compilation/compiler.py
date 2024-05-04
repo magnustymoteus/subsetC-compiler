@@ -90,11 +90,11 @@ class Compiler:
         ast = Compiler.getAST(tree, tokens, preprocessor.environment_node)
         ResolverVisitor(ast, preprocessor.included_stdio)
 
+        SimplifierVisitor(ast)
+
         # Makes symbol table entries of the ast nodes
         SymbolTableVisitor(ast)
         TypeCheckerVisitor(ast)
-
-        SimplifierVisitor(ast)
 
         if not self.is_disabled("cprop"):
             ConstantPropagationVisitor(ast)

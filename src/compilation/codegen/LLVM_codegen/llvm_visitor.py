@@ -321,18 +321,24 @@ class LLVMVisitor(CFGVisitor):
                 return self.builder.not_(operand_value, self._create_reg())
             case "++":
                 loaded_operand = self._load_if_pointer(operand_value)
+                int_type =  PrimitiveType("int", True)
                 increment = self._get_bin_op_func(loaded_operand, node_w.n.operand_w.n.type,
                                                   ir.Constant(ir.IntType(32), 1),
-                                                  PrimitiveType("int", True), "+")()
+                                                  int_type, "+")()
+                if not self.types_compatible(node_w.n.type, int_type):
+                    increment = self._cast(increment, int_type, node_w.n.operand_w.n.type)
                 self.builder.store(increment, operand_value, self._get_llvm_type(node_w.n.operand_w.n.type)[1])
                 if not node_w.n.is_postfix:
                     return increment
                 return loaded_operand
             case "--":
                 loaded_operand = self._load_if_pointer(operand_value)
+                int_type =  PrimitiveType("int", True)
                 decrement = self._get_bin_op_func(loaded_operand, node_w.n.operand_w.n.type,
                                                   ir.Constant(ir.IntType(32), 1),
-                                                  PrimitiveType("int", True), "-")()
+                                                  int_type, "-")()
+                if not self.types_compatible(node_w.n.type, int_type):
+                    decrement = self._cast(decrement, int_type, node_w.n.operand_w.n.type)
                 self.builder.store(decrement, operand_value, self._get_llvm_type(node_w.n.operand_w.n.type)[1])
                 if not node_w.n.is_postfix:
                     return decrement
