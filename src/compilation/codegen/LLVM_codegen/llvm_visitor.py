@@ -142,7 +142,7 @@ class LLVMVisitor(CFGVisitor):
         var.initializer = str
         var.linkage = 'private'
         var.align = 1
-        return self.builder.gep(var, [ir.Constant(ir.IntType(64),0)]*2, True, self._create_reg())
+        return var.gep([ir.Constant(ir.IntType(64),0)]*2)
 
     def func_call(self, node_w: Wrapper[FunctionCall]):
         args = [self.visit(arg) for arg in node_w.n.arguments]
@@ -189,6 +189,7 @@ class LLVMVisitor(CFGVisitor):
     def conditional(self, node_w: Wrapper[ConditionalStatement]):
         condition_w: Wrapper[Expression] = node_w.n.condition_w
         true_branch_w: Wrapper[CompoundStatement] = node_w.n.true_branch_w
+        branch_block = self.builder.block
         if node_w.n.false_branch_w:
             both_return: bool = False
             with self.builder.if_else(self.builder.trunc(self.visit(condition_w), ir.IntType(1))) as (then, otherwise):
@@ -203,6 +204,7 @@ class LLVMVisitor(CFGVisitor):
         else:  # if else
             with self.builder.if_then(self.builder.trunc(self.visit(condition_w), ir.IntType(1))):
                 self.visit(true_branch_w)
+        return branch_block.instructions[-1]
 
 
     def switch(self, node_w: Wrapper[SwitchStatement]):
@@ -225,10 +227,11 @@ class LLVMVisitor(CFGVisitor):
                     self.builder.branch(next_block)
         self.builder.position_at_end(end_block)
         self.jump_stack.pop()
+        return switch
 
     def iteration(self, node_w: Wrapper[IterationStatement]):
         conditional_block = self.builder.append_basic_block("condition")
-        self.builder.branch(conditional_block)
+        br = self.builder.branch(conditional_block)
         continue_block = conditional_block
         if node_w.n.adv_w is not None:
             advancement_block = self.builder.append_basic_block("advancement")
@@ -248,6 +251,7 @@ class LLVMVisitor(CFGVisitor):
                                  false_block)
         self.builder.position_at_end(false_block)
         self.jump_stack.pop()
+        return br
 
     def io(self, node_w: Wrapper[IOStatement]):
         # Get a pointer to the first element of the array
