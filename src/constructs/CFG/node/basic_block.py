@@ -5,7 +5,6 @@ class BasicBlock(CFGNode):
     def __init__(self):
         super().__init__()
         self.ast_items: list[Wrapper[Basic]] = []
-        #self.successors: list[tuple[Wrapper[Expression], Wrapper[BasicBlock]]] # [(condition_w, basic_block_w)]
 
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
         super().append_to_graph(graph, parent_id, label)

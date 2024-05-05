@@ -2,6 +2,7 @@ from src.antlr_files.C_GrammarParser import *
 from graphviz import Digraph
 from antlr4.tree.Trees import Trees
 from src.antlr_files.C_GrammarVisitor import *
+import html
 
 class CSTVisualizer(C_GrammarVisitor):
     def visit(self, tree):
@@ -15,7 +16,7 @@ class CSTVisualizer(C_GrammarVisitor):
             if node.getChildCount():
                 for child in node.getChildren():
                     child_id = id(child)
-                    dot.node(str(child_id), str(child), fillcolor='lightblue', style='filled')
+                    dot.node(html.escape(str(child_id)), str(child), fillcolor='lightblue', style='filled')
                     dot.edge(str(id(node)), str(child_id))
                     add_nodes(child)
 

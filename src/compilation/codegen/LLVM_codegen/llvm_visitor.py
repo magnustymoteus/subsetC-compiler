@@ -72,7 +72,7 @@ class LLVMVisitor(CFGVisitor):
     def _get_llvm_type_size(self, type: ir.Type):
         match type:
             case ir.PointerType():
-                return 8
+                return 64
             case ir.ArrayType():
                 return type.count * self._get_llvm_type_size(type.element)
             case ir.BaseStructType():

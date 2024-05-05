@@ -15,8 +15,8 @@ def test_fundamentals():
     for path in fundamental:
         filename = str(os.path.splitext(os.path.basename(path))[0])
         module = compiler.compile_llvm(path)
-        compiler.export_llvm(module, f"./generated_{filename}")
-        tested_output = subprocess.check_output(["lli", f"./generated_{filename}.ll"])
+        compiler.export_llvm(module, Path(f"./{filename}/llvm.ll"))
+        tested_output = subprocess.check_output(["lli", f"./{filename}/llvm.ll"])
         subprocess.run(["gcc", "-std=gnu99", "-w", path])
         reference_output = subprocess.check_output([f"./a.out"])
         success = tested_output == reference_output
@@ -34,13 +34,13 @@ def test_fundamentals():
 
 def test_all():
     failed = False
-    compiler = Compiler()
+    compiler = Compiler(None, {"all"})
     filtered_all = [file for file in all if file.name != 'prime.c']
     for path in filtered_all:
         filename = str(os.path.splitext(os.path.basename(path))[0])
         module = compiler.compile_llvm(path)
-        compiler.export_llvm(module, f"./generated_{filename}")
-        tested_output = subprocess.check_output(["lli", f"./generated_{filename}.ll"])
+        compiler.export_llvm(module, Path(f"./{filename}/llvm.ll"))
+        tested_output = subprocess.check_output(["lli", f"./{filename}/llvm.ll"])
         subprocess.run(["gcc", "-std=gnu99", "-w", path])
         reference_output = subprocess.check_output([f"./a.out"])
         success = tested_output == reference_output

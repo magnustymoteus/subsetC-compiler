@@ -36,17 +36,21 @@ class Compiler:
     @staticmethod
     def visualizeAST(ast: Ast, filename: str):
         graph = ast.to_dot_graph()
-        graph.save(filename=filename)
+        graph.render(filename=filename, format="png", cleanup=True)
+        graph.render(filename=filename, format="gv", cleanup=True)
 
     @staticmethod
     def visualizeSymTabs(ast: Ast, filename: str):
         visualizer = SymbolTablesVisualizer(ast)
-        visualizer.graph.save(filename=filename)
+        visualizer.graph.render(filename=filename, format="png",  cleanup=True)
+        visualizer.graph.render(filename=filename, format="gv",  cleanup=True)
 
     @staticmethod
     def visualizeCFG(cfg: ControlFlowGraph, filename: str):
         graph = cfg.to_dot_graph()
-        graph.save(filename=filename)
+        graph.render(filename=filename, format="png",  cleanup=True)
+        graph.render(filename=filename, format="gv",  cleanup=True)
+
 
     @staticmethod
     def getPreprocessor(filepath):
@@ -85,7 +89,7 @@ class Compiler:
         tree = parser.program()
 
         if self.do_viz("cst"):
-            Compiler.visualizeCST(tree, parser.ruleNames, f"./{filename}-viz/cst")
+            Compiler.visualizeCST(tree, parser.ruleNames, f"./{filename}/viz/cst")
         # conversion from CST to AST
         ast = Compiler.getAST(tree, tokens, preprocessor.environment_node)
         ResolverVisitor(ast, preprocessor.included_stdio)
@@ -106,38 +110,34 @@ class Compiler:
             DeadCodeVisitor(ast)
 
         if self.do_viz("ast"):
-            Compiler.visualizeAST(ast, f"./{filename}-viz/ast.gv")
+            Compiler.visualizeAST(ast, f"./{filename}/viz/ast")
         if self.do_viz("symtab"):
-            Compiler.visualizeSymTabs(ast, f"./{filename}-viz/symtab.gv")
+            Compiler.visualizeSymTabs(ast, f"./{filename}/viz/symtab")
 
         cfg: ControlFlowGraph = BasicBlockVisitor(ast).cfg
 
         TACVisitor(cfg)
 
         if self.do_viz("cfg"):
-            Compiler.visualizeCFG(cfg, f"./{filename}-viz/cfg.gv")
+            Compiler.visualizeCFG(cfg, f"./{filename}/viz/cfg")
 
         llvm = LLVMVisitor(ast, filename, self.is_disabled("comments"))
 
         if self.do_viz("cfg"):
             for function in llvm.module.functions:
                 s = graphviz.Source(
-                    get_function_cfg(function), filename=f"./{filename}-viz/{function.name}_llvm_cfg.gv"
+                    get_function_cfg(function), filename=f"./{filename}/viz/{function.name}_llvm_cfg.gv"
                 )
                 s.save()
         return llvm.module
 
     def export_llvm(self, llvm_module: ir.Module, filepath: Path):
-        output_path = str(os.path.splitext(os.path.basename(filepath))[0])
-        llvm_file = Path(f"{output_path}.ll")
-        llvm_file.parent.mkdir(parents=True, exist_ok=True)
-        f = open(f"./{output_path}.ll", "w")
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        f = open(f"{str(filepath)}", "w")
         f.write(str(llvm_module))
         f.close()
 
     def export_mips(self, program: MipsProgram, filepath: Path):
-        output_path = str(os.path.splitext(os.path.basename(filepath))[0])
-        mips_file = Path(f"{output_path}.asm")
-        mips_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(f"./{output_path}.asm", "w") as f:
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        with open(f"{str(filepath)}", "w") as f:
             f.write(program.to_asm())

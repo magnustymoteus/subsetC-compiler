@@ -46,14 +46,15 @@ def main(argv):
         path_in_str = str(path)
         try:
             module: Module = compiler.compile_llvm(path)
+            filename, fileext = os.path.splitext(path)
             for target in args.targets:
                 match target:
                     case "llvm":
-                        compiler.export_llvm(module, path)
+                        compiler.export_llvm(module, Path(f"{filename}.ll"))
                     case "mips":
-                        compiler.export_llvm(module, path)  # TODO remove, temporary for development
+                        compiler.export_llvm(module, Path(f"{filename}.ll"))  # TODO remove, temporary for development
                         mips_program: MipsProgram = compiler.compile_mips(module)
-                        compiler.export_mips(mips_program, path)
+                        compiler.export_mips(mips_program, Path(f"{filename}.asm"))
                     case _:
                         raise ValueError(f"Unrecognized target: {target}")
         except PreprocessingError as e:

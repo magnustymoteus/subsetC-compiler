@@ -1,6 +1,7 @@
 from __future__ import annotations
 from src.constructs.node import *
 from .symbol_type import *
+import html
 class SymbolTableEntry:
     def __init__(self, name: str, symbolType: SymbolType):
         self.name = name
@@ -92,9 +93,9 @@ class SymbolTable(AbstractNode):
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None):
         table_contents_str = ''
         for symbol_entry in self.lookup_table.values():
-            table_contents_str += f'<tr><td>{symbol_entry.name}</td><td>{symbol_entry.type}</td><td>{symbol_entry.value_w.n}</td></tr>'
+            table_contents_str += f'<tr><td>{html.escape(str(symbol_entry.name))}</td><td>{html.escape(str(symbol_entry.type))}</td><td>{html.escape(str(symbol_entry.value_w.n))}</td></tr>'
         table_str = (f'<<table border="0" cellborder="1" cellspacing="0"><tr>  '
-                     f'<td><i>Symbol</i></td><td><i>Type</i></td><td><i>Value</i></td></tr>{table_contents_str}</table>>')
+                     f'<td><i>Symbol</i></td><td><i>Type</i></td><td><i>Value</i></td></tr>{html.escape(str(table_contents_str))}</table>>')
         graph.node(str(self.id), label=table_str, shape='plain')
         if self.parent is not None:
             graph.edge(str(self.parent.n.id), str(self.id))
