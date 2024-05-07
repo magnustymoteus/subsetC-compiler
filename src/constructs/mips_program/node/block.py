@@ -2,6 +2,7 @@ from src.constructs.mips_program.node.label import Label
 from src.constructs.mips_program.node.node import Node
 from src.constructs.mips_program.node.instr.instruction import Instruction
 
+flatten = lambda x: [y for l in x for y in flatten(l)] if type(x) is list else [x]
 
 class LabeledBlock(Node):
     """
@@ -24,10 +25,6 @@ class LabeledBlock(Node):
         instructions = "".join([f"    {i}\n" for i in self.instructions])
         return f"{self.label}\n{instructions}"
 
-    def append_inst(self, instr: Instruction):
+    def add_instr(self, *instr: Instruction | list):
         """Add an instruction to the block"""
-        self.instructions.append(instr)
-
-    def extend_inst(self, instrs: list[Instruction]):
-        """Add a list of instructions to the block"""
-        self.instructions.extend(instrs)
+        self.instructions.append(flatten(instr))

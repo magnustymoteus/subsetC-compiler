@@ -90,7 +90,7 @@ class MipsVisitor(ir.Visitor):
             case ir_inst.ConditionalBranch():
                 pass
             case ir_inst.Comment():
-                self.mips_block.append_inst(mips_inst.Comment(instr.text))
+                self.mips_block.add_instr(mips_inst.Comment(instr.text))
             case ir_inst.GEPInstr():
                 pass
             case ir_inst.LoadInstr():
@@ -103,13 +103,11 @@ class MipsVisitor(ir.Visitor):
                 lw  $fp, 0($sp)     # restore previous frame pointer
                 jr  $ra             # jump back
                 """
-                self.mips_block.extend_inst(
-                    [
-                        mips_inst.Lw(Reg.ra, Reg.fp, -4),
-                        mips_inst.Move(Reg.sp, Reg.fp),
-                        mips_inst.Lw(Reg.fp, Reg.sp),
-                        mips_inst.Jr(Reg.ra),
-                    ]
+                self.mips_block.add_instr(
+                    mips_inst.Lw(Reg.ra, Reg.fp, -4),
+                    mips_inst.Move(Reg.sp, Reg.fp),
+                    mips_inst.Lw(Reg.fp, Reg.sp),
+                    mips_inst.Jr(Reg.ra),
                 )
             case ir_inst.StoreInstr():
                 pass
