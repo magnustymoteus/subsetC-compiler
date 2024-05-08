@@ -1,7 +1,9 @@
 """
 All conditional MIPS instructions.
 """
+from __future__ import annotations
 
+from src.constructs.mips_program.node.instr import Slti, Slt, Addi
 from src.constructs.mips_program.node.instr.instruction import Instruction
 from src.constructs.mips_program.node.label import Label
 from src.constructs.mips_program.node.reg import Reg
@@ -47,8 +49,11 @@ class Bge(Branch):
     MIPS `bge` (branch greater than or equal) instruction.
     """
 
-    def __init__(self, lhs: Reg, rhs: Reg | int, label: Label) -> None:
-        super().__init__("bge", lhs, rhs, label)
+    def __new__(cls, lhs: Reg, rhs: Reg | int, label: Label) -> tuple[Slt, Beq] | tuple[Slti, Beq]:
+        if isinstance(rhs, Reg):
+            return Slt(Reg.at, lhs, rhs), Beq(Reg.at, Reg.zero, label)
+        if isinstance(rhs, int):
+            return Slti(Reg.at, lhs, rhs), Beq(Reg.at, Reg.zero, label)
 
 
 class Bgt(Branch):
@@ -56,8 +61,11 @@ class Bgt(Branch):
     MIPS `bgt` (branch greater than) instruction.
     """
 
-    def __init__(self, lhs: Reg, rhs: Reg | int, label: Label) -> None:
-        super().__init__("bgt", lhs, rhs, label)
+    def __new__(cls, lhs: Reg, rhs: Reg | int, label: Label) -> tuple[Slt, Bne] | tuple[Addi, Slt, Bne]:
+        if isinstance(rhs, Reg):
+            return Slt(Reg.at, lhs, rhs), Bne(Reg.at, Reg.zero, label)
+        if isinstance(rhs, int):
+            return Addi(Reg.at, Reg.zero, rhs), Slt(Reg.at, Reg.at, lhs), Bne(Reg.at, Reg.zero, label)
 
 
 class Ble(Branch):
@@ -65,8 +73,11 @@ class Ble(Branch):
     MIPS `ble` (branch less than or equal) instruction.
     """
 
-    def __init__(self, lhs: Reg, rhs: Reg | int, label: Label) -> None:
-        super().__init__("ble", lhs, rhs, label)
+    def __new__(cls, lhs: Reg, rhs: Reg | int, label: Label) -> tuple[Slt, Beq] | tuple[Addi, Slti, Bne]:
+        if isinstance(rhs, Reg):
+            return Slt(Reg.at, rhs, lhs), Beq(Reg.at, Reg.zero, label)
+        if isinstance(rhs, int):
+            return Addi(Reg.at, lhs, -1), Slti(Reg.at, Reg.at, rhs), Bne(Reg.at, Reg.zero, label)
 
 
 class Blt(Branch):
@@ -74,8 +85,11 @@ class Blt(Branch):
     MIPS `blt` (branch less than) instruction.
     """
 
-    def __init__(self, lhs: Reg, rhs: Reg | int, label: Label) -> None:
-        super().__init__("blt", lhs, rhs, label)
+    def __new__(cls, lhs: Reg, rhs: Reg | int, label: Label) -> tuple[Slt | Slti, Bne]:
+        if isinstance(rhs, Reg):
+            return Slt(Reg.at, lhs, rhs), Bne(Reg.at, Reg.zero, label)
+        if isinstance(rhs, int):
+            return Slti(Reg.at, lhs, rhs), Bne(Reg.at, Reg.zero, label)
 
 
 class Bne(Branch):
