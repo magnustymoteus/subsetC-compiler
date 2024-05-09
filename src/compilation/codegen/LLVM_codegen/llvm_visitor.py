@@ -272,6 +272,10 @@ class LLVMVisitor(CFGVisitor):
             return result
         return self._get_reg(node_w.n.name)
 
+    def _in_place_cast(self, value, from_type: PrimitiveType, to_type: PrimitiveType):
+        result = do_cast(value, from_type, to_type)
+        return result(self._get_llvm_type(to_type)[0]) if result is not None else value
+
     def _cast(self, value, from_type: PrimitiveType, to_type: PrimitiveType):
         result = do_cast(self.builder, from_type, to_type)
         return result(value, self._get_llvm_type(to_type)[0], self._create_reg()) if result is not None else value
@@ -421,7 +425,10 @@ class LLVMVisitor(CFGVisitor):
             result = ir.GlobalVariable(self.module, type[0], node_w.n.identifier)
             result.linkage = "dso_local"
             if node_w.n.definition_w.n is not None:
-                result.initializer = self.visit(node_w.n.definition_w)
+                visited = self.visit(node_w.n.definition_w)
+                if not self.types_compatible(node_w.n.definition_w.n.type, node_w.n.type):
+                    visited = self._in_place_cast(self._load_if_pointer(visited), node_w.n.definition_w.n.type, node_w.n.type)
+                result.initializer = visited
             self.regs[node_w.n.identifier] = result
             return result
 
