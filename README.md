@@ -22,5 +22,8 @@
   * LLVM CFG for each function
   * CST
 * Extra Warnings
+  * Warning when a condition is never true
+  * Warning when there are too many initialized elements in an array
+  * Warning when a pointer discards const qualifier
 * Detailed warnings & errors
   * format: [filename]:[line]:[column]:[preprocessing_error | syntax_error | semantic_error | semantic_warning]: [message]

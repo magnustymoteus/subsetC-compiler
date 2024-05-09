@@ -5,7 +5,7 @@ from src.compilation.compiler import *
 import subprocess
 
 
-all = Path("../../example_source_files/CorrectCode").glob('[!scanf]*.c')
+all = Path("../../example_source_files/CorrectCode").glob('*.c')
 fundamental = Path("../../example_source_files/CorrectCode/").glob('*pass*.c')
 
 
@@ -35,7 +35,8 @@ def test_fundamentals():
 def test_all():
     failed = False
     compiler = Compiler(None, {"all"})
-    filtered_all = [file for file in all if file.name != 'prime.c']
+    filtered = ['prime.c', 'fibonacciRecursive.c']
+    filtered_all = [file for file in all if file.name not in filtered]
     for path in filtered_all:
         filename = str(os.path.splitext(os.path.basename(path))[0])
         module = compiler.compile_llvm(path)

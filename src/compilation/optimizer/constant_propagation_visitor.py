@@ -32,11 +32,14 @@ class ConstantPropagationVisitor(ASTVisitor):
 
     def _lookup_cpropagated_symbol(self, symtab_w: Wrapper[SymbolTable], symbol: str):
         entry = symtab_w.n.lookup_symbol(symbol)
-        while not entry.stopped_propagating and isinstance(entry.value_w.n, Identifier):
-            return self._lookup_cpropagated_symbol(symtab_w, entry.value_w.n.name)
+        if entry.cprop_value_w.n is None and entry.definition_w.n is not None:
+            return self._lookup_cpropagated_symbol(symtab_w.n.parent, symbol)
+        while not entry.stopped_propagating and isinstance(entry.cprop_value_w.n, Identifier):
+            return self._lookup_cpropagated_symbol(symtab_w, entry.cprop_value_w.n.name)
         return entry
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
+        node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.identifier).cprop_value_w.n = node_w.n.definition_w.n
         is_pointer: bool = node_w.n.type.ptr_count > 0
         if is_pointer:
             self.stop_propagation()
@@ -52,6 +55,11 @@ class ConstantPropagationVisitor(ASTVisitor):
         super().un_op(node_w)
         if node_w.n.operator in ["++", "--"]:
             self.start_propagation()
+    def enum(self, node_w: Wrapper[Enumeration]):
+        super().enum(node_w)
+        for i, label in enumerate(node_w.n.chronological_labels):
+            symtab_entry = node_w.n.local_symtab_w.n.lookup_symbol(label)
+            symtab_entry.cprop_value_w.n = symtab_entry.definition_w.n
 
     def assign(self, node_w: Wrapper[Assignment]):
         self.visit(node_w.n.value_w)
@@ -59,7 +67,7 @@ class ConstantPropagationVisitor(ASTVisitor):
             symbol: SymbolTableEntry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.assignee_w.n.name)
             value_w = wrap(CastOp(node_w.n.type))
             value_w.n.expression_w = node_w.n.value_w
-            symbol.value_w = value_w
+            symbol.cprop_value_w = value_w
             symbol.stopped_propagating = self.stop_propagating
 
         else:
@@ -82,9 +90,9 @@ class ConstantPropagationVisitor(ASTVisitor):
     def identifier(self, node_w: Wrapper[Identifier]):
         if not self.stop_propagating:
             symbol: SymbolTableEntry = self._lookup_cpropagated_symbol(node_w.n.local_symtab_w, node_w.n.name)
-            if symbol.value_w.n is not None and symbol.type.ptr_count == 0 and not symbol.stopped_propagating:
+            if symbol.cprop_value_w.n is not None and symbol.type.ptr_count == 0 and not symbol.stopped_propagating:
                 self.propagated_symbols.add(symbol)
-                value = symbol.value_w
+                value = symbol.cprop_value_w
                 CopyVisitor().visit(value)
                 node_w.n = value.n
         else:

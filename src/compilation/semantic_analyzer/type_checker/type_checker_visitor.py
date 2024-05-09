@@ -29,7 +29,7 @@ class TypeCheckerVisitor(ASTVisitor):
             if not symtab.symbol_exists(type.name):
                 self.raiseSemanticErr(f"{type.type} {type.name} not declared")
             entry = symtab.lookup_symbol(type.name)
-            if entry.value_w is None:
+            if entry.definition_w is None:
                 self.raiseSemanticErr(f"{type.type} {type.name} not defined")
             if type != entry.type:
                 self.raiseSemanticErr(f"instance of '{type}' does not match previous declaration '{entry.type}'")
@@ -192,7 +192,7 @@ class TypeCheckerVisitor(ASTVisitor):
         object_type: CompositeType = node_w.n.object_w.n.type
         if (not isinstance(object_type, CompositeType) or object_type.ptr_count > 0):
             self.raiseSemanticErr(f"member access of non object {object_type}")
-        composite_def: CompoundStatement = node_w.n.local_symtab_w.n.lookup_symbol(object_type.name).value_w.n
+        composite_def: CompoundStatement = node_w.n.local_symtab_w.n.lookup_symbol(object_type.name).definition_w.n
         member_name: str = node_w.n.member_w.n.name
         member_lookup = composite_def.statements[-1].n.local_symtab_w.n.lookup_symbol(member_name)
         if member_lookup is None:

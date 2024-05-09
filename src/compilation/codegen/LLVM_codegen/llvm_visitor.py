@@ -387,7 +387,7 @@ class LLVMVisitor(CFGVisitor):
         self.no_load = no_load
         if node_w.n.object_w.n.type.type == "struct":
             object_type: CompositeType = node_w.n.object_w.n.type
-            composite_def: CompoundStatement = node_w.n.local_symtab_w.n.lookup_symbol(object_type.name).value_w.n
+            composite_def: CompoundStatement = node_w.n.local_symtab_w.n.lookup_symbol(object_type.name).definition_w.n
             member_name: str = node_w.n.member_w.n.name
             for i, member_w in enumerate(composite_def.statements):
                 if member_w.n.identifier == member_name:

@@ -24,9 +24,9 @@ class ConstantFoldingVisitor(ASTVisitor):
                 case "==":
                     result = node_w.n.lhs.value == node_w.n.rhs.value
                 case "&&":
-                    result = node_w.n.lhs.value and node_w.n.rhs.value
+                    result = bool(node_w.n.lhs.value) and bool(node_w.n.rhs.value)
                 case "||":
-                    result = node_w.n.lhs.value or node_w.n.rhs.value
+                    result = bool(node_w.n.lhs.value) or bool(node_w.n.rhs.value)
                 case ">=":
                     result = node_w.n.lhs.value >= node_w.n.rhs.value
                 case "<=":
@@ -54,7 +54,6 @@ class ConstantFoldingVisitor(ASTVisitor):
                 case "^":
                     result = node_w.n.lhs.value ^ node_w.n.rhs.value
             coerced_type = PrimitiveType.typeCoercion([node_w.n.lhs_w.n.type, node_w.n.rhs_w.n.type], True)
-
             if isinstance(result, bool):
                 node_w.n = IntLiteral(1 if result else 0)
             else:

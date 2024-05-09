@@ -7,7 +7,8 @@ class SymbolTableEntry:
         self.name = name
         self.type = symbolType
         self.stopped_propagating: bool = False
-        self.value_w: Wrapper = wrap()
+        self.definition_w: Wrapper = wrap()
+        self.cprop_value_w: Wrapper = wrap()
         self.used: bool = False
     @property
     def __repr__(self):
@@ -32,6 +33,7 @@ class SymbolTable(AbstractNode):
         return "Symbol Table:"+result
     def has_parent(self) -> bool:
         return self.parent is not None
+
 
     def get_corresponding_table(self, symbol: str) -> SymbolTable | None:
         """
@@ -93,9 +95,9 @@ class SymbolTable(AbstractNode):
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None):
         table_contents_str = ''
         for symbol_entry in self.lookup_table.values():
-            table_contents_str += f'<tr><td>{html.escape(str(symbol_entry.name))}</td><td>{html.escape(str(symbol_entry.type))}</td><td>{html.escape(str(symbol_entry.value_w.n))}</td></tr>'
+            table_contents_str += f'<tr><td>{html.escape(str(symbol_entry.name))}</td><td>{html.escape(str(symbol_entry.type))}</td><td>{html.escape(str(symbol_entry.definition_w.n))}</td></tr>'
         table_str = (f'<<table border="0" cellborder="1" cellspacing="0"><tr>  '
-                     f'<td><i>Symbol</i></td><td><i>Type</i></td><td><i>Value</i></td></tr>{table_contents_str}</table>>')
+                     f'<td><i>Symbol</i></td><td><i>Type</i></td><td><i>Definition</i></td></tr>{table_contents_str}</table>>')
         graph.node(str(self.id), label=table_str, shape='plain')
         if self.has_parent():
             graph.edge(str(self.parent.n.id), str(self.id))
