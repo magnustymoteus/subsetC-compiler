@@ -106,5 +106,9 @@ class FunctionEncloser(SymbolTable):
     def __init__(self, parent: Wrapper[SymbolTable], func_signature: FunctionType):
         super().__init__(parent)
         self.func_signature: FunctionType = func_signature
+    def append_to_graph(self, graph: Digraph, parent_id: UUID | None):
+        graph.node(str(self.id), label=f'{html.escape(str(self.func_signature))}', shape='plain')
+        if self.has_parent():
+            graph.edge(str(self.parent.n.id), str(self.id))
 
 
