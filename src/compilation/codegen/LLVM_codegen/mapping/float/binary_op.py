@@ -23,9 +23,9 @@ def get_float_binary_op(left_value: ir.Instruction | ir.Constant, right_value: i
         case "%":
             return lambda: builder.frem(left_value, right_value, create_reg())
         case "<<":
-            return lambda: builder.ashr(left_value, right_value, create_reg())
-        case ">>":
             return lambda: builder.shl(left_value, right_value, create_reg())
+        case ">>":
+            return lambda: builder.ashr(left_value, right_value, create_reg())
         case "|":
             return lambda: builder.or_(left_value, right_value, create_reg())
         case "||":

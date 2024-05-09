@@ -134,6 +134,9 @@ class TypeCheckerVisitor(ASTVisitor):
         self.checkPointerTypes(node_w.n.lhs_w.n.type, node_w.n.operator, node_w.n.rhs_w.n.type)
         if TypeCheckerVisitor.is_comparison(node_w.n.operator):
             node_w.n.type = PrimitiveType('int', True)
+        elif node_w.n.operator in ['<<', '>>']:
+            if node_w.n.lhs_w.n.type.type == 'float' or node_w.n.rhs_w.n.type.type == 'float':
+                self.raiseSemanticErr(f"Cannot shift with types {node_w.n.lhs_w.n.type} and {node_w.n.rhs_w.n.type}")
         else:
             node_w.n.type = PrimitiveType.typeCoercion([node_w.n.lhs_w.n.type, node_w.n.rhs_w.n.type], True)
 

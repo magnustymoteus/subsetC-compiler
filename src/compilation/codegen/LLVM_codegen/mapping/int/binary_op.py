@@ -21,9 +21,9 @@ def get_int_binary_op(left_value: ir.Instruction | ir.Constant, right_value: ir.
         case "%":
             return lambda: builder.srem(left_value, right_value, create_reg())
         case "<<":
-            return lambda: builder.ashr(left_value, right_value, create_reg())
-        case ">>":
             return lambda: builder.shl(left_value, right_value, create_reg())
+        case ">>":
+            return lambda: builder.ashr(left_value, right_value, create_reg())
         case "|":
             return lambda: builder.or_(left_value, right_value, create_reg())
         case "||":
