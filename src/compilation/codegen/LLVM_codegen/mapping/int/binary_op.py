@@ -28,14 +28,14 @@ def get_int_binary_op(left_value: ir.Instruction | ir.Constant, right_value: ir.
             return lambda: builder.or_(left_value, right_value, create_reg())
         case "||":
             rel_op= lambda: builder.or_(left_value, right_value, create_reg())
-            return lambda: get_int_relational_comp_op(rel_op, builder, create_reg)
+            return lambda: get_int_logical_comp_op(rel_op, builder, create_reg)
         case "^":
             return lambda: builder.xor(left_value, right_value, create_reg())
         case "&":
             return lambda: builder.and_(left_value, right_value, create_reg())
         case "&&":
             rel_op = lambda: builder.and_(left_value, right_value, create_reg())
-            return lambda: get_int_relational_comp_op(rel_op, builder, create_reg)
+            return lambda: get_int_logical_comp_op(rel_op, builder, create_reg)
         case _:
             comp_op: Callable = lambda: builder.icmp_signed(operator, left_value, right_value, create_reg())
             return lambda: get_int_boolean_binary_op(left_value, right_value, operator, builder, create_reg, comp_op)
