@@ -1,10 +1,10 @@
 ## Execution
 1. execute `pip install -r src/requirements.txt`
 2. execute `make antlr`, this generates antlr files for the C grammar but also preprocessor
-3. execute ie.`python3 -m src --targets llvm --path test.c --viz all --disable dcode`
+3. execute ie.`python3 -m src --targets llvm --path test.c --viz all --disable comments`
    * Compile test.c to LLVM IR
    * Generate visualization for everything (CST, AST, CFG, symbol tables)
-   * disable dead code removal (which happens by default)
+   * disable comments in output (which happens by default)
 ## Optional Features
 * Project 2
   * const casting

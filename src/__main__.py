@@ -20,7 +20,7 @@ def main(argv):
         "--disable",
         type=str,
         nargs="*",
-        choices=["dcode", "cfold", "cprop", "comments", "warnings"],
+        choices=["cfold", "cprop", "comments", "warnings"],
         help="Things to disable",
     )
 
