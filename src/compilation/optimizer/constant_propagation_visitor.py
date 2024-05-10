@@ -86,21 +86,34 @@ class ConstantPropagationVisitor(ASTVisitor):
 
     def addressof_op(self, node_w: Wrapper[AddressOfOp]):
         self.stop_propagation()
+        super().addressof_op(node_w)
 
     def identifier(self, node_w: Wrapper[Identifier]):
-        if not self.stop_propagating:
-            symbol: SymbolTableEntry = self._lookup_cpropagated_symbol(node_w.n.local_symtab_w, node_w.n.name)
-            if symbol.cprop_value_w.n is not None and symbol.type.ptr_count == 0 and not symbol.stopped_propagating:
-                self.propagated_symbols.add(symbol)
-                value = symbol.cprop_value_w
+        if node_w.n.local_symtab_w.n is not None:
+            symtab_entry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name)
+            if symtab_entry.is_enum:
+                value = symtab_entry.definition_w
                 CopyVisitor().visit(value)
                 node_w.n = value.n
-        else:
-            node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).stopped_propagating = True
+            elif not self.stop_propagating:
+                symbol: SymbolTableEntry = self._lookup_cpropagated_symbol(node_w.n.local_symtab_w, node_w.n.name)
+                if symbol.cprop_value_w.n is not None and symbol.type.ptr_count == 0 and not symbol.stopped_propagating:
+                    self.propagated_symbols.add(symbol)
+                    value = symbol.cprop_value_w
+                    CopyVisitor().visit(value)
+                    node_w.n = value.n
+            else:
+                node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).stopped_propagating = True
     def object_access(self, node_w: Wrapper[ObjectAccess]):
         self.stop_propagation()
+        super().object_access(node_w)
+        self.start_propagation()
     def iteration(self, node_w: Wrapper[IterationStatement]):
         self.stop_propagation()
+        super().iteration(node_w)
+        self.start_propagation()
     def array_access(self, node_w: Wrapper[ArrayAccess]):
         self.stop_propagation()
+        super().array_access(node_w)
+        self.start_propagation()
 

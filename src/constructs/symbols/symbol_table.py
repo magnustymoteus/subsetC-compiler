@@ -10,6 +10,7 @@ class SymbolTableEntry:
         self.definition_w: Wrapper = wrap()
         self.cprop_value_w: Wrapper = wrap()
         self.used: bool = False
+        self.is_enum: bool = False
     @property
     def __repr__(self):
         return f"symbol: {self.name}, type: {self.type}"

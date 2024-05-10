@@ -142,6 +142,7 @@ class SymbolTableVisitor(ASTVisitor):
         super().enum(node_w)
         for i, label in enumerate(node_w.n.chronological_labels):
             current_symtab_entry = SymbolTableEntry(label, node_w.n.type)
+            current_symtab_entry.is_enum = True
             lit = IntLiteral(i)
             current_symtab_entry.definition_w.n = lit
             current_symtab_entry.definition_w.n = lit
