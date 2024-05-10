@@ -271,8 +271,3 @@ class TypeCheckerVisitor(ASTVisitor):
 
 
 
-
-
-
-
-
