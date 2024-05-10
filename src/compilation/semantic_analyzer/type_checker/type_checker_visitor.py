@@ -188,12 +188,12 @@ class TypeCheckerVisitor(ASTVisitor):
         self.checkValidType(node_w.n.type, node_w.n.local_symtab_w.n)
         super().variable_decl(node_w)
         if node_w.n.definition_w.n is not None and not isinstance(node_w.n, CompositeDeclaration):
-            self.checkPointerTypes(node_w.n.type, '=', node_w.n.definition_w.n.type)
             self.checkImplicitDemotion(node_w.n.type, node_w.n.definition_w.n.type)
             self.checkDiscardedPointerQualifier(node_w.n.type, node_w.n.definition_w.n.type)
             if isinstance(node_w.n.type, ArrayType):
                 self.checkArrayInitialization(node_w)
-
+            else:
+                self.checkPointerTypes(node_w.n.type, '=', node_w.n.definition_w.n.type)
     def object_access(self, node_w: Wrapper[ObjectAccess]):
         self.visit(node_w.n.object_w)
         object_type: CompositeType = node_w.n.object_w.n.type
