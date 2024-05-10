@@ -25,7 +25,9 @@ class TypeCheckerVisitor(ASTVisitor):
 
 
     def checkValidType(self, type: SymbolType, symtab: SymbolTable):
-        if isinstance(type, CompositeType):
+        if isinstance(type, ArrayType):
+            self.checkValidType(type.element_type, symtab)
+        elif isinstance(type, CompositeType):
             if not symtab.symbol_exists(type.name):
                 self.raiseSemanticErr(f"{type.type} {type.name} not declared")
             entry = symtab.lookup_symbol(type.name)
@@ -50,9 +52,8 @@ class TypeCheckerVisitor(ASTVisitor):
         Raises:
             Warning: If there is implicit demotion.
         """
-        if not (isinstance(assignee_type, CompositeType) and isinstance(value_type, CompositeType)):
-            if PrimitiveType.type_ranks.index(assignee_type.type) < PrimitiveType.type_ranks.index(value_type.type):
-                self.raiseWarning(f"Implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
+        if PrimitiveType.type_ranks.index(assignee_type.type) < PrimitiveType.type_ranks.index(value_type.type):
+            self.raiseWarning(f"Implicit demotion from {value_type} to {assignee_type} (possible loss of information)")
 
     def checkDiscardedPointerQualifier(self, assignee_type: PrimitiveType, value_type: PrimitiveType):
         """
@@ -87,6 +88,10 @@ class TypeCheckerVisitor(ASTVisitor):
                 self.raiseSemanticErr(f"assignment of readonly variable {symtype}")
         else:
             self.raiseSemanticErr("lvalue required as left operand of assignment")
+    def checkCompositeTypes(self, left_type: SymbolType, operator: str, right_type: SymbolType):
+        if isinstance(left_type, CompositeType) or isinstance(right_type, CompositeType):
+            if left_type != right_type or operator not in ['=']:
+                self.raiseSemanticErr(f"invalid operands to {operator} ({left_type} and {right_type})")
 
     def checkPointerTypes(self, left_type: SymbolType, operator: str, right_type: SymbolType):
         """
@@ -118,6 +123,7 @@ class TypeCheckerVisitor(ASTVisitor):
             self.raiseSemanticErr(f"Cannot return type {returned_type} as void")
         self.checkImplicitDemotion(return_type, returned_type)
         self.checkPointerTypes(return_type, '=', returned_type)
+        self.checkCompositeTypes(return_type, '=', returned_type)
     def checkArrayInitialization(self, node_w: Wrapper[VariableDeclaration]):
         arr_type: ArrayType = node_w.n.type
         definition_type = node_w.n.definition_w.n.type
@@ -132,6 +138,7 @@ class TypeCheckerVisitor(ASTVisitor):
     def bin_op(self, node_w: Wrapper[BinaryOp]):
         super().bin_op(node_w)
         self.checkPointerTypes(node_w.n.lhs_w.n.type, node_w.n.operator, node_w.n.rhs_w.n.type)
+        self.checkCompositeTypes(node_w.n.lhs_w.n.type, node_w.n.operator, node_w.n.rhs_w.n.type)
         if TypeCheckerVisitor.is_comparison(node_w.n.operator):
             node_w.n.type = PrimitiveType('int', True)
         elif node_w.n.operator in ['<<', '>>', '^', '|', '&']:
@@ -176,9 +183,10 @@ class TypeCheckerVisitor(ASTVisitor):
     def assign(self, node_w: Wrapper[Assignment]):
         super().assign(node_w)
         node_w.n.type = deepcopy(node_w.n.assignee_w.n.type)
+        self.checkPointerTypes(node_w.n.assignee_w.n.type, '=', node_w.n.value_w.n.type)
+        self.checkCompositeTypes(node_w.n.assignee_w.n.type, '=', node_w.n.value_w.n.type)
         self.checkImplicitDemotion(node_w.n.assignee_w.n.type, node_w.n.value_w.n.type)
         self.checkAssignee(node_w.n.assignee_w)
-        self.checkPointerTypes(node_w.n.assignee_w.n.type, '=', node_w.n.value_w.n.type)
         self.checkDiscardedPointerQualifier(node_w.n.assignee_w.n.type, node_w.n.value_w.n.type)
 
     def identifier(self, node_w: Wrapper[Identifier]):
@@ -188,16 +196,17 @@ class TypeCheckerVisitor(ASTVisitor):
         self.checkValidType(node_w.n.type, node_w.n.local_symtab_w.n)
         super().variable_decl(node_w)
         if node_w.n.definition_w.n is not None and not isinstance(node_w.n, CompositeDeclaration):
-            self.checkImplicitDemotion(node_w.n.type, node_w.n.definition_w.n.type)
-            self.checkDiscardedPointerQualifier(node_w.n.type, node_w.n.definition_w.n.type)
             if isinstance(node_w.n.type, ArrayType):
                 self.checkArrayInitialization(node_w)
             else:
                 self.checkPointerTypes(node_w.n.type, '=', node_w.n.definition_w.n.type)
+                self.checkCompositeTypes(node_w.n.type, '=', node_w.n.definition_w.n.type)
+            self.checkImplicitDemotion(node_w.n.type, node_w.n.definition_w.n.type)
+            self.checkDiscardedPointerQualifier(node_w.n.type, node_w.n.definition_w.n.type)
     def object_access(self, node_w: Wrapper[ObjectAccess]):
         self.visit(node_w.n.object_w)
         object_type: CompositeType = node_w.n.object_w.n.type
-        if (not isinstance(object_type, CompositeType) or object_type.ptr_count > 0):
+        if not (isinstance(object_type, CompositeType) or object_type.ptr_count > 0):
             self.raiseSemanticErr(f"member access of non object {object_type}")
         composite_def: CompoundStatement = node_w.n.local_symtab_w.n.lookup_symbol(object_type.name).definition_w.n
         member_name: str = node_w.n.member_w.n.name
@@ -249,6 +258,7 @@ class TypeCheckerVisitor(ASTVisitor):
             param_type = func_type.parameter_types[i]
             self.checkImplicitDemotion(param_type, arg_type)
             self.checkPointerTypes(param_type, '=', arg_type)
+            self.checkCompositeTypes(param_type, '=', arg_type)
             self.checkDiscardedPointerQualifier(param_type, arg_type)
 
 

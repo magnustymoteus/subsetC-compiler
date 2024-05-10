@@ -124,10 +124,10 @@ class Compiler:
 
         if self.do_viz("cfg"):
             for function in llvm.module.functions:
-                '''s = graphviz.Source(
+                s = graphviz.Source(
                     get_function_cfg(function), filename=f"./{filename}/viz/{function.name}_llvm_cfg.gv"
                 )
-                s.save()'''
+                s.save()
         return llvm.module
 
     def export_llvm(self, llvm_module: ir.Module, filepath: Path):

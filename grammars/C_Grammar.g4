@@ -141,4 +141,4 @@ INT: '0' | [1-9][0-9]*;
 FLOAT: INT* '.' [0-9]*;
 CHAR: (~["\r\n]  | '\\' ([abefnrtv0]|'\\'|'\''|'"'|'?'));
 CHARLIT: '\'' CHAR '\'';
-STRING: '"' CHAR+ '"';
+STRING: '"' CHAR* '"';

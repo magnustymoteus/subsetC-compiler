@@ -1,5 +1,6 @@
 from __future__ import annotations
 class SymbolType:
+    type_ranks: list[str] = ["char", "int", "float", "struct", "union"]
     def __init__(self, is_constant: bool = False, ptr_count: int = 0, const_ptrs: list[int] = []):
         self.is_constant: bool = is_constant
         self.ptr_count: int = ptr_count
@@ -23,7 +24,6 @@ class VoidType(SymbolType):
     pass
 
 class PrimitiveType(SymbolType):
-    type_ranks: list[str] = ["char", "int", "float"]
     @staticmethod
     def typeCoercion(primitive_types: list[PrimitiveType], is_constant: bool) -> PrimitiveType:
         """
@@ -75,8 +75,8 @@ class CompositeType(SymbolType):
 
 
 class ArrayType(PrimitiveType):
-    def __init__(self, element_type: PrimitiveType, dimension: list[int]):
-        self.element_type: PrimitiveType = element_type
+    def __init__(self, element_type: SymbolType, dimension: list[int]):
+        self.element_type: SymbolType = element_type
         self.dimension = dimension
         super().__init__(element_type.type, element_type.is_constant, len(dimension))
     def get_dimension_string(self) -> str:
