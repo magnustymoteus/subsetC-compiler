@@ -39,7 +39,6 @@ class ResolverVisitor(ASTVisitor):
             self.var_decl_instances[node_w.n.identifier] = [node_w]
         else:
             self.var_decl_instances[node_w.n.identifier].append(node_w)
-            # TODO: allow function overloading in the future
             if not self.signature_match(node_w.n.type, found.n.type):
                 self.raiseSemanticErr(f"conflicting types for function {node_w.n.identifier}: {node_w.n.type} and {found.n.type}")
             if node_w.n.body_w.n is not None and found.n.body_w.n is not None:

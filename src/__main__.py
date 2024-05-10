@@ -3,9 +3,6 @@ from src.compilation.compiler import *
 from llvmlite.ir.module import Module
 
 
-# TODO: line numbers in errors/warnings for source code with includes is off
-# TODO: struct declared after a function that uses it
-# TODO: member of struct is array => array access
 def c_file(param):
     base, ext = os.path.splitext(param)
     if ext.lower() not in (".c"):

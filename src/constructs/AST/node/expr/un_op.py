@@ -9,13 +9,13 @@ class UnaryOp(Expression):
     """
 
     def __init__(self, operator: str, is_postfix: bool = False) -> None:
-        self.operand_w: Wrapper = wrap()  # TODO ensure gets set
+        self.operand_w: Wrapper = wrap()
         self.is_postfix: bool = is_postfix
         """
         Wrapper for the value node operated on.
         """
 
-        self.operator: str = operator  # TODO use enum instead of string for operator type
+        self.operator: str = operator
         """
         Operation type of the node.
         """

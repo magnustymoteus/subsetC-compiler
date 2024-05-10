@@ -9,8 +9,6 @@ class Identifier(Expression):
         """
         User assigned name of the indentifier.
         """
-
-        # TODO
         super().__init__()
 
     def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:

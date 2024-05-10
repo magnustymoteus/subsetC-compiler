@@ -83,7 +83,6 @@ class TypeCheckerVisitor(ASTVisitor):
         is_lvalue = isinstance(assignee_w.n, (Identifier, DerefOp, ArrayAccess, ObjectAccess))
         if is_lvalue:
             symtype = assignee_w.n.type
-            # TODO: with constant pointers?
             if symtype.ptr_count == 0 and symtype.is_constant:
                 self.raiseSemanticErr(f"assignment of readonly variable {symtype}")
         else:

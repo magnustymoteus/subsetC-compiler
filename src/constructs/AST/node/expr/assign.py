@@ -7,12 +7,12 @@ class Assignment(Expression):
     """
 
     def __init__(self, operator: str) -> None:
-        self.assignee_w: Wrapper = wrap()  # TODO ensure gets set
+        self.assignee_w: Wrapper = wrap()
         """
         Wrapper for the variable node assigned to.
         """
 
-        self.value_w: Wrapper = wrap()  # TODO ensure gets set
+        self.value_w: Wrapper = wrap()
         """
         Wrapper for the assigned value node.
         """
