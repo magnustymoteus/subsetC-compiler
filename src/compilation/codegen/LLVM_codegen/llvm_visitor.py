@@ -412,34 +412,35 @@ class LLVMVisitor(CFGVisitor):
 
 
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
-        no_load = self.no_load
-        if node_w.n.local_symtab_w.n.has_parent():
-            decl_ir_type = self._get_llvm_type(node_w.n.type)
-            if node_w.n.definition_w.n is not None:
-                if isinstance(node_w.n.definition_w.n, (DerefOp, ObjectAccess)):
-                    self.no_load = True
-                self.regs[node_w.n.identifier] = self.visit(node_w.n.definition_w)
-                if isinstance(node_w.n.definition_w.n, AddressOfOp):
-                    self.refs.add(node_w.n.identifier)
-                self.no_load = no_load
-                return self._get_reg(node_w.n.identifier)
-            else:
-                allocaInstr = self.builder.alloca(decl_ir_type[0], 1, node_w.n.identifier)
-                allocaInstr.align = decl_ir_type[1]
-                self.regs[node_w.n.identifier] = allocaInstr
-                return allocaInstr
+        if node_w.n.storage_class_specifier != "typedef":
+            no_load = self.no_load
+            if node_w.n.local_symtab_w.n.has_parent():
+                decl_ir_type = self._get_llvm_type(node_w.n.type)
+                if node_w.n.definition_w.n is not None:
+                    if isinstance(node_w.n.definition_w.n, (DerefOp, ObjectAccess)):
+                        self.no_load = True
+                    self.regs[node_w.n.identifier] = self.visit(node_w.n.definition_w)
+                    if isinstance(node_w.n.definition_w.n, AddressOfOp):
+                        self.refs.add(node_w.n.identifier)
+                    self.no_load = no_load
+                    return self._get_reg(node_w.n.identifier)
+                else:
+                    allocaInstr = self.builder.alloca(decl_ir_type[0], 1, node_w.n.identifier)
+                    allocaInstr.align = decl_ir_type[1]
+                    self.regs[node_w.n.identifier] = allocaInstr
+                    return allocaInstr
 
-        else:
-            type = self._get_llvm_type(node_w.n.type)
-            result = ir.GlobalVariable(self.module, type[0], node_w.n.identifier)
-            result.linkage = "dso_local"
-            if node_w.n.definition_w.n is not None:
-                visited = self.visit(node_w.n.definition_w)
-                if not self.types_compatible(node_w.n.definition_w.n.type, node_w.n.type):
-                    visited = self._in_place_cast(self._load_if_pointer(visited), node_w.n.definition_w.n.type, node_w.n.type)
-                result.initializer = visited
-            self.regs[node_w.n.identifier] = result
-            return result
+            else:
+                type = self._get_llvm_type(node_w.n.type)
+                result = ir.GlobalVariable(self.module, type[0], node_w.n.identifier)
+                result.linkage = "dso_local"
+                if node_w.n.definition_w.n is not None:
+                    visited = self.visit(node_w.n.definition_w)
+                    if not self.types_compatible(node_w.n.definition_w.n.type, node_w.n.type):
+                        visited = self._in_place_cast(self._load_if_pointer(visited), node_w.n.definition_w.n.type, node_w.n.type)
+                    result.initializer = visited
+                self.regs[node_w.n.identifier] = result
+                return result
 
     def assign(self, node_w: Wrapper[Assignment]):
         no_load = self.no_load
