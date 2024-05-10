@@ -59,7 +59,9 @@ class LLVMVisitor(CFGVisitor):
         self.io_functions["scanf"] = ir.Function(self.module, io_type, name="scanf")
 
         self.builder: ir.IRBuilder = ir.IRBuilder()
+
         self.visit(ast.root_w)
+
 
     def _load_if_pointer(self, value: ir.Instruction):
         if value.type.is_pointer:
@@ -152,11 +154,18 @@ class LLVMVisitor(CFGVisitor):
             if not self.types_compatible(node_w.n.arguments[i].n.type, params[i]):
                 args[i] = self._cast(self._load_if_pointer(args[i]), node_w.n.arguments[i].n.type, params[i])
         return self.builder.call(func, args, node_w.n.func_name)
+    def add_func_attrs(self, func: ir.Function):
+        func.linkage = "dso_local"
+        func.attributes.add('noinline')
+        func.attributes.add('nounwind')
+        func.attributes.add('optnone')
+        func.attributes.add('uwtable')
 
     def func_decl(self, node_w: Wrapper[FunctionDeclaration]):
         param_types = [self._get_llvm_type(param)[0] for param in node_w.n.type.parameter_types]
         fnty = ir.FunctionType(self._get_llvm_type(node_w.n.type.return_type)[0], param_types)
         func = ir.Function(self.module, fnty, name=node_w.n.name)
+        self.add_func_attrs(func)
         self.regs[node_w.n.name] = func
         self.regs_stack.append({})
         self.reg_counters.append(0)

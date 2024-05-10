@@ -20,7 +20,7 @@ def get_pointer_relational_comparison(left_value: ir.Instruction | ir.Constant, 
     left_value = cast_toptr_if_constant(left_value, pointer_type, builder, create_reg())
     right_value = cast_toptr_if_constant(right_value, pointer_type, builder, create_reg())
 
-    comp_op = builder.icmp_signed(operator, left_value, right_value, create_reg())
+    comp_op = builder.icmp_unsigned(operator, left_value, right_value, create_reg())
 
     return builder.zext(comp_op, ir.IntType(32), create_reg())
 def get_pointer_logical_value(value, builder: ir.IRBuilder, create_reg) -> ir.Instruction:
@@ -41,15 +41,19 @@ def get_pointer_binary_op(left_value: ir.Instruction | ir.Constant, right_value:
     match operator:
         case '+':
             return lambda: builder.gep(get_pointer(left_value, right_value),
-                                       [get_non_pointer(left_value, right_value)],
+                                       [builder.zext(get_non_pointer(left_value, right_value), ir.IntType(64), create_reg())],
                                        True, create_reg())
         case '-':
             if is_pointer(left_value) and is_pointer(right_value):
-                return lambda: builder.sub(builder.ptrtoint(left_value,ir.IntType(64), create_reg()),
+                return lambda: builder.sdiv(
+                    builder.sub(builder.ptrtoint(left_value,ir.IntType(64), create_reg()),
                                         builder.ptrtoint(right_value, ir.IntType(64), create_reg()),
-                                                            create_reg())
+                                                            create_reg()),
+                ir.Constant(ir.IntType(64), 4), create_reg())
             return lambda: builder.gep(get_pointer(left_value, right_value),
-                                       [builder.neg(get_non_pointer(left_value, right_value), create_reg())], True,
+                                       [builder.zext(
+                                           builder.neg(get_non_pointer(left_value, right_value), create_reg()), ir.IntType(64)
+                                           ,create_reg())], True,
                                        create_reg())
         case '||':
             return lambda: get_pointer_logical_comparison(left_value, right_value, builder.or_, builder, create_reg)

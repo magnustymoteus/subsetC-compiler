@@ -84,9 +84,9 @@ ete())
             ast_node_w: The wrapper object representing the AST node.
             ctx: The context node.
         """
-        ast_node_w.n.comments += self.get_comments_for_ctx(ctx)
         if isinstance(ctx, C_GrammarParser.BlockItemContext):
             ast_node_w.n.source_code_line = ctx.parser.getInputStream().getText(ctx.start, ctx.stop)
+            ast_node_w.n.comments += self.get_comments_for_ctx(ctx)
 
     def visit(self, tree):
         """
@@ -103,7 +103,12 @@ ete())
             self.attach_comments(result, tree)
             env_node, translated_line = self.environment_root.get_env(tree.start.line)
             result.n.set_env_data(env_node.filename, translated_line, tree.start.column)
-
+        elif isinstance(result, (list, tuple)):
+            for result_elem in result:
+                if isinstance(result_elem, Wrapper):
+                    self.attach_comments(result_elem, tree)
+                    env_node, translated_line = self.environment_root.get_env(tree.start.line)
+                    result_elem.n.set_env_data(env_node.filename, translated_line, tree.start.column)
         return result
 
     def visitSelectionStmt(self, ctx:C_GrammarParser.SelectionStmtContext):

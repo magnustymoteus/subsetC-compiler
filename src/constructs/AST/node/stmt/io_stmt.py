@@ -9,4 +9,9 @@ class IOStatement(Statement):
         self.arguments: list[Wrapper[Expression]] = arguments
 
     def __repr__(self):
-        return f'{self.name} "{self.contents_w.n.string}" {[arg_w.n for arg_w in self.arguments]}'
+        return f'{self.name} "{self.contents_w.n.string}"'
+
+    def append_to_graph(self, graph: Digraph, parent_id: UUID | None, label: str | None = None) -> None:
+        super().append_to_graph(graph, parent_id, label)
+        for argument_w in self.arguments:
+            argument_w.n.append_to_graph(graph, self.id)
