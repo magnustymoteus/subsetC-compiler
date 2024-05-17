@@ -27,6 +27,11 @@ Module
 - ...
 """
 
+# TODO:
+#  -printf
+#  -scanf
+#
+
 def assert_type(value, typename):
     assert type(value).__name__ == typename, f"type '{type(value).__name__}' not implemented"
 
@@ -111,9 +116,12 @@ class MipsVisitor(ir.Visitor):
                 addiu $sp, $sp, -:count:*:size:
                 # save variable offset from $fp
                 """
+                # size of the allocated type
                 size: int = int(instr.operands[0].type.width / 8)  # TODO allow for arrays
 
+                # add variable to the list of variables of that function scope
                 self.variables.new_var(Label(instr.name), self.stack_offset)
+                # add instruction to the block and create new space on the stack for the var
                 self.last_block.add_instr(
                     mips_inst.IrComment(f"{instr}"),
                     # move the stack pointer by the size of the variable
@@ -177,12 +185,25 @@ class MipsVisitor(ir.Visitor):
                 """
                 Performs integer comparison
                 """
-                print("unhandled! aliased")
                 self.variables.new_alias(Label(instr.name), self.variables[instr.operands[0].name])
                 self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
 
+                match instr.op:
+                    case 'eq':
+                        self.last_block.add_instr(
+                            mips_inst.Comment("icmp"),
+                            mips_inst.Beq(Reg.t0, Reg.t1, Label("test")),
+                        )
+
+                self.last_block.add_instr(
+                    mips_inst.Comment("icmp"),
+                    mips_inst.Slt(Reg.t0, Reg.t1, Reg.t2),
+                )
+
+                print("busy!")
+
+
             case ir_inst.CompareInstr():
-                assert_type(instr, "CompareInstr")
                 print("unhandled!")
 
             case ir_inst.CastInstr():

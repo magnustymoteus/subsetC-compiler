@@ -4,6 +4,8 @@ All comparison MIPS instructions.
 
 from src.constructs.mips_program.node.instr.instruction import Instruction
 from src.constructs.mips_program.node.reg import Reg
+from src.constructs.mips_program.node.instr.arith import Addi, Subu
+from src.constructs.mips_program.node.instr.logic import Ori
 
 
 class SlInstruction(Instruction):
@@ -55,3 +57,20 @@ class Slti(SlInstruction):
 
     def __str__(self) -> str:
         return f"slti {self.dest}, {self.operand1}, {self.operand2}"
+
+
+class Sle(SlInstruction):
+    """
+    MIPS `sle` (set less than or equal) instruction.
+    Set :dest: register to 1 if :operand1: register is less than or equal to contents of :operand2: register and 0 otherwise.
+    """
+
+    def __new__(cls, dest: Reg, lhs: Reg, rhs: Reg | int) -> tuple[Addi, Slt, Ori, Subu] | tuple[Slt, Ori, Subu]:
+        if isinstance(rhs, Reg):
+            return Slt(dest, rhs, lhs), Ori(Reg.t0, Reg.zero, 1), Subu(dest, Reg.t0, dest)
+        if isinstance(rhs, int):
+            return Addi(Reg.t0, Reg.zero, rhs), Slt(dest, Reg.t0, lhs), Ori(Reg.t0, Reg.zero, 1), Subu(dest, Reg.t0,
+                                                                                                         dest)
+
+    def __str__(self) -> str:
+        return f"sle {self.dest}, {self.operand1}, {self.operand2}"
