@@ -19,7 +19,7 @@ class La(Instruction):
     label: Label
     "Value to load into register"
 
-    def __init__(self, dest: Reg, label: int) -> None:
+    def __init__(self, dest: Reg, label: Label) -> None:
         super().__init__()
         self.dest = dest
         self.label = label
@@ -150,7 +150,7 @@ class Move(Instruction):
 class Sw(Instruction):
     """
     MIPS `sw` (store word) instruction.
-    Load data at address in :src: register with offset :offset: into :dest: register.
+    Store data in the ``src`` register with at address ``dest`` with an offset ``offset`` in memory.
     """
 
     dest: Reg
@@ -162,13 +162,13 @@ class Sw(Instruction):
     offset: int
     "Offset from the source address"
 
-    def __init__(self, dest: Reg, src: Reg, offset: int = 0) -> None:
+    def __init__(self, src: Reg, dest: Reg, offset: int = 0) -> None:
         assert offset >= -32768 and offset <= 32767  # ? TODO exception
 
         super().__init__()
-        self.dest = dest
         self.src = src
+        self.dest = dest
         self.offset = offset
 
     def __str__(self) -> str:
-        return f"sw {self.dest}, {self.offset}({self.src})"
+        return f"sw {self.src}, {self.offset}({self.dest})"
