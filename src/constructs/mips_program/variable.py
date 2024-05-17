@@ -34,6 +34,23 @@ class Variable:
         self.label = label
         self.offset = offset
 
+class VariableAlias(Variable):
+    """
+    Alias to a MIPS variable
+    """
+
+    var: Variable
+    "Variable being aliased"
+
+    @property
+    def offset(self) -> Label:
+        """Offset hook, returns offset of the aliased variable instead of its own"""
+        return self.var.offset
+    
+    def __init__(self, label: Label, ref: Variable) -> None:
+        self.label = label
+        self.var = ref
+
 
 class Variables:
     """
@@ -51,9 +68,19 @@ class Variables:
     def __getitem__(self, var: Variable | str) -> Variable | None:
         return self.vars.get(var if isinstance(var, str) else var.label.label)
 
-    def add_var(self, var: Variable | str):
+    def add_var(self, var: Variable):
         assert var not in self
         self.vars[var.label.label] = var
+
+    def new_var(self, label: Label, offset: int = 0) -> Variable:
+        var = Variable(label, offset)
+        self.add_var(var)
+        return var
+
+    def new_alias(self, label: Label, ref: Variable) -> VariableAlias:
+        var = VariableAlias(label, ref)
+        self.add_var(var)
+        return var
 
     def clear(self):
         self.vars.clear()
