@@ -140,3 +140,4 @@ class Compiler:
         filepath.parent.mkdir(parents=True, exist_ok=True)
         with open(f"{str(filepath)}", "w") as f:
             f.write(program.to_asm())
+        f.close()

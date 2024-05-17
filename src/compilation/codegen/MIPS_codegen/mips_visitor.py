@@ -149,6 +149,25 @@ class MipsVisitor(ir.Visitor):
                 )
             case ir_inst.SwitchInstr():
                 print("unhandled!")
+
+            case ir_inst.ICMPInstr():
+                """
+                Performs integer comparison
+                """
+                # print("unhandled!")
+                pass
+
+            case ir_inst.CompareInstr():
+                # print("unhandled!")
+                pass
+
+            case ir_inst.CastInstr():
+                # print("unhandled!")
+                pass
+
+            case ir_inst.Instruction():
+                # print("unhandled!")
+                pass
             case ir_inst.Instruction():
                 print("unhandled!")
             case _:
