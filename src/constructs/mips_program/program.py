@@ -14,7 +14,7 @@ class MipsProgram:
 
     def to_asm(self) -> str:
         globl = ".globl main"
-        entry = ".text\n" "main:\n" "    jal main_entry\n" "    li $v0, 10\n" "    syscall\n"
+        entry = ".text\n" "main:\n" "    jal main.entry\n" "    li $v0, 10\n" "    syscall\n"
         # convert all blocks in the program to asm and join them with a newline
         blocks = "\n".join([f"{b}" for b in self.blocks])
         return f"{globl}\n\n{entry}\n{blocks}"

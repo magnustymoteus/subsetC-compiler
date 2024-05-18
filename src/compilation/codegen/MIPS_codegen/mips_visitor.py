@@ -63,6 +63,13 @@ class MipsVisitor(ir.Visitor):
         self.stack_offset = 0
         super().__init__()
 
+    def load_value(self, i: ir.Instruction, r: Reg) -> mips_inst.Instruction:
+        """Load a value from an instruction or a constant into the register."""
+        if isinstance(i, ir.Constant):
+            return mips_inst.Li(r, i.constant)  # TODO support full i32 range load
+        else:
+            return mips_inst.Lw(r, Reg.sp, self.variables[i.name].offset)
+
     def visit(self, module: ir.Module):
         """Visit a module. Top level visit function."""
         print(type(module).__name__)
@@ -148,22 +155,26 @@ class MipsVisitor(ir.Visitor):
                 print("unhandled!")
 
             case ir_inst.LoadInstr():
-                alloc: ir.AllocaInstr = instr.operands[0]
+                alloc: ir.AllocaInstr = instr.operands[0] # TODO wrong, operand is just the previous step not always alloca
                 assert isinstance(alloc, ir.AllocaInstr)
 
                 self.variables.new_var(Label(instr.name), self.stack_offset)
+                size: int = int(alloc.operands[0].type.width / 8)  # TODO allow for arrays
                 self.last_block.add_instr(
                     mips_inst.IrComment(f"{instr}"),
+                    mips_inst.Addiu(Reg.sp, Reg.sp, -size),
                     # load value into reg
-                    mips_inst.Lw(Reg.t0, Reg.fp, self.variables[alloc.name].offset), # lw $t0, $fp, src
+                    mips_inst.Lw(Reg.t1, Reg.fp, self.variables[alloc.name].offset), # lw $t1, $fp, src
                     # store value in new variable
-                    mips_inst.Sw(Reg.t0, Reg.fp, self.variables[instr.name].offset), # lw $t0, $fp, dest
+                    mips_inst.Sw(Reg.t1, Reg.fp, self.variables[instr.name].offset), # lw $t1, $fp, dest
                     mips_inst.Blank(),
                 )
+                self.stack_offset -= size
 
             case ir_inst.Ret():
                 self.last_block.add_instr(
                     mips_inst.IrComment(f"{instr}"),
+                    mips_inst.Comment("clean up stack frame"),
                     # restore return register
                     mips_inst.Lw(Reg.ra, Reg.fp, -4),  # lw  $ra, -4($fp)
                     # restore stack pointer to start of frame
@@ -213,9 +224,7 @@ class MipsVisitor(ir.Visitor):
 
             case ir_inst.Instruction():
                 assert_type(instr, "Instruction")
-                print("unhandled! aliased")
-                self.variables.new_alias(Label(instr.name), self.variables[instr.operands[0].name])
-                self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
+                self.handle_instruction(instr)
 
             case _:
                 raise ValueError(f"Unsupported type: '{type(instr).__name__}'")
@@ -231,19 +240,36 @@ class MipsVisitor(ir.Visitor):
         )
 
         # create store value
-        match value:
-            case ir.Constant():
-                self.last_block.add_instr(
-                    mips_inst.Li(Reg.t0, value.constant),  # TODO support full i32 range load
-                )
-            case ir.Instruction():
-                # ? assuming this will be the same for all non-constant instruction and can be generalised
-                assert_type(value, "Instruction")
-                self.last_block.add_instr(
-                    mips_inst.Lw(Reg.t0, Reg.fp, self.variables[value.name].offset),
-                )
+        self.last_block.add_instr(self.load_value(value, Reg.t1))
 
         # store created value
         assert alloc.name in self.variables
         var = self.variables[alloc.name]
-        self.last_block.add_instr(mips_inst.Sw(Reg.t0, Reg.fp, var.offset), mips_inst.Blank())
+        self.last_block.add_instr(
+            mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
+            mips_inst.Blank(),
+        )
+
+    def handle_instruction(self, instr: ir.Instruction):
+        self.variables.new_var(Label(instr.name), self.stack_offset)
+        size: int = int(instr.type.width / 8)  # TODO allow for arrays
+        self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
+
+        self.last_block.add_instr(
+            self.load_value(instr.operands[0], Reg.t1),
+            self.load_value(instr.operands[1], Reg.t2),
+        )
+
+        match instr.opname:
+            case "add":
+                self.last_block.add_instr(mips_inst.Add(Reg.t1, Reg.t1, Reg.t2))
+            case _:
+                print(f"Unhandled instruction: '{instr.opname}'")
+
+        self.last_block.add_instr(
+            mips_inst.Sw(Reg.t1, Reg.fp, self.variables[instr.name].offset),
+            mips_inst.Addiu(Reg.sp, Reg.sp, -size),
+            mips_inst.Blank(),
+        )
+
+        self.stack_offset -= size
