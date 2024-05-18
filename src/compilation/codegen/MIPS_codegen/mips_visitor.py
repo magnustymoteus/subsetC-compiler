@@ -68,7 +68,7 @@ class MipsVisitor(ir.Visitor):
         if isinstance(i, ir.Constant):
             return mips_inst.Li(r, i.constant)  # TODO support full i32 range load
         else:
-            return mips_inst.Lw(r, Reg.sp, self.variables[i.name].offset)
+            return mips_inst.Lw(r, Reg.fp, self.variables[i.name].offset)
 
     def visit(self, module: ir.Module):
         """Visit a module. Top level visit function."""
@@ -123,6 +123,8 @@ class MipsVisitor(ir.Visitor):
                 addiu $sp, $sp, -:count:*:size:
                 # save variable offset from $fp
                 """
+                assert len(instr.operands) == 1
+
                 # size of the allocated type
                 size: int = int(instr.operands[0].type.width / 8)  # TODO allow for arrays
 
@@ -141,7 +143,20 @@ class MipsVisitor(ir.Visitor):
 
             case ir_inst.CallInstr():
                 """
-                # MIPS code:
+                function call stack layout:
+                +-----------------+  ┓
+                | stack of caller |  ┃
+                +-----------------+  ┃
+                | function return |  ┃ responsibility of caller
+                +-----------------+  ┃
+                | function args   |  ┛
+                +-----------------+  ┓
+                | old $fp         |  ┃
+                +-----------------+  ┃
+                | new $ra         |  ┃ responsibility of callee
+                +-----------------+  ┃
+                | stack of callee |  ┃
+                +-----------------+  ┛
                 """
                 print("unhandled!")
 
@@ -155,6 +170,7 @@ class MipsVisitor(ir.Visitor):
                 print("unhandled!")
 
             case ir_inst.LoadInstr():
+                assert len(instr.operands) == 1
                 alloc: ir.AllocaInstr = instr.operands[0] # TODO wrong, operand is just the previous step not always alloca
                 assert isinstance(alloc, ir.AllocaInstr)
 
@@ -164,17 +180,24 @@ class MipsVisitor(ir.Visitor):
                     mips_inst.IrComment(f"{instr}"),
                     mips_inst.Addiu(Reg.sp, Reg.sp, -size),
                     # load value into reg
-                    mips_inst.Lw(Reg.t1, Reg.fp, self.variables[alloc.name].offset), # lw $t1, $fp, src
+                    mips_inst.Lw(Reg.t1, Reg.fp, self.variables[alloc.name].offset),  # lw $t1, $fp, src
                     # store value in new variable
-                    mips_inst.Sw(Reg.t1, Reg.fp, self.variables[instr.name].offset), # lw $t1, $fp, dest
+                    mips_inst.Sw(Reg.t1, Reg.fp, self.variables[instr.name].offset),  # lw $t1, $fp, dest
                     mips_inst.Blank(),
                 )
                 self.stack_offset -= size
 
             case ir_inst.Ret():
+                assert len(instr.operands) == 1  # ? likely wrong for structs
+                ret_val: ir.Instruction = instr.operands[0]
+                size: int = int(ret_val.type.width / 8)  # TODO allow for structs
                 self.last_block.add_instr(
                     mips_inst.IrComment(f"{instr}"),
                     mips_inst.Comment("clean up stack frame"),
+                    # load return value and store it at return address on the stack
+                    self.load_value(ret_val, Reg.t1),
+                    # mips_inst.Lw(Reg.t1, Reg.fp, self.variables[ret_val.name].offset),  # lw $t1, $fp, src
+                    mips_inst.Sw(Reg.t1, Reg.fp, 4),  # sw $t1, $fp, 4
                     # restore return register
                     mips_inst.Lw(Reg.ra, Reg.fp, -4),  # lw  $ra, -4($fp)
                     # restore stack pointer to start of frame
@@ -196,11 +219,13 @@ class MipsVisitor(ir.Visitor):
                 """
                 Performs integer comparison
                 """
+                assert len(instr.operands) == 2
+
                 self.variables.new_alias(Label(instr.name), self.variables[instr.operands[0].name])
                 self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
 
                 match instr.op:
-                    case 'eq':
+                    case "eq":
                         self.last_block.add_instr(
                             mips_inst.Comment("icmp"),
                             mips_inst.Beq(Reg.t0, Reg.t1, Label("test")),
@@ -213,16 +238,17 @@ class MipsVisitor(ir.Visitor):
 
                 print("busy!")
 
-
             case ir_inst.CompareInstr():
                 print("unhandled!")
 
             case ir_inst.CastInstr():
+                assert len(instr.operands) == 1
                 # ? instruction ignored because mips is 32bit, possibly a problem in future
                 self.variables.new_alias(Label(instr.name), self.variables[instr.operands[0].name])
                 self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
 
             case ir_inst.Instruction():
+                assert len(instr.operands) == 2  # ? possibly needs to be <= 2 for unary ops
                 assert_type(instr, "Instruction")
                 self.handle_instruction(instr)
 
@@ -231,20 +257,22 @@ class MipsVisitor(ir.Visitor):
 
     def handle_store(self, instr: ir_inst.StoreInstr):
         value: ir.Instruction = instr.operands[0]
-        alloc: ir.AllocaInstr = instr.operands[1]
-        assert isinstance(alloc, ir.AllocaInstr)
+        "value to be stored"
+
+        gen: ir.AllocaInstr = instr.operands[1]
+        "instruction that allocated the value space (expect alloca or gep)"
+
+        assert isinstance(gen, (ir.AllocaInstr, ir.GEPInstr))
         assert len(instr.operands) == 2
 
-        self.last_block.add_instr(
-            mips_inst.IrComment(f"{instr}"),
-        )
+        self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
 
         # create store value
         self.last_block.add_instr(self.load_value(value, Reg.t1))
 
         # store created value
-        assert alloc.name in self.variables
-        var = self.variables[alloc.name]
+        assert gen.name in self.variables
+        var = self.variables[gen.name]
         self.last_block.add_instr(
             mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
             mips_inst.Blank(),
@@ -254,6 +282,7 @@ class MipsVisitor(ir.Visitor):
         self.variables.new_var(Label(instr.name), self.stack_offset)
         size: int = int(instr.type.width / 8)  # TODO allow for arrays
         self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
+        assert len(instr.operands) == 2
 
         self.last_block.add_instr(
             self.load_value(instr.operands[0], Reg.t1),
