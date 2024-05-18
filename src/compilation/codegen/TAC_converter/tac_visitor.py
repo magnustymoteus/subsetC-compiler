@@ -115,7 +115,7 @@ class TACVisitor(CFGVisitor):
                     resulting_node = assign_node
 
                 node_w.n.definition_w.n = None
-                self.add_node_to_subject(wrap(copy(node_w.n)), 0)
+                self.add_node_to_subject(wrap(copy(node_w.n)))
 
                 node_w.n = resulting_node
         else:

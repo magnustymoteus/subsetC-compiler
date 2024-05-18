@@ -82,9 +82,14 @@ class SymbolTableVisitor(ASTVisitor):
         Args:
             node_w (Wrapper[Identifier]): The wrapped identifier node to visit.
         """
+        symtab_entry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name)
         # if the symbol is not found in the current symbol table raise an error
-        if node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name) is None:
+        if symtab_entry is None:
             self.raiseSemanticErr(f"Undeclared variable {node_w.n.name}")
+        if symtab_entry.is_enum:
+            value = symtab_entry.definition_w
+            CopyVisitor().visit(value)
+            node_w.n = value.n
 
     def object_access(self, node_w: Wrapper[ObjectAccess]):
         self.visit(node_w.n.object_w)

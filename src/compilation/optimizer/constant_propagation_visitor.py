@@ -90,12 +90,7 @@ class ConstantPropagationVisitor(ASTVisitor):
 
     def identifier(self, node_w: Wrapper[Identifier]):
         if node_w.n.local_symtab_w.n is not None:
-            symtab_entry = node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name)
-            if symtab_entry.is_enum:
-                value = symtab_entry.definition_w
-                CopyVisitor().visit(value)
-                node_w.n = value.n
-            elif not self.stop_propagating:
+            if not self.stop_propagating:
                 symbol: SymbolTableEntry = self._lookup_cpropagated_symbol(node_w.n.local_symtab_w, node_w.n.name)
                 if symbol.cprop_value_w.n is not None and symbol.type.ptr_count == 0 and not symbol.stopped_propagating:
                     self.propagated_symbols.add(symbol)
