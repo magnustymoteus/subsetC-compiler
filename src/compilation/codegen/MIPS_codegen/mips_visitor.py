@@ -291,7 +291,21 @@ class MipsVisitor(ir.Visitor):
 
         match instr.opname:
             case "add":
-                self.last_block.add_instr(mips_inst.Add(Reg.t1, Reg.t1, Reg.t2))
+                self.last_block.add_instr(mips_inst.Addu(Reg.t1, Reg.t1, Reg.t2))
+            case "sub":
+                self.last_block.add_instr(mips_inst.Subu(Reg.t1, Reg.t1, Reg.t2))
+            case "mul":
+                self.last_block.add_instr(mips_inst.Mul(Reg.t1, Reg.t1, Reg.t2))
+            case "sdiv":
+                self.last_block.add_instr(
+                    mips_inst.Div(Reg.t1, Reg.t2),
+                    mips_inst.Mflo(Reg.t1),
+                )
+            case "udiv":
+                self.last_block.add_instr(
+                    mips_inst.Divu(Reg.t1, Reg.t2),
+                    mips_inst.Mflo(Reg.t1),
+                )
             case _:
                 print(f"Unhandled instruction: '{instr.opname}'")
 
