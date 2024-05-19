@@ -17,7 +17,7 @@ def main(argv):
         "--disable",
         type=str,
         nargs="*",
-        choices=["cfold", "cprop", "comments", "warnings"],
+        choices=["cfold", "cprop", "comments", "warnings", "dcode"],
         help="Things to disable",
     )
 

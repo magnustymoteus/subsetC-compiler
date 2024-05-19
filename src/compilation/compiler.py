@@ -106,7 +106,8 @@ class Compiler:
         if not self.is_disabled("cfold"):
             ConstantFoldingVisitor(ast)
 
-        DeadCodeVisitor(ast)
+        if not self.is_disabled("dcode"):
+            DeadCodeVisitor(ast)
 
         if self.do_viz("ast"):
             Compiler.visualizeAST(ast, f"./{filename}/viz/ast")
@@ -124,10 +125,11 @@ class Compiler:
 
         if self.do_viz("cfg"):
             for function in llvm.module.functions:
-                s = graphviz.Source(
+                pass
+                '''s = graphviz.Source(
                     get_function_cfg(function), filename=f"./{filename}/viz/{function.name}_llvm_cfg.gv"
                 )
-                s.save()
+                s.save()'''
         return llvm.module
 
     def export_llvm(self, llvm_module: ir.Module, filepath: Path):

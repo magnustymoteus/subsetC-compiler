@@ -342,9 +342,10 @@ class LLVMVisitor(CFGVisitor):
         operand_value = operand
         match node_w.n.operator:
             case "+":
-                return self.builder.add(operand_value.type(0), operand_value, self._create_reg())
+                return operand
             case "-":
-                return self.builder.sub(operand_value.type(0), operand_value, self._create_reg())
+                return self._get_bin_op_func(ir.Constant(ir.IntType(32), 0), PrimitiveType("int", True),
+                                             operand_value, node_w.n.operand_w.n.type, "-")()
             case "!":
                 return self._get_bin_op_func(operand_value, node_w.n.operand_w.n.type, ir.Constant(ir.IntType(1), 0),
                                              PrimitiveType('int', True), '==')()

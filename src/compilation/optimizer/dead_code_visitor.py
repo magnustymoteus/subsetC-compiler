@@ -19,14 +19,10 @@ class DeadCodeVisitor(ASTVisitor):
     def variable_decl(self, node_w: Wrapper[VariableDeclaration]):
         self.working_var = node_w.n.identifier
         super().variable_decl(node_w)
-
     def identifier(self, node_w: Wrapper[Identifier]):
         if node_w.n.local_symtab_w.n is not None:
             node_w.n.local_symtab_w.n.lookup_symbol(node_w.n.name).used = True
     def compound_stmt(self, node_w: Wrapper[CompoundStatement]):
-        for i, stmt_w in enumerate(node_w.n.statements):
-            if isinstance(stmt_w.n, JumpStatement):
-                node_w.n.statements = node_w.n.statements[:i+1]
         super().compound_stmt(node_w)
         for i, stmt_w in enumerate(node_w.n.statements):
             if isinstance(stmt_w.n, VariableDeclaration):
