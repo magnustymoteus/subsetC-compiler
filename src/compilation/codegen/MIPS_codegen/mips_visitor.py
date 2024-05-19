@@ -306,6 +306,16 @@ class MipsVisitor(ir.Visitor):
                     mips_inst.Divu(Reg.t1, Reg.t2),
                     mips_inst.Mflo(Reg.t1),
                 )
+            case "srem":
+                self.last_block.add_instr(
+                    mips_inst.Div(Reg.t1, Reg.t2),
+                    mips_inst.Mfhi(Reg.t1),
+                )
+            case "urem":
+                self.last_block.add_instr(
+                    mips_inst.Divu(Reg.t1, Reg.t2),
+                    mips_inst.Mfhi(Reg.t1),
+                )
             case _:
                 print(f"Unhandled instruction: '{instr.opname}'")
 
