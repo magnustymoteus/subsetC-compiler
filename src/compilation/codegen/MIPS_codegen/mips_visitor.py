@@ -37,6 +37,19 @@ Module
 def assert_type(value, typename):
     assert type(value).__name__ == typename, f"type '{type(value).__name__}' not implemented"
 
+def get_type_size(type: ir.Type) -> int:
+    """Get the size of the type in bytes."""
+    # TODO allow for arrays
+    match type:
+        case ir.IntType():
+            return int(type.width / 8)
+        case ir.PointerType():
+            return get_type_size(type.pointee)
+        case ir.FloatType():
+            return 4
+        case _:
+            assert False
+
 
 class MipsVisitor(ir.Visitor):
     tree: MipsProgram
@@ -127,17 +140,17 @@ class MipsVisitor(ir.Visitor):
                 assert len(instr.operands) == 1
 
                 # size of the allocated type
-                size: int = int(instr.operands[0].type.width / 8)  # TODO allow for arrays
-
+                size = get_type_size(instr.operands[0].type)
                 # add variable to the list of variables of that function scope
                 self.variables.new_var(Label(instr.name), self.stack_offset)
+                self.stack_offset -= size
+
                 # add instruction to the block and create new space on the stack for the var
                 self.last_block.add_instr(
                     # move the stack pointer by the size of the variable
                     mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -size
                     mips_inst.Blank(),
                 )
-                self.stack_offset -= size
             case ir_inst.Branch():
                 print("unhandled!")
 
@@ -172,24 +185,24 @@ class MipsVisitor(ir.Visitor):
             case ir_inst.LoadInstr():
                 assert len(instr.operands) == 1
                 alloc: ir.AllocaInstr = instr.operands[0]  # TODO wrong, operand is just the previous step not always alloca
-                assert isinstance(alloc, ir.AllocaInstr)
+                assert isinstance(alloc, (ir.AllocaInstr, ir.GEPInstr))
 
-                self.variables.new_var(Label(instr.name), self.stack_offset)
-                size: int = int(alloc.operands[0].type.width / 8)  # TODO allow for arrays
+                size = get_type_size(alloc.operands[0].type)
+                var = self.variables.new_var(Label(instr.name), self.stack_offset)
+                self.stack_offset -= size
                 self.last_block.add_instr(
                     mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
                     # load value into reg
                     mips_inst.Lw(Reg.t1, Reg.fp, self.variables[alloc.name].offset),  # lw $t1, $fp, src
                     # store value in new variable
-                    mips_inst.Sw(Reg.t1, Reg.fp, self.variables[instr.name].offset),  # lw $t1, $fp, dest
+                    mips_inst.Sw(Reg.t1, Reg.fp, var.offset),  # lw $t1, $fp, dest
                     mips_inst.Blank(),
                 )
-                self.stack_offset -= size
 
             case ir_inst.Ret():
                 assert len(instr.operands) == 1  # ? likely wrong for structs
                 ret_val: ir.Instruction = instr.operands[0]
-                size: int = int(ret_val.type.width / 8)  # TODO allow for structs
+                # size = get_type_size(ret_val.type) # TODO unused
                 self.last_block.add_instr(
                     mips_inst.IrComment(f"{instr}"),
                     mips_inst.Comment("clean up stack frame"),
@@ -270,7 +283,7 @@ class MipsVisitor(ir.Visitor):
                 assert len(instr.operands) == 1
                 # ? instruction ignored because mips is 32bit, possibly a problem in future
                 if isinstance(instr.operands[0], ir.Constant):
-                    size: int = int(instr.operands[0].type.width / 8)
+                    size = get_type_size(instr.operands[0].type)
                     var = self.variables.new_var(Label(instr.name), self.stack_offset)
                     self.stack_offset += size
                     self.last_block.add_instr(
@@ -317,7 +330,7 @@ class MipsVisitor(ir.Visitor):
 
     def handle_instruction(self, instr: ir.Instruction):
         var = self.variables.new_var(Label(instr.name), self.stack_offset)
-        size: int = int(instr.type.width / 8)  # TODO allow for arrays
+        size = get_type_size(instr.type)
         self.last_block.add_instr(mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")))
         assert len(instr.operands) == 2
 
