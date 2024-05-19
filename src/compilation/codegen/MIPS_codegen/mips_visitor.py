@@ -4,7 +4,6 @@ import llvmlite.ir.instructions as ir_inst
 from src.constructs.mips_program import MipsProgram, Variables, Global
 from src.constructs.mips_program.node import LabeledBlock, Reg, instr as mips_inst, Label
 
-
 """
 MIPS code layout:
 - module name
@@ -31,6 +30,8 @@ Module
 #  -printf
 #  -scanf
 #
+
+# pseudo instructions may only use $t0 !!!
 
 def assert_type(value, typename):
     assert type(value).__name__ == typename, f"type '{type(value).__name__}' not implemented"
@@ -219,33 +220,80 @@ class MipsVisitor(ir.Visitor):
                 """
                 Performs integer comparison
                 """
+
+                self.variables.new_var(Label(instr.name), self.stack_offset)
+                size: int = int(instr.type.width / 8)  # TODO allow for arrays
+                self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
                 assert len(instr.operands) == 2
 
-                self.variables.new_alias(Label(instr.name), self.variables[instr.operands[0].name])
-                self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
-
-                match instr.op:
-                    case "eq":
-                        self.last_block.add_instr(
-                            mips_inst.Comment("icmp"),
-                            mips_inst.Beq(Reg.t0, Reg.t1, Label("test")),
-                        )
-
                 self.last_block.add_instr(
-                    mips_inst.Comment("icmp"),
-                    mips_inst.Slt(Reg.t0, Reg.t1, Reg.t2),
+                    self.load_value(instr.operands[0], Reg.t1),
+                    self.load_value(instr.operands[1], Reg.t2),
                 )
 
-                print("busy!")
+                match instr.op:
+                    case 'eq':
+                        print("unhandled : icmp eq")
+                        # TODO : not correct
+                        # self.last_block.add_instr(
+                        #     mips_inst.Comment("icmp eq"),
+                        #     mips_inst.Beq(Reg.t0, Reg.t1, Label("test")),
+                        # )
+                    case 'ne':
+                        print("ne")
+                        self.last_block.add_instr(
+                            mips_inst.Comment("icmp ne"),
+                            mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2),
+                        )
+                    case 'ugt':
+                        print("unhandled : ugt")
+                    case 'uge':
+                        print("unhandled : uge")
+                    case 'ult':
+                        print("unhandled : ult")
+                    case 'ule':
+                        print("unhandled : ule")
+                    case 'sgt':
+                        print("unhandled : sgt")
+                    case 'sge':
+                        print("unhandled : sge")
+                    case 'slt':
+                        print("unhandled : slt")
+                    case 'sle':
+                        print("unhandled : sle")
+                    case _:
+                        raise ValueError(f"Unsupported icmp operation: '{instr.op}'")
+
+                self.last_block.add_instr(
+                    mips_inst.Sw(Reg.t1, Reg.fp, self.variables[instr.name].offset),
+                    mips_inst.Addiu(Reg.sp, Reg.sp, -size),
+                    mips_inst.Blank(),
+                )
+
+                self.stack_offset -= size
 
             case ir_inst.CompareInstr():
                 print("unhandled!")
 
             case ir_inst.CastInstr():
                 assert len(instr.operands) == 1
+                # TODO: 'Constant' object has no attribute 'name' ???
                 # ? instruction ignored because mips is 32bit, possibly a problem in future
-                self.variables.new_alias(Label(instr.name), self.variables[instr.operands[0].name])
-                self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
+
+                if isinstance(instr.operands[0], ir.Constant):
+                    size: int = int(instr.operands[0].type.width / 8)
+                    self.variables.new_var(Label(instr.name), self.stack_offset)
+                    self.last_block.add_instr(
+                        mips_inst.IrComment(f"{instr}"),
+                        mips_inst.Li(Reg.t0, instr.operands[0].constant),
+                        mips_inst.Sw(Reg.t0, Reg.fp, self.variables[instr.name].offset),
+                        mips_inst.Addiu(Reg.sp, Reg.sp, -size),  # addiu $sp, $sp, -size
+                        mips_inst.Blank(),
+                    )
+                    self.stack_offset -= size
+                else:
+                    self.variables.new_alias(Label(instr.name), self.variables[instr.operands[0].name])
+                    self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
 
             case ir_inst.Instruction():
                 assert len(instr.operands) == 2  # ? possibly needs to be <= 2 for unary ops
@@ -316,6 +364,10 @@ class MipsVisitor(ir.Visitor):
                     mips_inst.Divu(Reg.t1, Reg.t2),
                     mips_inst.Mfhi(Reg.t1),
                 )
+            case "and":
+                self.last_block.add_instr(mips_inst.And(Reg.t1, Reg.t1, Reg.t2))
+            case "or":
+                self.last_block.add_instr(mips_inst.Or(Reg.t1, Reg.t1, Reg.t2))
             case _:
                 print(f"Unhandled instruction: '{instr.opname}'")
 

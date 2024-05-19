@@ -111,9 +111,12 @@ class Sne(SlInstruction):
         :param rhs: $t3 (if register) or 5 (for example if immediate)
         """
         if isinstance(rhs, Reg):
-            return Subu(dest, lhs, dest), Sltu(dest, Reg.zero, dest)
+            return Subu(dest, lhs, rhs), Sltu(dest, Reg.zero, dest)
         if isinstance(rhs, int):
             return Addi(Reg.t0, Reg.zero, rhs), Subu(dest, lhs, Reg.t0), Sltu(dest, Reg.zero, dest)
 
     def __str__(self) -> str:
         return f"sle {self.dest}, {self.operand1}, {self.operand2}"
+
+
+# TODO : add sge

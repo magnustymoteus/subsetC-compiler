@@ -31,9 +31,9 @@ def test_sle_imm():
     assert str(instructions[3]) == "subu $t1, $t0, $t1"
 
 def test_sne_reg():
-    instructions = Sne(Reg.t1, Reg.t2, Reg.t3)
+    instructions = Sne(Reg.t1, Reg.t1, Reg.t2)
     assert(len(instructions) == 2)
-    assert str(instructions[0]) == "subu $t1, $t2, $t1"
+    assert str(instructions[0]) == "subu $t1, $t1, $t2"
     assert str(instructions[1]) == "sltu $t1, $zero, $t1"
 
 

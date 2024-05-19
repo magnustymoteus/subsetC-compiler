@@ -51,9 +51,9 @@ class Bge(Branch):
 
     def __new__(cls, lhs: Reg, rhs: Reg | int, label: Label) -> tuple[Slt, Beq] | tuple[Slti, Beq]:
         if isinstance(rhs, Reg):
-            return Slt(Reg.at, lhs, rhs), Beq(Reg.at, Reg.zero, label)
+            return Slt(Reg.t0, lhs, rhs), Beq(Reg.t0, Reg.zero, label)
         if isinstance(rhs, int):
-            return Slti(Reg.at, lhs, rhs), Beq(Reg.at, Reg.zero, label)
+            return Slti(Reg.t0, lhs, rhs), Beq(Reg.t0, Reg.zero, label)
 
 
 class Bgt(Branch):
@@ -63,9 +63,9 @@ class Bgt(Branch):
 
     def __new__(cls, lhs: Reg, rhs: Reg | int, label: Label) -> tuple[Slt, Bne] | tuple[Addi, Slt, Bne]:
         if isinstance(rhs, Reg):
-            return Slt(Reg.at, lhs, rhs), Bne(Reg.at, Reg.zero, label)
+            return Slt(Reg.t0, lhs, rhs), Bne(Reg.t0, Reg.zero, label)
         if isinstance(rhs, int):
-            return Addi(Reg.at, Reg.zero, rhs), Slt(Reg.at, Reg.at, lhs), Bne(Reg.at, Reg.zero, label)
+            return Addi(Reg.t0, Reg.zero, rhs), Slt(Reg.t0, Reg.t0, lhs), Bne(Reg.t0, Reg.zero, label)
 
 
 class Ble(Branch):
@@ -75,9 +75,9 @@ class Ble(Branch):
 
     def __new__(cls, lhs: Reg, rhs: Reg | int, label: Label) -> tuple[Slt, Beq] | tuple[Addi, Slti, Bne]:
         if isinstance(rhs, Reg):
-            return Slt(Reg.at, rhs, lhs), Beq(Reg.at, Reg.zero, label)
+            return Slt(Reg.t0, rhs, lhs), Beq(Reg.t0, Reg.zero, label)
         if isinstance(rhs, int):
-            return Addi(Reg.at, lhs, -1), Slti(Reg.at, Reg.at, rhs), Bne(Reg.at, Reg.zero, label)
+            return Addi(Reg.t0, lhs, -1), Slti(Reg.t0, Reg.t0, rhs), Bne(Reg.t0, Reg.zero, label)
 
 
 class Blt(Branch):
@@ -87,9 +87,9 @@ class Blt(Branch):
 
     def __new__(cls, lhs: Reg, rhs: Reg | int, label: Label) -> tuple[Slt | Slti, Bne]:
         if isinstance(rhs, Reg):
-            return Slt(Reg.at, lhs, rhs), Bne(Reg.at, Reg.zero, label)
+            return Slt(Reg.t0, lhs, rhs), Bne(Reg.t0, Reg.zero, label)
         if isinstance(rhs, int):
-            return Slti(Reg.at, lhs, rhs), Bne(Reg.at, Reg.zero, label)
+            return Slti(Reg.t0, lhs, rhs), Bne(Reg.t0, Reg.zero, label)
 
 
 class Bne(Branch):
