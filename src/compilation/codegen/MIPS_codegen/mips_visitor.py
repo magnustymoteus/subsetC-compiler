@@ -51,6 +51,11 @@ def get_type_size(type: ir.Type) -> int:
             assert False
 
 
+def get_args_size(args) -> int:
+    """Get the size of the provided arguments in bytes."""
+    return sum(get_type_size(arg.type) for arg in args)
+
+
 class MipsVisitor(ir.Visitor):
     tree: MipsProgram
     "Tree of the mips program blocks with instructions."
@@ -78,12 +83,24 @@ class MipsVisitor(ir.Visitor):
         self.stack_offset = 0
         super().__init__()
 
-    def load_value(self, i: ir.Instruction, r: Reg) -> mips_inst.Instruction:
+    def load_value(self, i: ir.Instruction | tuple[ir.Argument, ir.Function], r: Reg) -> mips_inst.Instruction:
         """Load a value from an instruction or a constant into the register."""
         if isinstance(i, ir.Constant):
             return mips_inst.Li(r, i.constant)  # TODO support full i32 range load
+        elif isinstance(i, ir.Argument):
+            func: ir.Function = self.function
+            arg_index: int = func.args.index(i)
+            offset = get_args_size(func.args[arg_index:])
+            return mips_inst.Lw(r, Reg.fp, offset)  # lw $r, offset($fp)
+        # elif isinstance(i, ir.CallInstr):
+        #     func, *args = i.operands
+        # elif isinstance(i, tuple) and len(i) == 2 and isinstance(i[0], ir.Argument) and isinstance(i[1], ir.Function):
+        #     [arg, func] = i
+        #     arg_index: int = func.args.index(arg)
+        #     offset = get_args_size(func.args[arg_index:])
+        #     return mips_inst.Lw(r, Reg.fp, offset)  # lw $r, offset($fp)
         else:
-            return mips_inst.Lw(r, Reg.fp, self.variables[i.name].offset)
+            return mips_inst.Lw(r, Reg.fp, self.variables[i.name].offset)  # lw $r, offset($fp)
 
     def visit(self, module: ir.Module):
         """Visit a module. Top level visit function."""
@@ -171,7 +188,27 @@ class MipsVisitor(ir.Visitor):
                 | stack of callee |  ┃
                 +-----------------+  ┛
                 """
-                print("unhandled!")
+                var = self.variables.new_var(Label(instr.name), self.stack_offset)
+                func: ir.Function = instr.operands[0]
+                ret_size = get_type_size(func.return_value.type)
+                arg_size = get_args_size(func.args)
+                tot_size = ret_size + arg_size
+                self.stack_offset -= ret_size
+                self.last_block.add_instr(
+                    mips_inst.IrComment(f"{instr}"),
+                    # allocate stack space for function and return arguments
+                    mips_inst.Addiu(Reg.sp, Reg.sp, -tot_size),  # addiu $sp, $sp, -(ret_size + arg_size)
+                    [
+                        (
+                            # load argument value into t1
+                            self.load_value(oper, Reg.t1),
+                            # store argument value on stack. stored at return offset (negative) - return size - argument size up to stored argument
+                            mips_inst.Sw(Reg.t1, Reg.fp, var.offset - ret_size - get_args_size(func.args[:i])),
+                        )
+                        for i, oper in enumerate(instr.operands[1:])
+                    ],
+                    mips_inst.Jal(Label(f"{func.name}.{func.basic_blocks[0].name}")),
+                )
 
             case ir_inst.ConditionalBranch():
                 print("unhandled!")
@@ -202,6 +239,8 @@ class MipsVisitor(ir.Visitor):
             case ir_inst.Ret():
                 assert len(instr.operands) == 1  # ? likely wrong for structs
                 ret_val: ir.Instruction = instr.operands[0]
+                arg_size = get_args_size(self.function.args)
+                tot_size = arg_size + get_type_size(ret_val.type)
                 # size = get_type_size(ret_val.type) # TODO unused
                 self.last_block.add_instr(
                     mips_inst.IrComment(f"{instr}"),
@@ -209,13 +248,15 @@ class MipsVisitor(ir.Visitor):
                     # load return value and store it at return address on the stack
                     self.load_value(ret_val, Reg.t1),
                     # mips_inst.Lw(Reg.t1, Reg.fp, self.variables[ret_val.name].offset),  # lw $t1, $fp, src
-                    mips_inst.Sw(Reg.t1, Reg.fp, 4),  # sw $t1, $fp, 4
+                    mips_inst.Sw(Reg.t1, Reg.fp, tot_size),  # sw $t1, $fp, 4
                     # restore return register
                     mips_inst.Lw(Reg.ra, Reg.fp, -4),  # lw  $ra, -4($fp)
                     # restore stack pointer to start of frame
                     mips_inst.Move(Reg.sp, Reg.fp),  # move    $sp, $fp
                     # restore previous frame pointer
                     mips_inst.Lw(Reg.fp, Reg.sp),  # lw  $fp, 0($sp)
+                    # reset stack by size of arguments
+                    mips_inst.Addiu(Reg.sp, Reg.sp, arg_size),
                     # jump back to caller
                     mips_inst.Jr(Reg.ra),  # jr  $ra
                     mips_inst.Blank(),
@@ -285,7 +326,7 @@ class MipsVisitor(ir.Visitor):
                 if isinstance(instr.operands[0], ir.Constant):
                     size = get_type_size(instr.operands[0].type)
                     var = self.variables.new_var(Label(instr.name), self.stack_offset)
-                    self.stack_offset += size
+                    self.stack_offset -= size
                     self.last_block.add_instr(
                         mips_inst.Li(Reg.t0, instr.operands[0].constant, mips_inst.IrComment(f"{instr}")),  # TODO support full i32 range load
                         mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
