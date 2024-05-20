@@ -33,6 +33,7 @@ Module
 
 # pseudo instructions may only use $t0 !!!
 
+
 def assert_type(value, typename):
     assert type(value).__name__ == typename, f"type '{type(value).__name__}' not implemented"
 
@@ -237,17 +238,11 @@ class MipsVisitor(ir.Visitor):
 
                 match instr.op:
                     case "eq":
-                        print("unhandled : icmp eq")
-                        # TODO : not correct
-                        # self.last_block.add_instr(
-                        #     mips_inst.Comment("icmp eq"),
-                        #     mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2),
-                        # )
+                        print("\t\t -eq")
+                        self.last_block.add_instr(mips_inst.Sle(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp eq")))
                     case "ne":
                         print("ne")
-                        self.last_block.add_instr(
-                            mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp ne")),
-                        )
+                        self.last_block.add_instr(mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp ne")))
                     case "ugt":
                         print("unhandled : ugt")
                     case "uge":

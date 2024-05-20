@@ -1,6 +1,7 @@
 """
 All conditional MIPS instructions.
 """
+
 from __future__ import annotations
 
 from src.constructs.mips_program.node.instr import Slti, Slt, Addi
@@ -50,7 +51,9 @@ class Bge(Branch):
     MIPS `bge` (branch greater than or equal) instruction.
     """
 
-    def __new__(cls, lhs: Reg, rhs: Reg | int, label: Label, text: str | Comment = "") -> tuple[Slt, Beq] | tuple[Slti, Beq]:
+    def __new__(
+        cls, lhs: Reg, rhs: Reg | int, label: Label, text: str | Comment = ""
+    ) -> tuple[Slt, Beq] | tuple[Slti, Beq]:
         if isinstance(rhs, Reg):
             return Slt(Reg.t0, lhs, rhs, text), Beq(Reg.t0, Reg.zero, label)
         if isinstance(rhs, int):
@@ -62,7 +65,9 @@ class Bgt(Branch):
     MIPS `bgt` (branch greater than) instruction.
     """
 
-    def __new__(cls, lhs: Reg, rhs: Reg | int, label: Label, text: str | Comment = "") -> tuple[Slt, Bne] | tuple[Addi, Slt, Bne]:
+    def __new__(
+        cls, lhs: Reg, rhs: Reg | int, label: Label, text: str | Comment = ""
+    ) -> tuple[Slt, Bne] | tuple[Addi, Slt, Bne]:
         if isinstance(rhs, Reg):
             return Slt(Reg.t0, lhs, rhs, text), Bne(Reg.t0, Reg.zero, label)
         if isinstance(rhs, int):
@@ -74,7 +79,9 @@ class Ble(Branch):
     MIPS `ble` (branch less than or equal) instruction.
     """
 
-    def __new__(cls, lhs: Reg, rhs: Reg | int, label: Label, text: str | Comment = "") -> tuple[Slt, Beq] | tuple[Addi, Slti, Bne]:
+    def __new__(
+        cls, lhs: Reg, rhs: Reg | int, label: Label, text: str | Comment = ""
+    ) -> tuple[Slt, Beq] | tuple[Addi, Slti, Bne]:
         if isinstance(rhs, Reg):
             return Slt(Reg.t0, rhs, lhs, text), Beq(Reg.t0, Reg.zero, label)
         if isinstance(rhs, int):
