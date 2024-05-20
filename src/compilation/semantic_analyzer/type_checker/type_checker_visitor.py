@@ -140,12 +140,12 @@ class TypeCheckerVisitor(ASTVisitor):
         self.checkCompositeTypes(node_w.n.lhs_w.n.type, node_w.n.operator, node_w.n.rhs_w.n.type)
         if TypeCheckerVisitor.is_comparison(node_w.n.operator):
             node_w.n.type = PrimitiveType('int', True)
-        elif node_w.n.operator in ['<<', '>>', '^', '|', '&']:
-            l_type = node_w.n.lhs_w.n.type
-            r_type = node_w.n.rhs_w.n.type
-            if (l_type.type == 'float' or l_type.ptr_count) or (r_type.type == 'float' or r_type.ptr_count):
-                self.raiseSemanticErr(f"Cannot do '{node_w.n.operator}'with types {node_w.n.lhs_w.n.type} and {node_w.n.rhs_w.n.type}")
         else:
+            if node_w.n.operator in ['<<', '>>', '^', '|', '&']:
+                l_type = node_w.n.lhs_w.n.type
+                r_type = node_w.n.rhs_w.n.type
+                if (l_type.type == 'float' or l_type.ptr_count) or (r_type.type == 'float' or r_type.ptr_count):
+                    self.raiseSemanticErr(f"Cannot do '{node_w.n.operator}'with types {node_w.n.lhs_w.n.type} and {node_w.n.rhs_w.n.type}")
             node_w.n.type = PrimitiveType.typeCoercion([node_w.n.lhs_w.n.type, node_w.n.rhs_w.n.type], True)
 
     def un_op(self, node_w: Wrapper[UnaryOp]):
