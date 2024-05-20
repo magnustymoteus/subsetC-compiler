@@ -4,7 +4,6 @@ import llvmlite.ir.instructions as ir_inst
 from src.constructs.mips_program import MipsProgram, Variables, Global
 from src.constructs.mips_program.node import LabeledBlock, Reg, instr as mips_inst, Label
 
-
 """
 MIPS code layout:
 - module name
@@ -32,8 +31,29 @@ Module
 #  -scanf
 #
 
+# pseudo instructions may only use $t0 !!!
+
+
 def assert_type(value, typename):
     assert type(value).__name__ == typename, f"type '{type(value).__name__}' not implemented"
+
+def get_type_size(type: ir.Type) -> int:
+    """Get the size of the type in bytes."""
+    # TODO allow for arrays
+    match type:
+        case ir.IntType():
+            return int(type.width / 8)
+        case ir.PointerType():
+            return get_type_size(type.pointee)
+        case ir.FloatType():
+            return 4
+        case _:
+            assert False
+
+
+def get_args_size(args) -> int:
+    """Get the size of the provided arguments in bytes."""
+    return sum(get_type_size(arg.type) for arg in args)
 
 
 class MipsVisitor(ir.Visitor):
@@ -63,12 +83,24 @@ class MipsVisitor(ir.Visitor):
         self.stack_offset = 0
         super().__init__()
 
-    def load_value(self, i: ir.Instruction, r: Reg) -> mips_inst.Instruction:
+    def load_value(self, i: ir.Instruction | tuple[ir.Argument, ir.Function], r: Reg) -> mips_inst.Instruction:
         """Load a value from an instruction or a constant into the register."""
         if isinstance(i, ir.Constant):
             return mips_inst.Li(r, i.constant)  # TODO support full i32 range load
+        elif isinstance(i, ir.Argument):
+            func: ir.Function = self.function
+            arg_index: int = func.args.index(i)
+            offset = get_args_size(func.args[arg_index:])
+            return mips_inst.Lw(r, Reg.fp, offset)  # lw $r, offset($fp)
+        # elif isinstance(i, ir.CallInstr):
+        #     func, *args = i.operands
+        # elif isinstance(i, tuple) and len(i) == 2 and isinstance(i[0], ir.Argument) and isinstance(i[1], ir.Function):
+        #     [arg, func] = i
+        #     arg_index: int = func.args.index(arg)
+        #     offset = get_args_size(func.args[arg_index:])
+        #     return mips_inst.Lw(r, Reg.fp, offset)  # lw $r, offset($fp)
         else:
-            return mips_inst.Lw(r, Reg.fp, self.variables[i.name].offset)
+            return mips_inst.Lw(r, Reg.fp, self.variables[i.name].offset)  # lw $r, offset($fp)
 
     def visit(self, module: ir.Module):
         """Visit a module. Top level visit function."""
@@ -93,13 +125,12 @@ class MipsVisitor(ir.Visitor):
         # if new function started, start by creating new stack frame
         if self.new_function_started:
             self.last_block.add_instr(
-                mips_inst.Comment("new stack frame"),
                 # store frame pointer at top of stack
-                mips_inst.Sw(Reg.fp, Reg.sp, 0),      # sw  $fp, 0($sp)
+                mips_inst.Sw(Reg.fp, Reg.sp, 0, "new stack frame"),  # sw  $fp, 0($sp)
                 # set frame pointer
-                mips_inst.Move(Reg.fp, Reg.sp),       # move    $fp, $sp
+                mips_inst.Move(Reg.fp, Reg.sp),  # move    $fp, $sp
                 # store return address on stack
-                mips_inst.Sw(Reg.ra, Reg.fp, -4),     # sw  $ra, -4($fp)
+                mips_inst.Sw(Reg.ra, Reg.fp, -4),  # sw  $ra, -4($fp)
                 # move stack pointer down
                 mips_inst.Addiu(Reg.sp, Reg.sp, -8),  # subiu   $sp, $sp, 8
                 mips_inst.Blank(),
@@ -126,18 +157,17 @@ class MipsVisitor(ir.Visitor):
                 assert len(instr.operands) == 1
 
                 # size of the allocated type
-                size: int = int(instr.operands[0].type.width / 8)  # TODO allow for arrays
-
+                size = get_type_size(instr.operands[0].type)
                 # add variable to the list of variables of that function scope
                 self.variables.new_var(Label(instr.name), self.stack_offset)
+                self.stack_offset -= size
+
                 # add instruction to the block and create new space on the stack for the var
                 self.last_block.add_instr(
-                    mips_inst.IrComment(f"{instr}"),
                     # move the stack pointer by the size of the variable
-                    mips_inst.Addiu(Reg.sp, Reg.sp, -size),  # addiu $sp, $sp, -size
+                    mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -size
                     mips_inst.Blank(),
                 )
-                self.stack_offset -= size
             case ir_inst.Branch():
                 print("unhandled!")
 
@@ -158,7 +188,27 @@ class MipsVisitor(ir.Visitor):
                 | stack of callee |  ┃
                 +-----------------+  ┛
                 """
-                print("unhandled!")
+                var = self.variables.new_var(Label(instr.name), self.stack_offset)
+                func: ir.Function = instr.operands[0]
+                ret_size = get_type_size(func.return_value.type)
+                arg_size = get_args_size(func.args)
+                tot_size = ret_size + arg_size
+                self.stack_offset -= ret_size
+                self.last_block.add_instr(
+                    mips_inst.IrComment(f"{instr}"),
+                    # allocate stack space for function and return arguments
+                    mips_inst.Addiu(Reg.sp, Reg.sp, -tot_size),  # addiu $sp, $sp, -(ret_size + arg_size)
+                    [
+                        (
+                            # load argument value into t1
+                            self.load_value(oper, Reg.t1),
+                            # store argument value on stack. stored at return offset (negative) - return size - argument size up to stored argument
+                            mips_inst.Sw(Reg.t1, Reg.fp, var.offset - ret_size - get_args_size(func.args[:i])),
+                        )
+                        for i, oper in enumerate(instr.operands[1:])
+                    ],
+                    mips_inst.Jal(Label(f"{func.name}.{func.basic_blocks[0].name}")),
+                )
 
             case ir_inst.ConditionalBranch():
                 print("unhandled!")
@@ -171,41 +221,44 @@ class MipsVisitor(ir.Visitor):
 
             case ir_inst.LoadInstr():
                 assert len(instr.operands) == 1
-                alloc: ir.AllocaInstr = instr.operands[0] # TODO wrong, operand is just the previous step not always alloca
-                assert isinstance(alloc, ir.AllocaInstr)
+                alloc: ir.AllocaInstr = instr.operands[0]  # TODO wrong, operand is just the previous step not always alloca
+                assert isinstance(alloc, (ir.AllocaInstr, ir.GEPInstr))
 
-                self.variables.new_var(Label(instr.name), self.stack_offset)
-                size: int = int(alloc.operands[0].type.width / 8)  # TODO allow for arrays
+                size = get_type_size(alloc.operands[0].type)
+                var = self.variables.new_var(Label(instr.name), self.stack_offset)
+                self.stack_offset -= size
                 self.last_block.add_instr(
-                    mips_inst.IrComment(f"{instr}"),
-                    mips_inst.Addiu(Reg.sp, Reg.sp, -size),
+                    mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
                     # load value into reg
                     mips_inst.Lw(Reg.t1, Reg.fp, self.variables[alloc.name].offset),  # lw $t1, $fp, src
                     # store value in new variable
-                    mips_inst.Sw(Reg.t1, Reg.fp, self.variables[instr.name].offset),  # lw $t1, $fp, dest
+                    mips_inst.Sw(Reg.t1, Reg.fp, var.offset),  # lw $t1, $fp, dest
                     mips_inst.Blank(),
                 )
-                self.stack_offset -= size
 
             case ir_inst.Ret():
                 assert len(instr.operands) == 1  # ? likely wrong for structs
                 ret_val: ir.Instruction = instr.operands[0]
-                size: int = int(ret_val.type.width / 8)  # TODO allow for structs
+                arg_size = get_args_size(self.function.args)
+                tot_size = arg_size + get_type_size(ret_val.type)
+                # size = get_type_size(ret_val.type) # TODO unused
                 self.last_block.add_instr(
                     mips_inst.IrComment(f"{instr}"),
                     mips_inst.Comment("clean up stack frame"),
                     # load return value and store it at return address on the stack
                     self.load_value(ret_val, Reg.t1),
                     # mips_inst.Lw(Reg.t1, Reg.fp, self.variables[ret_val.name].offset),  # lw $t1, $fp, src
-                    mips_inst.Sw(Reg.t1, Reg.fp, 4),  # sw $t1, $fp, 4
+                    mips_inst.Sw(Reg.t1, Reg.fp, tot_size),  # sw $t1, $fp, 4
                     # restore return register
                     mips_inst.Lw(Reg.ra, Reg.fp, -4),  # lw  $ra, -4($fp)
                     # restore stack pointer to start of frame
-                    mips_inst.Move(Reg.sp, Reg.fp),    # move    $sp, $fp
+                    mips_inst.Move(Reg.sp, Reg.fp),  # move    $sp, $fp
                     # restore previous frame pointer
-                    mips_inst.Lw(Reg.fp, Reg.sp),      # lw  $fp, 0($sp)
+                    mips_inst.Lw(Reg.fp, Reg.sp),  # lw  $fp, 0($sp)
+                    # reset stack by size of arguments
+                    mips_inst.Addiu(Reg.sp, Reg.sp, arg_size),
                     # jump back to caller
-                    mips_inst.Jr(Reg.ra),              # jr  $ra
+                    mips_inst.Jr(Reg.ra),  # jr  $ra
                     mips_inst.Blank(),
                 )
 
@@ -219,24 +272,50 @@ class MipsVisitor(ir.Visitor):
                 """
                 Performs integer comparison
                 """
+
+                self.variables.new_var(Label(instr.name), self.stack_offset)
+                size: int = int(instr.type.width / 8)  # TODO allow for arrays
+                self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
                 assert len(instr.operands) == 2
 
-                self.variables.new_alias(Label(instr.name), self.variables[instr.operands[0].name])
-                self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
+                self.last_block.add_instr(
+                    self.load_value(instr.operands[0], Reg.t1),
+                    self.load_value(instr.operands[1], Reg.t2),
+                )
 
                 match instr.op:
                     case "eq":
-                        self.last_block.add_instr(
-                            mips_inst.Comment("icmp"),
-                            mips_inst.Beq(Reg.t0, Reg.t1, Label("test")),
-                        )
+                        print("\t\t -eq")
+                        self.last_block.add_instr(mips_inst.Sle(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp eq")))
+                    case "ne":
+                        print("ne")
+                        self.last_block.add_instr(mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp ne")))
+                    case "ugt":
+                        print("unhandled : ugt")
+                    case "uge":
+                        print("unhandled : uge")
+                    case "ult":
+                        print("unhandled : ult")
+                    case "ule":
+                        print("unhandled : ule")
+                    case "sgt":
+                        print("unhandled : sgt")
+                    case "sge":
+                        print("unhandled : sge")
+                    case "slt":
+                        print("unhandled : slt")
+                    case "sle":
+                        print("unhandled : sle")
+                    case _:
+                        raise ValueError(f"Unsupported icmp operation: '{instr.op}'")
 
                 self.last_block.add_instr(
-                    mips_inst.Comment("icmp"),
-                    mips_inst.Slt(Reg.t0, Reg.t1, Reg.t2),
+                    mips_inst.Sw(Reg.t1, Reg.fp, self.variables[instr.name].offset),
+                    mips_inst.Addiu(Reg.sp, Reg.sp, -size),
+                    mips_inst.Blank(),
                 )
 
-                print("busy!")
+                self.stack_offset -= size
 
             case ir_inst.CompareInstr():
                 print("unhandled!")
@@ -244,8 +323,20 @@ class MipsVisitor(ir.Visitor):
             case ir_inst.CastInstr():
                 assert len(instr.operands) == 1
                 # ? instruction ignored because mips is 32bit, possibly a problem in future
-                self.variables.new_alias(Label(instr.name), self.variables[instr.operands[0].name])
-                self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
+                if isinstance(instr.operands[0], ir.Constant):
+                    size = get_type_size(instr.operands[0].type)
+                    var = self.variables.new_var(Label(instr.name), self.stack_offset)
+                    self.stack_offset -= size
+                    self.last_block.add_instr(
+                        mips_inst.Li(Reg.t0, instr.operands[0].constant, mips_inst.IrComment(f"{instr}")),  # TODO support full i32 range load
+                        mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
+                        mips_inst.Addiu(Reg.sp, Reg.sp, -size),  # addiu $sp, $sp, -size
+                        mips_inst.Blank(),
+                    )
+                    self.stack_offset -= size
+                else:
+                    self.variables.new_alias(Label(instr.name), self.variables[instr.operands[0].name])
+                    self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
 
             case ir_inst.Instruction():
                 assert len(instr.operands) == 2  # ? possibly needs to be <= 2 for unary ops
@@ -279,9 +370,9 @@ class MipsVisitor(ir.Visitor):
         )
 
     def handle_instruction(self, instr: ir.Instruction):
-        self.variables.new_var(Label(instr.name), self.stack_offset)
-        size: int = int(instr.type.width / 8)  # TODO allow for arrays
-        self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
+        var = self.variables.new_var(Label(instr.name), self.stack_offset)
+        size = get_type_size(instr.type)
+        self.last_block.add_instr(mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")))
         assert len(instr.operands) == 2
 
         self.last_block.add_instr(
@@ -316,12 +407,17 @@ class MipsVisitor(ir.Visitor):
                     mips_inst.Divu(Reg.t1, Reg.t2),
                     mips_inst.Mfhi(Reg.t1),
                 )
+            case "and":
+                self.last_block.add_instr(mips_inst.And(Reg.t1, Reg.t1, Reg.t2))
+            case "or":
+                self.last_block.add_instr(mips_inst.Or(Reg.t1, Reg.t1, Reg.t2))
+            case "xor":
+                self.last_block.add_instr(mips_inst.Xor(Reg.t1, Reg.t1, Reg.t2))
             case _:
                 print(f"Unhandled instruction: '{instr.opname}'")
 
         self.last_block.add_instr(
-            mips_inst.Sw(Reg.t1, Reg.fp, self.variables[instr.name].offset),
-            mips_inst.Addiu(Reg.sp, Reg.sp, -size),
+            mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
             mips_inst.Blank(),
         )
 
