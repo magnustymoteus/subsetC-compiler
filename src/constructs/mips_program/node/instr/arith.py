@@ -2,8 +2,8 @@
 All arithmetic MIPS instructions.
 """
 
-from src.constructs.mips_program.node.instr.instruction import BinOpMixin, Instruction, UnOpMixin
-from src.constructs.mips_program.node.reg import Reg
+from src.constructs.mips_program.node.instr.instruction import BinOpMixin, Instruction
+from src.constructs.mips_program.node.reg import Reg, Regf
 from src.constructs.mips_program.node.instr.comment import Comment
 
 
@@ -22,19 +22,6 @@ class ArithOp(Instruction):
         super().__init__(text)
         self.op = op
         self.dest = dest
-
-
-class ArithUnOp(ArithOp, UnOpMixin):
-    """
-    Base class for all MIPS arithmetic unary operations
-    """
-
-    def __init__(self, op: str, dest: Reg, operand: Reg, text: str | Comment = "") -> None:
-        ArithOp.__init__(self, op, dest, text)
-        UnOpMixin.__init__(self, operand)
-
-    def __str__(self) -> str:
-        return f"{self.op} {self.dest}, {self.operand}{super().__str__()}"
 
 
 class ArithBinOp(ArithOp, BinOpMixin):
@@ -158,3 +145,111 @@ class Subu(ArithBinOp):
 
     def __init__(self, dest: Reg, operand1: Reg, operand2: Reg, text: str | Comment = "") -> None:
         super().__init__("subu", dest, operand1, operand2, text)
+
+
+class FpArithBinOp(Instruction):
+    """
+    Base class for all MIPS floating point arithmetic operations
+    """
+
+    op: str
+    "Floating point operation to perform"
+
+    dest: Regf
+    "Destination register to store result in"
+
+    operand1: Regf
+    "First operand of the operation"
+
+    operand2: Regf
+    "Second operand of the operation"
+
+    def __init__(self, op: str, dest: Regf, operand1: Regf, operand2: Regf, text: str | Comment = "") -> None:
+        Instruction.__init__(self, text)
+        self.op = op
+        self.dest = dest
+        self.operand1 = operand1
+        self.operand2 = operand2
+
+    def __str__(self) -> str:
+        return f"{self.op} {self.dest}, {self.operand1}, {self.operand2}{super().__str__()}"
+
+
+class Add_s(FpArithBinOp):
+    """
+    MIPS `add.s` instruction.
+    Add contents of :operand1: and :operand2: registers and store result into :dest: register.
+    """
+
+    def __init__(self, dest: Regf, operand1: Regf, operand2: Regf, text: str | Comment = "") -> None:
+        super().__init__("add.s", dest, operand1, operand2, text)
+
+class Sub_s(FpArithBinOp):
+    """
+    MIPS `sub.s` instruction.
+    Subtract contents of :operand2: register from contents of :operand1: register and store result into :dest: register.
+    """
+
+    def __init__(self, dest: Regf, operand1: Regf, operand2: Regf, text: str | Comment = "") -> None:
+        super().__init__("sub.s", dest, operand1, operand2, text)
+
+class Mul_s(FpArithBinOp):
+    """
+    MIPS `mul.s` instruction.
+    Multiply contents of :operand1: and :operand2: registers and store result into :dest: register.
+    """
+
+    def __init__(self, dest: Regf, operand1: Regf, operand2: Regf, text: str | Comment = "") -> None:
+        super().__init__("mul.s", dest, operand1, operand2, text)
+
+class Div_s(FpArithBinOp):
+    """
+    MIPS `div.s` instruction.
+    Divide contents of :operand1: and :operand2: registers and store result into :dest: register.
+    """
+
+    def __init__(self, dest: Regf, operand1: Regf, operand2: Regf, text: str | Comment = "") -> None:
+        super().__init__("div.s", dest, operand1, operand2, text)
+
+class FpArithUnOp(Instruction):
+    """
+    Base class for all MIPS floating point arithmetic unary operations
+    """
+
+    op: str
+    "Floating point operation to perform"
+
+    dest: Regf
+    "Destination register to store result in"
+
+    operand1: Regf
+    "First operand of the operation"
+
+    def __init__(self, op: str, dest: Regf, operand1: Regf, text: str | Comment = "") -> None:
+        Instruction.__init__(self, text)
+        self.op = op
+        self.dest = dest
+        self.operand1 = operand1
+
+    def __str__(self) -> str:
+        return f"{self.op} {self.dest}, {self.operand1}{super().__str__()}"
+
+
+class Abs_s(FpArithUnOp):
+    """
+    MIPS `abs.s` instruction.
+    Take absolute value of contents of :operand1: register and store result into :dest: register.
+    """
+
+    def __init__(self, dest: Regf, operand1: Regf, text: str | Comment = "") -> None:
+        super().__init__("abs.s", dest, operand1, text)
+
+
+class Neg_s(FpArithUnOp):
+    """
+    MIPS `neg.s` instruction.
+    Take negative value of contents of :operand1: register and store result into :dest: register.
+    """
+
+    def __init__(self, dest: Regf, operand1: Regf, text: str | Comment = "") -> None:
+        super().__init__("neg.s", dest, operand1, text)

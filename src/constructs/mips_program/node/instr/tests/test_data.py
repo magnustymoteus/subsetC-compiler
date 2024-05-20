@@ -1,6 +1,6 @@
-from src.constructs.mips_program.node.instr import La, Li, Lui, Lw, Mfhi, Mflo, Move, Sw
+from src.constructs.mips_program.node.instr.data import La, Li, Lui, Lw, Mfhi, Mflo, Move, Sw, Cvt_s_w, Cvt_w_s, Mov_s, L_s, S_s, Mtc1, Mfc1
 from src.constructs.mips_program.node.label import Label
-from src.constructs.mips_program.node.reg import Reg
+from src.constructs.mips_program.node.reg import Reg, Regf
 
 
 def test_la():
@@ -41,3 +41,31 @@ def test_move():
 def test_sw():
     instruction = Sw(Reg.t0, Reg.s0, 1)
     assert str(instruction) == "sw $t0, 1($s0)"
+
+def test_cvt_s_w():
+    instruction = Cvt_s_w(Regf.f0, Regf.f1)
+    assert str(instruction) == "cvt.s.w $f0, $f1"
+
+def test_cvt_w_s():
+    instruction = Cvt_w_s(Regf.f0, Regf.f1)
+    assert str(instruction) == "cvt.w.s $f0, $f1"
+
+def test_mov_s():
+    instruction = Mov_s(Regf.f0, Regf.f1)
+    assert str(instruction) == "mov.s $f0, $f1"
+
+def test_l_s():
+    instruction = L_s(Regf.f0, Reg.t1, 1)
+    assert str(instruction) == "l.s $f0, 1($t1)"
+
+def test_s_s():
+    instruction = S_s(Regf.f0, Reg.t1, 1)
+    assert str(instruction) == "s.s $f0, 1($t1)"
+
+def test_mtc1():
+    instruction = Mtc1(Regf.f0, Regf.f1)
+    assert str(instruction) == "mtc1 $f0, $f1"
+
+def test_mfc1():
+    instruction = Mfc1(Regf.f0, Regf.f1)
+    assert str(instruction) == "mfc1 $f0, $f1"

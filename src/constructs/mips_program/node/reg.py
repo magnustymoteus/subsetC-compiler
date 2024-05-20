@@ -1,6 +1,5 @@
 from enum import Enum
 
-
 class Reg(Enum):
     zero = "zero"
     at = "at"
@@ -34,6 +33,43 @@ class Reg(Enum):
     sp = "sp"
     fp = "fp"
     ra = "ra"
+
+    def __str__(self) -> str:
+        return f"${self.value}"
+
+class Regf(Enum):
+    f0 = "f0"
+    f1 = "f1"
+    f2 = "f2"
+    f3 = "f3"
+    f4 = "f4"
+    f5 = "f5"
+    f6 = "f6"
+    f7 = "f7"
+    f8 = "f8"
+    f9 = "f9"
+    f10 = "f10"
+    f11 = "f11"
+    f12 = "f12"
+    f13 = "f13"
+    f14 = "f14"
+    f15 = "f15"
+    f16 = "f16"
+    f17 = "f17"
+    f18 = "f18"
+    f19 = "f19"
+    f20 = "f20"
+    f21 = "f21"
+    f22 = "f22"
+    f23 = "f23"
+    f24 = "f24"
+    f25 = "f25"
+    f26 = "f26"
+    f27 = "f27"
+    f28 = "f28"
+    f29 = "f29"
+    f30 = "f30"
+    f31 = "f31"
 
     def __str__(self) -> str:
         return f"${self.value}"

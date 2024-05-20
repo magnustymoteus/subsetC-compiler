@@ -1,5 +1,5 @@
-from src.constructs.mips_program.node.instr import Slt, Slti, Sltu, Sle, Sne, Seq
-from src.constructs.mips_program.node.reg import Reg
+from src.constructs.mips_program.node.instr.comp import Slt, Slti, Sltu, Sle, Sne, Seq, C_eq_s, C_le_s, C_lt_s
+from src.constructs.mips_program.node.reg import Reg, Regf
 
 
 def test_slt():
@@ -62,3 +62,18 @@ def test_seq_imm():
     assert str(instruction[1]) == "subu $t1, $t2, $t0"
     assert str(instruction[2]) == "ori $t0, $zero, 1"
     assert str(instruction[3]) == "sltu $t1, $t1, $t0"
+
+
+def test_c_eq_s():
+    instruction = C_eq_s(Regf.f1, Regf.f2)
+    assert str(instruction) == "c.eq.s $f1, $f2"
+
+
+def test_c_le_s():
+    instruction = C_le_s(Regf.f1, Regf.f2)
+    assert str(instruction) == "c.le.s $f1, $f2"
+
+
+def test_c_lt_s():
+    instruction = C_lt_s(Regf.f1, Regf.f2)
+    assert str(instruction) == "c.lt.s $f1, $f2"

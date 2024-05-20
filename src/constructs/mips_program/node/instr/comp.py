@@ -3,7 +3,7 @@ All comparison MIPS instructions.
 """
 
 from src.constructs.mips_program.node.instr.instruction import Instruction
-from src.constructs.mips_program.node.reg import Reg
+from src.constructs.mips_program.node.reg import Reg, Regf
 from src.constructs.mips_program.node.instr.arith import Addi, Subu
 from src.constructs.mips_program.node.instr.logic import Ori
 from src.constructs.mips_program.node.instr.comment import Comment
@@ -147,3 +147,57 @@ class Seq(Instruction):
                 Ori(Reg.t0, Reg.zero, 1),
                 Sltu(dest, dest, Reg.t0),
             )
+
+
+class FpCompOp(Instruction):
+    """
+    Base class for all floating point comparison instructions
+    """
+
+    op: str
+    "Operation to perform"
+
+    operand1: Regf
+    "First operand to compare"
+
+    operand2: Regf
+    "Second operand to compare"
+
+    def __init__(self, op: str, operand1: Regf, operand2: Regf, text: str | Comment = "") -> None:
+        super().__init__(text)
+        self.op = op
+        self.operand1 = operand1
+        self.operand2 = operand2
+
+    def __str__(self) -> str:
+        return f"{self.op} {self.operand1}, {self.operand2}{super().__str__()}"
+
+
+class C_eq_s(FpCompOp):
+    """
+    MIPS `c.eq.s` instruction.
+    Set FP condition flag if :operand1: register is equal to contents of :operand2: register.
+    """
+
+    def __init__(self, operand1: Regf, operand2: Regf, text: str | Comment = "") -> None:
+        super().__init__("c.eq.s", operand1, operand2, text)
+
+
+class C_le_s(FpCompOp):
+    """
+    MIPS `c.le.s` instruction.
+    Set FP condition flag if :operand1: register is less than or equal to contents of :operand2: register.
+    """
+
+    def __init__(self, operand1: Regf, operand2: Regf, text: str | Comment = "") -> None:
+        super().__init__("c.le.s", operand1, operand2, text)
+
+
+class C_lt_s(FpCompOp):
+    """
+    MIPS `c.lt.s` instruction.
+    Set FP condition flag if :operand1: register is less than contents of :operand2: register.
+    """
+
+    def __init__(self, operand1: Regf, operand2: Regf, text: str | Comment = "") -> None:
+        super().__init__("c.lt.s", operand1, operand2, text)

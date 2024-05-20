@@ -27,16 +27,6 @@ class Instruction(Node):
             return f"  #{self.text}" if self.text else ""
 
 
-class UnOpMixin:
-    """Mixin that adds an `operand` attribute to the class"""
-
-    operand: Reg
-    "Register containing operand value"
-
-    def __init__(self, operand: Reg) -> None:
-        self.operand = operand
-
-
 class BinOpMixin:
     """Mixin that adds `operand1` and `operand2` attributes to the class"""
 
