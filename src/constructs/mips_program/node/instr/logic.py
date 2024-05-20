@@ -47,6 +47,16 @@ class Ori(ArithBinOp):
         super().__init__("ori", dest, operand1, operand2, text)
 
 
+class Xor(ArithBinOp):
+    """
+    MIPS `xor` instruction.
+    Store result of bitwise XOR of :operand1: and :operand2: registers and store result into :dest: register.
+    """
+
+    def __init__(self, dest: Reg, operand1: Reg, operand2: Reg, text: str | Comment = "") -> None:
+        super().__init__("xor", dest, operand1, operand2, text)
+
+
 class Ssl(ArithBinOp):
     """
     MIPS `ssl` (shift left logical) instruction.

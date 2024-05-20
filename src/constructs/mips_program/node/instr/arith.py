@@ -34,7 +34,7 @@ class ArithUnOp(ArithOp, UnOpMixin):
         UnOpMixin.__init__(self, operand)
 
     def __str__(self) -> str:
-        return f"{self.op} {self.dest}, {self.operand} {super().__str__()}"
+        return f"{self.op} {self.dest}, {self.operand}{super().__str__()}"
 
 
 class ArithBinOp(ArithOp, BinOpMixin):
@@ -47,7 +47,7 @@ class ArithBinOp(ArithOp, BinOpMixin):
         BinOpMixin.__init__(self, operand1, operand2)
 
     def __str__(self) -> str:
-        return f"{self.op} {self.dest}, {self.operand1}, {self.operand2} {super().__str__()}"
+        return f"{self.op} {self.dest}, {self.operand1}, {self.operand2}{super().__str__()}"
 
 
 class Add(ArithBinOp):
@@ -102,7 +102,7 @@ class Div(BinOpMixin, Instruction):
         Instruction.__init__(self, text)
 
     def __str__(self) -> str:
-        return f"div {self.operand1}, {self.operand2} {super().__str__()}"
+        return f"div {self.operand1}, {self.operand2}{super().__str__()}"
 
 
 class Divu(BinOpMixin, Instruction):
@@ -117,7 +117,7 @@ class Divu(BinOpMixin, Instruction):
         Instruction.__init__(self, text)
 
     def __str__(self) -> str:
-        return f"divu {self.operand1}, {self.operand2} {super().__str__()}"
+        return f"divu {self.operand1}, {self.operand2}{super().__str__()}"
 
 
 class Mul(ArithBinOp):

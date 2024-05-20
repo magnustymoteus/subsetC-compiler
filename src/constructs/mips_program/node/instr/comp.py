@@ -40,7 +40,7 @@ class Slt(SlInstruction):
         self.operand2 = operand2
 
     def __str__(self) -> str:
-        return f"slt {self.dest}, {self.operand1}, {self.operand2} {super().__str__()}"
+        return f"slt {self.dest}, {self.operand1}, {self.operand2}{super().__str__()}"
 
 
 class Slti(SlInstruction):
@@ -57,7 +57,7 @@ class Slti(SlInstruction):
         self.operand2 = operand2
 
     def __str__(self) -> str:
-        return f"slti {self.dest}, {self.operand1}, {self.operand2} {super().__str__()}"
+        return f"slti {self.dest}, {self.operand1}, {self.operand2}{super().__str__()}"
 
 
 class Sltu(SlInstruction):
@@ -74,7 +74,7 @@ class Sltu(SlInstruction):
         self.operand2 = operand2
 
     def __str__(self) -> str:
-        return f"sltu {self.dest}, {self.operand1}, {self.operand2} {super().__str__()}"
+        return f"sltu {self.dest}, {self.operand1}, {self.operand2}{super().__str__()}"
 
 
 class Sle(Instruction):

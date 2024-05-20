@@ -22,7 +22,7 @@ class J(Instruction):
         self.label = label
 
     def __str__(self) -> str:
-        return f"j {self.label.label} {super().__str__()}"
+        return f"j {self.label.label}{super().__str__()}"
 
 
 class Jr(Instruction):
@@ -39,7 +39,7 @@ class Jr(Instruction):
         self.dest = dest
 
     def __str__(self) -> str:
-        return f"jr {self.dest} {super().__str__()}"
+        return f"jr {self.dest}{super().__str__()}"
 
 
 class Jal(Instruction):
@@ -56,7 +56,7 @@ class Jal(Instruction):
         self.label = label
 
     def __str__(self) -> str:
-        return f"jal {self.label.label} {super().__str__()}"
+        return f"jal {self.label.label}{super().__str__()}"
 
 
 class Jalr(Instruction):
@@ -73,4 +73,4 @@ class Jalr(Instruction):
         self.dest = dest
 
     def __str__(self) -> str:
-        return f"jalr {self.dest} {super().__str__()}"
+        return f"jalr {self.dest}{super().__str__()}"

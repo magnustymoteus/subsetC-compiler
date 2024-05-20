@@ -365,6 +365,8 @@ class MipsVisitor(ir.Visitor):
                 self.last_block.add_instr(mips_inst.And(Reg.t1, Reg.t1, Reg.t2))
             case "or":
                 self.last_block.add_instr(mips_inst.Or(Reg.t1, Reg.t1, Reg.t2))
+            case "xor":
+                self.last_block.add_instr(mips_inst.Xor(Reg.t1, Reg.t1, Reg.t2))
             case _:
                 print(f"Unhandled instruction: '{instr.opname}'")
 

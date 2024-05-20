@@ -34,7 +34,7 @@ class Branch(Instruction):
         self.label = label
 
     def __str__(self) -> str:
-        return f"{self.type} {self.lhs}, {self.rhs}, {self.label.label} {super().__str__()}"
+        return f"{self.type} {self.lhs}, {self.rhs}, {self.label.label}{super().__str__()}"
 
 
 class Beq(Branch):

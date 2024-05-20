@@ -26,7 +26,7 @@ class La(Instruction):
         self.label = label
 
     def __str__(self) -> str:
-        return f"la {self.dest}, {self.label.label} {super().__str__()}"
+        return f"la {self.dest}, {self.label.label}{super().__str__()}"
 
 
 class Li(Instruction):
@@ -47,7 +47,7 @@ class Li(Instruction):
         self.value = value
 
     def __str__(self) -> str:
-        return f"li {self.dest}, {self.value} {super().__str__()}"
+        return f"li {self.dest}, {self.value}{super().__str__()}"
 
 
 class Lui(Li):
@@ -57,7 +57,7 @@ class Lui(Li):
     """
 
     def __str__(self) -> str:
-        return f"lui {self.dest}, {self.value} {super().__str__()}"
+        return f"lui {self.dest}, {self.value}{Instruction.__str__(self)}"
 
 
 class Lw(Instruction):
@@ -84,7 +84,7 @@ class Lw(Instruction):
         self.offset = offset
 
     def __str__(self) -> str:
-        return f"lw {self.dest}, {self.offset}({self.src}) {super().__str__()}"
+        return f"lw {self.dest}, {self.offset}({self.src}){super().__str__()}"
 
 
 class MfInstruction(Instruction):
@@ -104,7 +104,7 @@ class MfInstruction(Instruction):
         self.dest = dest
 
     def __str__(self) -> str:
-        return f"mf{self.src} {self.dest} {super().__str__()}"
+        return f"mf{self.src} {self.dest}{super().__str__()}"
 
 
 class Mfhi(MfInstruction):
@@ -145,7 +145,7 @@ class Move(Instruction):
         self.src = src
 
     def __str__(self) -> str:
-        return f"move {self.dest}, {self.src} {super().__str__()}"
+        return f"move {self.dest}, {self.src}{super().__str__()}"
 
 
 class Sw(Instruction):
@@ -172,4 +172,4 @@ class Sw(Instruction):
         self.offset = offset
 
     def __str__(self) -> str:
-        return f"sw {self.src}, {self.offset}({self.dest}) {super().__str__()}"
+        return f"sw {self.src}, {self.offset}({self.dest}){super().__str__()}"
