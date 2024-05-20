@@ -122,3 +122,28 @@ class Sne(Instruction):
             return Subu(dest, lhs, rhs, text), Sltu(dest, Reg.zero, dest)
         if isinstance(rhs, int):
             return Addi(Reg.t0, Reg.zero, rhs, text), Subu(dest, lhs, Reg.t0), Sltu(dest, Reg.zero, dest)
+
+
+class Seq(Instruction):
+    """
+    MIPS `seq` (set equal) instruction.
+    """
+
+    def __new__(
+        cls, dest: Reg, lhs: Reg, rhs: Reg | int, text: str | Comment = ""
+    ) -> tuple[Subu, Ori, Sltu] | tuple[Addi, Subu, Ori, Sltu]:
+        """
+        example: seq $t1, $t2, $t3
+        :param dest: $t1
+        :param lhs: $t2
+        :param rhs: $t3 (if register) or 5 (for example if immediate)
+        """
+        if isinstance(rhs, Reg):
+            return Subu(dest, lhs, rhs, text), Ori(Reg.t0, Reg.zero, 1), Sltu(dest, dest, Reg.t0)
+        if isinstance(rhs, int):
+            return (
+                Addi(Reg.t0, Reg.zero, rhs, text),
+                Subu(dest, lhs, Reg.t0),
+                Ori(Reg.t0, Reg.zero, 1),
+                Sltu(dest, dest, Reg.t0),
+            )

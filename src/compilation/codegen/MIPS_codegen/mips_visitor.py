@@ -37,6 +37,7 @@ Module
 def assert_type(value, typename):
     assert type(value).__name__ == typename, f"type '{type(value).__name__}' not implemented"
 
+
 def get_type_size(type: ir.Type) -> int:
     """Get the size of the type in bytes."""
     # TODO allow for arrays
@@ -215,7 +216,23 @@ class MipsVisitor(ir.Visitor):
                 )
 
             case ir_inst.ConditionalBranch():
-                print("unhandled!")
+                condition, true_block, false_block = instr.operands
+
+                self.last_block.add_instr(
+                    # Load the condition value into a register
+                    self.load_value(condition, Reg.t1),
+                    # Branch if the condition is true
+                    mips_inst.Bne(
+                        Reg.t1,
+                        Reg.zero,
+                        Label(f"{self.function.name}.{true_block.name}"),
+                        mips_inst.Comment(f"{instr} condition true"),
+                    ),
+                    # Branch to the false block if the condition is zero
+                    mips_inst.J(
+                        Label(f"{self.function.name}.{false_block.name}"), mips_inst.Comment(f"{instr} condition false")
+                    ),
+                )
 
             case ir_inst.Comment():
                 self.last_block.add_instr(mips_inst.CComment(instr.text))
@@ -225,7 +242,9 @@ class MipsVisitor(ir.Visitor):
 
             case ir_inst.LoadInstr():
                 assert len(instr.operands) == 1
-                alloc: ir.AllocaInstr = instr.operands[0]  # TODO wrong, operand is just the previous step not always alloca
+                alloc: ir.AllocaInstr = instr.operands[
+                    0
+                ]  # TODO wrong, operand is just the previous step not always alloca
                 assert isinstance(alloc, (ir.AllocaInstr, ir.GEPInstr))
 
                 size = get_type_size(alloc.operands[0].type)
@@ -290,9 +309,9 @@ class MipsVisitor(ir.Visitor):
                 match instr.op:
                     case "eq":
                         print("\t\t -eq")
-                        self.last_block.add_instr(mips_inst.Sle(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp eq")))
+                        self.last_block.add_instr(mips_inst.Seq(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp eq")))
                     case "ne":
-                        print("ne")
+                        print("\t\t ne")
                         self.last_block.add_instr(mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp ne")))
                     case "ugt":
                         print("unhandled : ugt")
@@ -307,7 +326,8 @@ class MipsVisitor(ir.Visitor):
                     case "sge":
                         print("unhandled : sge")
                     case "slt":
-                        print("unhandled : slt")
+                        print("\t\t slt")
+                        self.last_block.add_instr(mips_inst.Slt(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp slt")))
                     case "sle":
                         print("unhandled : sle")
                     case _:
@@ -332,7 +352,9 @@ class MipsVisitor(ir.Visitor):
                     var = self.variables.new_var(Label(instr.name), self.stack_offset)
                     self.stack_offset -= size
                     self.last_block.add_instr(
-                        mips_inst.Li(Reg.t0, instr.operands[0].constant, mips_inst.IrComment(f"{instr}")),  # TODO support full i32 range load
+                        mips_inst.Li(
+                            Reg.t0, instr.operands[0].constant, mips_inst.IrComment(f"{instr}")
+                        ),  # TODO support full i32 range load
                         mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
                         mips_inst.Addiu(Reg.sp, Reg.sp, -size),  # addiu $sp, $sp, -size
                         mips_inst.Blank(),
@@ -412,11 +434,11 @@ class MipsVisitor(ir.Visitor):
                     mips_inst.Mfhi(Reg.t1),
                 )
             case "and":
-                self.last_block.add_instr(mips_inst.And(Reg.t1, Reg.t1, Reg.t2))
+                self.last_block.add_instr(mips_inst.And(Reg.t1, Reg.t1, Reg.t2), mips_inst.Comment("and"))
             case "or":
-                self.last_block.add_instr(mips_inst.Or(Reg.t1, Reg.t1, Reg.t2))
+                self.last_block.add_instr(mips_inst.Or(Reg.t1, Reg.t1, Reg.t2), mips_inst.Comment("or"))
             case "xor":
-                self.last_block.add_instr(mips_inst.Xor(Reg.t1, Reg.t1, Reg.t2))
+                self.last_block.add_instr(mips_inst.Xor(Reg.t1, Reg.t1, Reg.t2), mips_inst.Comment("xor"))
             case _:
                 print(f"Unhandled instruction: '{instr.opname}'")
 

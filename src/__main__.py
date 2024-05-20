@@ -36,7 +36,7 @@ def main(argv):
         "--targets", choices=["llvm", "mips"], nargs="+", required=True, help="Choose 1 or more languages to compile to"
     )
     args = arg_parser.parse_args(argv[1:])
-    #compiler = Compiler(args.disable, args.viz)
+    # compiler = Compiler(args.disable, args.viz)
 
     pass_tests = Path.cwd().glob(args.path)
 
@@ -106,46 +106,46 @@ def main(argv):
     affected files: variables3.c, unaryOperations.c
     """
 
-    filtered = ['proj2_man_pass_pointerToPointer2.c',
-                'proj2_man_pass_pointerOperations2.c',
-                'proj4_man_pass_switchEnum.c',
-                'variables7.c',
-                'variables8.c',
-                'printf3.c',
-                'pointerArgument.c',
-                'proj2_man_pass_pointerReassignment.c',
-                'proj2_man_pass_pointerConstRessignment.c',
-                'structs.c',
-                'variables6.c',
-                'scoping.c',
-                'proj2_man_pass_customPostfixPtr1.c',
-                'proj2_man_pass_conversionExplicitTypeCast.c',
-                'binaryOperations1.c',
-                'unions.c',
-                'proj2_man_pass_simplePostfix.c',
-                'proj2_man_pass_pointerOperations1.c',
-                'proj2_opt_pass_constPointerToNonConstPointer3.c',
-                'proj2_man_pass_advancedPointerOperations.c',
-                'proj2_man_pass_conversionImplicit.c',
-                'dereferenceAssignment.c',
-                'proj4_man_pass_ifChar.c',
-                'fibonacciRecursive.c',
-                'proj2_opt_pass_constPointerToNonConstPointer2.c',
-                'variables4.c',
-                'proj2_man_pass_simplePointerOperation.c',
-                'variables3.c',
-                'proj2_man_pass_variableNormal.c',
-                'unaryOperations.c',
-                'proj2_man_pass_pointerToPointer.c',
-                'proj2_opt_pass_constPointerToNonConstPointer1.c',
-                ]
+    # filtered = ['proj2_man_pass_pointerToPointer2.c',
+    #             'proj2_man_pass_pointerOperations2.c',
+    #             'proj4_man_pass_switchEnum.c',
+    #             'variables7.c',
+    #             'variables8.c',
+    #             'printf3.c',
+    #             'pointerArgument.c',
+    #             'proj2_man_pass_pointerReassignment.c',
+    #             'proj2_man_pass_pointerConstRessignment.c',
+    #             'structs.c',
+    #             'variables6.c',
+    #             'scoping.c',
+    #             'proj2_man_pass_customPostfixPtr1.c',
+    #             'proj2_man_pass_conversionExplicitTypeCast.c',
+    #             'binaryOperations1.c',
+    #             'unions.c',
+    #             'proj2_man_pass_simplePostfix.c',
+    #             'proj2_man_pass_pointerOperations1.c',
+    #             'proj2_opt_pass_constPointerToNonConstPointer3.c',
+    #             'proj2_man_pass_advancedPointerOperations.c',
+    #             'proj2_man_pass_conversionImplicit.c',
+    #             'dereferenceAssignment.c',
+    #             'proj4_man_pass_ifChar.c',
+    #             'fibonacciRecursive.c',
+    #             'proj2_opt_pass_constPointerToNonConstPointer2.c',
+    #             'variables4.c',
+    #             'proj2_man_pass_simplePointerOperation.c',
+    #             'variables3.c',
+    #             'proj2_man_pass_variableNormal.c',
+    #             'unaryOperations.c',
+    #             'proj2_man_pass_pointerToPointer.c',
+    #             'proj2_opt_pass_constPointerToNonConstPointer1.c',
+    #             ]
 
-
+    filtered = []
 
     filtered_all = [file for file in pass_tests if file.name not in filtered]
     for path in filtered_all:
         compiler = Compiler(args.disable, args.viz)
-        #path_in_str = str(path)
+        # path_in_str = str(path)
         try:
             module: Module = compiler.compile_llvm(path)
             filename, fileext = os.path.splitext(path)
