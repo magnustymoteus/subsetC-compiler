@@ -5,6 +5,7 @@ All data manipulation MIPS instructions.
 from src.constructs.mips_program.node.instr.instruction import Instruction
 from src.constructs.mips_program.node.label import Label
 from src.constructs.mips_program.node.reg import Reg
+from src.constructs.mips_program.node.instr.comment import Comment
 
 
 class La(Instruction):
@@ -19,13 +20,13 @@ class La(Instruction):
     label: Label
     "Value to load into register"
 
-    def __init__(self, dest: Reg, label: Label) -> None:
-        super().__init__()
+    def __init__(self, dest: Reg, label: Label, text: str | Comment = "") -> None:
+        super().__init__(text)
         self.dest = dest
         self.label = label
 
     def __str__(self) -> str:
-        return f"la {self.dest}, {self.label.label}"
+        return f"la {self.dest}, {self.label.label} {super().__str__()}"
 
 
 class Li(Instruction):
@@ -40,13 +41,13 @@ class Li(Instruction):
     value: int
     "Value to load into register"
 
-    def __init__(self, dest: Reg, value: int) -> None:
-        super().__init__()
+    def __init__(self, dest: Reg, value: int, text: str | Comment = "") -> None:
+        super().__init__(text)
         self.dest = dest
         self.value = value
 
     def __str__(self) -> str:
-        return f"li {self.dest}, {self.value}"
+        return f"li {self.dest}, {self.value} {super().__str__()}"
 
 
 class Lui(Li):
@@ -56,7 +57,7 @@ class Lui(Li):
     """
 
     def __str__(self) -> str:
-        return f"lui {self.dest}, {self.value}"
+        return f"lui {self.dest}, {self.value} {super().__str__()}"
 
 
 class Lw(Instruction):
@@ -74,16 +75,16 @@ class Lw(Instruction):
     offset: int
     "Offset from the source address"
 
-    def __init__(self, dest: Reg, src: Reg, offset: int = 0) -> None:
-        assert offset >= -32768 and offset <= 32767  # ? TODO exception
+    def __init__(self, dest: Reg, src: Reg, offset: int = 0, text: str | Comment = "") -> None:
+        assert -32768 <= offset <= 32767  # ? TODO exception
 
-        super().__init__()
+        super().__init__(text)
         self.dest = dest
         self.src = src
         self.offset = offset
 
     def __str__(self) -> str:
-        return f"lw {self.dest}, {self.offset}({self.src})"
+        return f"lw {self.dest}, {self.offset}({self.src}) {super().__str__()}"
 
 
 class MfInstruction(Instruction):
@@ -97,13 +98,13 @@ class MfInstruction(Instruction):
     dest: Reg
     "Destination register to move into"
 
-    def __init__(self, src: str, dest: Reg) -> None:
-        super().__init__()
+    def __init__(self, src: str, dest: Reg, text: str | Comment = "") -> None:
+        super().__init__(text)
         self.src = src
         self.dest = dest
 
     def __str__(self) -> str:
-        return f"mf{self.src} {self.dest}"
+        return f"mf{self.src} {self.dest} {super().__str__()}"
 
 
 class Mfhi(MfInstruction):
@@ -112,8 +113,8 @@ class Mfhi(MfInstruction):
     Load contents of the special `hi` register into :dest: register.
     """
 
-    def __init__(self, dest: Reg) -> None:
-        super().__init__("hi", dest)
+    def __init__(self, dest: Reg, text: str | Comment = "") -> None:
+        super().__init__("hi", dest, text)
 
 
 class Mflo(MfInstruction):
@@ -122,8 +123,8 @@ class Mflo(MfInstruction):
     Load contents of the special `lo` register into :dest: register.
     """
 
-    def __init__(self, dest: Reg) -> None:
-        super().__init__("lo", dest)
+    def __init__(self, dest: Reg, text: str | Comment = "") -> None:
+        super().__init__("lo", dest, text)
 
 
 class Move(Instruction):
@@ -138,13 +139,13 @@ class Move(Instruction):
     src: Reg
     "Register containing source address to load from"
 
-    def __init__(self, dest: Reg, src: Reg) -> None:
-        super().__init__()
+    def __init__(self, dest: Reg, src: Reg, text: str | Comment = "") -> None:
+        super().__init__(text)
         self.dest = dest
         self.src = src
 
     def __str__(self) -> str:
-        return f"move {self.dest}, {self.src}"
+        return f"move {self.dest}, {self.src} {super().__str__()}"
 
 
 class Sw(Instruction):
@@ -162,13 +163,13 @@ class Sw(Instruction):
     offset: int
     "Offset from the source address"
 
-    def __init__(self, src: Reg, dest: Reg, offset: int = 0) -> None:
-        assert offset >= -32768 and offset <= 32767  # ? TODO exception
+    def __init__(self, src: Reg, dest: Reg, offset: int = 0, text: str | Comment = "") -> None:
+        assert -32768 <= offset <= 32767  # ? TODO exception
 
-        super().__init__()
+        super().__init__(text)
         self.src = src
         self.dest = dest
         self.offset = offset
 
     def __str__(self) -> str:
-        return f"sw {self.src}, {self.offset}({self.dest})"
+        return f"sw {self.src}, {self.offset}({self.dest}) {super().__str__()}"

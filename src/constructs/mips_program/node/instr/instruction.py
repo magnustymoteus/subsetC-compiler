@@ -1,12 +1,24 @@
 from src.constructs.mips_program.node.node import Node
 from src.constructs.mips_program.node.reg import Reg
+from src.constructs.mips_program.node.instr.comment import Comment
 
 
 class Instruction(Node):
     """Base node representing a MIPS instruction"""
 
-    def __init__(self) -> None:
+    text: str
+    "Inline comment for the instruction"
+
+    def __init__(self, text: str | Comment = "") -> None:
         super().__init__()
+        self.text = text
+
+    def __str__(self) -> str:
+        if isinstance(self.text, Comment):
+            return f"  {self.text}"
+        else:
+            return f"  #{self.text}" if self.text else ""
+
 
 
 class UnOpMixin:

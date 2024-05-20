@@ -94,13 +94,12 @@ class MipsVisitor(ir.Visitor):
         # if new function started, start by creating new stack frame
         if self.new_function_started:
             self.last_block.add_instr(
-                mips_inst.Comment("new stack frame"),
                 # store frame pointer at top of stack
-                mips_inst.Sw(Reg.fp, Reg.sp, 0),      # sw  $fp, 0($sp)
+                mips_inst.Sw(Reg.fp, Reg.sp, 0, "new stack frame"),  # sw  $fp, 0($sp)
                 # set frame pointer
-                mips_inst.Move(Reg.fp, Reg.sp),       # move    $fp, $sp
+                mips_inst.Move(Reg.fp, Reg.sp),  # move    $fp, $sp
                 # store return address on stack
-                mips_inst.Sw(Reg.ra, Reg.fp, -4),     # sw  $ra, -4($fp)
+                mips_inst.Sw(Reg.ra, Reg.fp, -4),  # sw  $ra, -4($fp)
                 # move stack pointer down
                 mips_inst.Addiu(Reg.sp, Reg.sp, -8),  # subiu   $sp, $sp, 8
                 mips_inst.Blank(),
@@ -133,9 +132,8 @@ class MipsVisitor(ir.Visitor):
                 self.variables.new_var(Label(instr.name), self.stack_offset)
                 # add instruction to the block and create new space on the stack for the var
                 self.last_block.add_instr(
-                    mips_inst.IrComment(f"{instr}"),
                     # move the stack pointer by the size of the variable
-                    mips_inst.Addiu(Reg.sp, Reg.sp, -size),  # addiu $sp, $sp, -size
+                    mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -size
                     mips_inst.Blank(),
                 )
                 self.stack_offset -= size
@@ -172,14 +170,20 @@ class MipsVisitor(ir.Visitor):
 
             case ir_inst.LoadInstr():
                 assert len(instr.operands) == 1
-                alloc: ir.AllocaInstr = instr.operands[0] # TODO wrong, operand is just the previous step not always alloca
+                alloc: ir.AllocaInstr = instr.operands[
+                    0
+                ]  # TODO wrong, operand is just the previous step not always alloca
                 assert isinstance(alloc, ir.AllocaInstr)
 
                 self.variables.new_var(Label(instr.name), self.stack_offset)
                 size: int = int(alloc.operands[0].type.width / 8)  # TODO allow for arrays
                 self.last_block.add_instr(
-                    mips_inst.IrComment(f"{instr}"),
-                    mips_inst.Addiu(Reg.sp, Reg.sp, -size),
+                    mips_inst.Addiu(
+                        Reg.sp,
+                        Reg.sp,
+                        -size,
+                        mips_inst.IrComment(f"{instr}"),
+                    ),
                     # load value into reg
                     mips_inst.Lw(Reg.t1, Reg.fp, self.variables[alloc.name].offset),  # lw $t1, $fp, src
                     # store value in new variable
@@ -202,11 +206,11 @@ class MipsVisitor(ir.Visitor):
                     # restore return register
                     mips_inst.Lw(Reg.ra, Reg.fp, -4),  # lw  $ra, -4($fp)
                     # restore stack pointer to start of frame
-                    mips_inst.Move(Reg.sp, Reg.fp),    # move    $sp, $fp
+                    mips_inst.Move(Reg.sp, Reg.fp),  # move    $sp, $fp
                     # restore previous frame pointer
-                    mips_inst.Lw(Reg.fp, Reg.sp),      # lw  $fp, 0($sp)
+                    mips_inst.Lw(Reg.fp, Reg.sp),  # lw  $fp, 0($sp)
                     # jump back to caller
-                    mips_inst.Jr(Reg.ra),              # jr  $ra
+                    mips_inst.Jr(Reg.ra),  # jr  $ra
                     mips_inst.Blank(),
                 )
 
@@ -232,34 +236,33 @@ class MipsVisitor(ir.Visitor):
                 )
 
                 match instr.op:
-                    case 'eq':
+                    case "eq":
                         print("unhandled : icmp eq")
                         # TODO : not correct
                         # self.last_block.add_instr(
                         #     mips_inst.Comment("icmp eq"),
-                        #     mips_inst.Beq(Reg.t0, Reg.t1, Label("test")),
+                        #     mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2),
                         # )
-                    case 'ne':
+                    case "ne":
                         print("ne")
                         self.last_block.add_instr(
-                            mips_inst.Comment("icmp ne"),
-                            mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2),
+                            mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp ne")),
                         )
-                    case 'ugt':
+                    case "ugt":
                         print("unhandled : ugt")
-                    case 'uge':
+                    case "uge":
                         print("unhandled : uge")
-                    case 'ult':
+                    case "ult":
                         print("unhandled : ult")
-                    case 'ule':
+                    case "ule":
                         print("unhandled : ule")
-                    case 'sgt':
+                    case "sgt":
                         print("unhandled : sgt")
-                    case 'sge':
+                    case "sge":
                         print("unhandled : sge")
-                    case 'slt':
+                    case "slt":
                         print("unhandled : slt")
-                    case 'sle':
+                    case "sle":
                         print("unhandled : sle")
                     case _:
                         raise ValueError(f"Unsupported icmp operation: '{instr.op}'")
@@ -284,8 +287,7 @@ class MipsVisitor(ir.Visitor):
                     size: int = int(instr.operands[0].type.width / 8)
                     self.variables.new_var(Label(instr.name), self.stack_offset)
                     self.last_block.add_instr(
-                        mips_inst.IrComment(f"{instr}"),
-                        mips_inst.Li(Reg.t0, instr.operands[0].constant),
+                        mips_inst.Li(Reg.t0, instr.operands[0].constant, mips_inst.IrComment(f"{instr}")),
                         mips_inst.Sw(Reg.t0, Reg.fp, self.variables[instr.name].offset),
                         mips_inst.Addiu(Reg.sp, Reg.sp, -size),  # addiu $sp, $sp, -size
                         mips_inst.Blank(),
