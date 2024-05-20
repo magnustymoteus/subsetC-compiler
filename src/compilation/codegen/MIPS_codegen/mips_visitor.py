@@ -169,7 +169,11 @@ class MipsVisitor(ir.Visitor):
                     mips_inst.Blank(),
                 )
             case ir_inst.Branch():
-                print("unhandled!")
+                block: ir.Block = instr.operands[0]
+                assert isinstance(block, ir.Block)
+                self.last_block.add_instr(
+                    mips_inst.J(Label(f"{self.function.name}.{block.name}"), mips_inst.IrComment(f"{instr}")),
+                )
 
             case ir_inst.CallInstr():
                 """
