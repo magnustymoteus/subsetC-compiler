@@ -107,3 +107,40 @@ class Bne(Branch):
 
     def __init__(self, lhs: Reg, rhs: Reg | int, label: Label, text: str | Comment = "") -> None:
         super().__init__("bne", lhs, rhs, label, text)
+
+
+class FpBranch(Instruction):
+    """
+    Base class for MIPS floating point branch instructions.
+    """
+
+    op: str
+    "Type of branch instruction"
+
+    label: Label
+    "Label to jump to if the condition is true"
+
+    def __init__(self, op: str, label: Label, text: str | Comment = "") -> None:
+        super().__init__(text)
+        self.op = op
+        self.label = label
+
+    def __str__(self) -> str:
+        return f"{self.op} {self.label.label}{super().__str__()}"
+
+
+class Bc1t(FpBranch):
+    """
+    MIPS `bc1t` (branch condition true) instruction.
+    """
+
+    def __init__(self, label: Label, text: str | Comment = "") -> None:
+        super().__init__("bc1t", label, text)
+
+class Bc1f(FpBranch):
+    """
+    MIPS `bc1f` (branch condition false) instruction.
+    """
+
+    def __init__(self, label: Label, text: str | Comment = "") -> None:
+        super().__init__("bc1f", label, text)

@@ -1,4 +1,4 @@
-from src.constructs.mips_program.node.instr import Beq, Bge, Bgt, Ble, Blt, Bne
+from src.constructs.mips_program.node.instr.cond import Beq, Bge, Bgt, Ble, Blt, Bne, Bc1t, Bc1f
 from src.constructs.mips_program.node.label import Label
 from src.constructs.mips_program.node.reg import Reg
 
@@ -61,3 +61,11 @@ def test_blt_imm():
 def test_bne():
     instruction = Bne(Reg.t0, Reg.t1, Label("test"))
     assert str(instruction) == "bne $t0, $t1, test"
+
+def test_bc1t():
+    instruction = Bc1t(Label("test"))
+    assert str(instruction) == "bc1t test"
+
+def test_bc1f():
+    instruction = Bc1f(Label("test"))
+    assert str(instruction) == "bc1f test"
