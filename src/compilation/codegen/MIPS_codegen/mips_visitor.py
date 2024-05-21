@@ -156,6 +156,21 @@ class MipsVisitor(ir.Visitor):
             return self.load_float(i, r, text)
         return self.load_int(i, r, text)
 
+    def load_address(self, value, r: Reg) -> mips_inst.Instruction:
+        """
+        Load the address of a pointer into the register.
+        """
+        # Ensure the value is a variable with an allocated memory space
+        assert value.name in self.variables, f"Variable {value.name} not found in allocated variables."
+
+        # Retrieve the variable's offset
+        var_offset = self.variables[value.name].offset
+
+        # TODO: add support for function
+
+        # Load the address into the register by adding the variable's offset to the frame pointer
+        return mips_inst.Addiu(r, Reg.fp, var_offset, mips_inst.Comment(f"Store address of {value.name}"))
+
     def store_float(self, r: Regf, offset: int, text: str | mips_inst.Comment = "") -> mips_inst.Instruction:
         """Store a float in register ``r`` at ``offset`` from the frame pointer."""
         return mips_inst.S_s(r, Reg.fp, offset, text)
@@ -234,6 +249,7 @@ class MipsVisitor(ir.Visitor):
                 addiu $sp, $sp, -:count:*:size:
                 # save variable offset from $fp
                 """
+
                 assert len(instr.operands) == 1
 
                 # size of the allocated type
@@ -249,6 +265,7 @@ class MipsVisitor(ir.Visitor):
                     mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -size
                     mips_inst.Blank(),
                 )
+
             case ir_inst.Branch():
                 block: ir.Block = instr.operands[0]
                 assert isinstance(block, ir.Block)
@@ -330,24 +347,89 @@ class MipsVisitor(ir.Visitor):
             case ir_inst.GEPInstr():
                 print("unhandled!")
 
+            # case ir_inst.LoadInstr():
+            #     assert len(instr.operands) == 1
+            #     # TODO wrong, operand is just the previous step not always alloca
+            #     alloc: ir.AllocaInstr = instr.operands[0]
+            #     assert isinstance(alloc, (ir.AllocaInstr, ir.GEPInstr, ir.LoadInstr))
+            #
+            #     size = get_type_size(alloc.operands[0].type)
+            #     var = self.variables.new_var(Label(instr.name), self.stack_offset)
+            #     self.stack_offset -= size
+            #     self.last_block.add_instr(
+            #         mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
+            #         # load value into reg
+            #         mips_inst.Lw(Reg.t1, Reg.fp, self.variables[alloc.name].offset),  # lw $t1, $fp, src
+            #         # store value in new variable
+            #         mips_inst.Sw(Reg.t1, Reg.fp, var.offset),  # lw $t1, $fp, dest
+            #         mips_inst.Blank(),
+            #     )
+
             case ir_inst.LoadInstr():
                 assert len(instr.operands) == 1
-                alloc: ir.AllocaInstr = instr.operands[
-                    0
-                ]  # TODO wrong, operand is just the previous step not always alloca
-                assert isinstance(alloc, (ir.AllocaInstr, ir.GEPInstr))
+                operand = instr.operands[0]
+                assert isinstance(operand, (ir.AllocaInstr, ir.GEPInstr, ir.LoadInstr))
 
-                size = get_type_size(alloc.operands[0].type)
-                self.align_to(alloc.align)
+                # Allocate space for the new variable and store the loaded value
+                size = get_type_size(operand.operands[0].type)
+                self.align_to(operand.align)
                 var = self.variables.new_var(Label(instr.name), self.stack_offset)
                 self.stack_offset -= size
 
+                if isinstance(instr.type, ir.PointerType):
+                    # address of operand(=var) gets stored in $t1
+                    assert not isinstance(instr.type.pointee, (ir.IntType, ir.PointerType)), "only pointers and ints implemented"
+                    self.last_block.add_instr(
+                        # mips_inst.Lw(
+                        #     Reg.t1,
+                        #     Reg.fp,
+                        #     self.variables[operand.name].offset,
+                        #     mips_inst.Comment(f"Load {operand.name}  (LoadInstr)"),
+                        # ),
+                        self.load_int(operand, Reg.t1, mips_inst.Comment(f"Load {operand.name}  (LoadInstr)")),
+                        # Dereference the address to get the value
+                        mips_inst.Lw(Reg.t1, Reg.t1, 0, mips_inst.Comment(f"Dereference {operand.name}")),
+                        # TODO support more than only integer/pointer types
+                    )
+
+                # dereference pointer and turn address into value
+                # elif isinstance(instr.type, ir.IntType) and isinstance(operand.type, ir.PointerType):
+                #     # address of operand(=var) gets stored in $t1
+                #     # self.last_block.add_instr(
+                #     #     mips_inst.Lw(
+                #     #         Reg.t1,
+                #     #         Reg.fp,
+                #     #         self.variables[operand.name].offset,
+                #     #         mips_inst.Comment(f"Load {operand.name}  (LoadInstr)"),
+                #     #     ),
+                #     #     # Dereference the address to get the value
+                #     #     mips_inst.Lw(Reg.t1, Reg.t1, 0, mips_inst.Comment(f"Dereference {operand.name}")),
+                #     # )
+                #
+                #     self.last_block.add_instr(
+                #         mips_inst.Lw(
+                #             Reg.t1,
+                #             Reg.fp,
+                #             self.variables[operand.name].offset,
+                #             mips_inst.Comment(f"Load value of {operand.name}"),
+                #         ),
+                #     )
+
+                else:
+                    # Load the value directly if not a pointer
+                    self.last_block.add_instr(
+                        mips_inst.Lw(
+                            Reg.t1,
+                            Reg.fp,
+                            self.variables[operand.name].offset,
+                            mips_inst.Comment(f"Load value of {operand.name}"),
+                        ),
+                    )
+                    self.load_value(operand, Regf.f0 if is_float else Reg.t1, mips_inst.Comment(f"Load {operand.name}  (LoadInstr)")),
+
                 self.last_block.add_instr(
                     mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
-                    # load value into reg
-                    mips_inst.Lw(Reg.t1, Reg.fp, self.variables[alloc.name].offset),  # lw $t1, $fp, src
-                    # store value in new variable
-                    mips_inst.Sw(Reg.t1, Reg.fp, var.offset),  # lw $t1, $fp, dest
+                    mips_inst.Sw(Reg.t1, Reg.fp, var.offset),  # Store value in new variable
                     mips_inst.Blank(),
                 )
 
@@ -387,55 +469,7 @@ class MipsVisitor(ir.Visitor):
                 print("unhandled!")
 
             case ir_inst.ICMPInstr():
-                """
-                Performs integer comparison
-                """
-
-                size: int = get_type_size(instr.type)  # TODO allow for arrays
-                self.align_to(size)
-                var = self.variables.new_var(Label(instr.name), self.stack_offset)
-                self.stack_offset -= size
-
-                assert len(instr.operands) == 2
-
-                self.last_block.add_instr(
-                    self.load_int(instr.operands[0], Reg.t1, mips_inst.IrComment(f"{instr}")),
-                    self.load_int(instr.operands[1], Reg.t2),
-                )
-
-                match instr.op:
-                    case "eq":
-                        print("\t\t -eq")
-                        self.last_block.add_instr(mips_inst.Seq(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp eq")))
-                    case "ne":
-                        print("\t\t ne")
-                        self.last_block.add_instr(mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp ne")))
-                    case "ugt":
-                        print("unhandled : ugt")
-                    case "uge":
-                        print("unhandled : uge")
-                    case "ult":
-                        print("unhandled : ult")
-                    case "ule":
-                        print("unhandled : ule")
-                    case "sgt":
-                        print("unhandled : sgt")
-                    case "sge":
-                        print("unhandled : sge")
-                    case "slt":
-                        print("\t\t slt")
-                        self.last_block.add_instr(mips_inst.Slt(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp slt")))
-                    case "sle":
-                        print("unhandled : sle")
-                    case _:
-                        raise ValueError(f"Unsupported icmp operation: '{instr.op}'")
-
-                self.last_block.add_instr(
-                    self.store_int(instr, Reg.t1, var.offset),
-                    # mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
-                    mips_inst.Addiu(Reg.sp, Reg.sp, -size),
-                    mips_inst.Blank(),
-                )
+                self.handleICMP(instr)
 
             case ir_inst.FCMPInstr():
                 self.handle_fcmp(instr)
@@ -461,21 +495,77 @@ class MipsVisitor(ir.Visitor):
         gen: ir.AllocaInstr = instr.operands[1]
         "instruction that allocated the value space (expect alloca or gep)"
 
-        assert isinstance(gen, (ir.AllocaInstr, ir.GEPInstr))
+        assert isinstance(gen, (ir.AllocaInstr, ir.GEPInstr, ir.LoadInstr))
+        assert len(instr.operands) == 2
 
         is_float = isinstance(value.type, ir.FloatType)
+        # Check if the value to be stored is a pointer
+        if isinstance(value.type, ir.PointerType):
+            # If value is a pointer, load the address it points to into the register
+            self.last_block.add_instr(self.load_address(value, Reg.t1))
+
+        # Check if the value to be stored is not a pointer and gen is a load instruction
+        elif isinstance(gen, ir.LoadInstr):
+            assert isinstance(value, ir.Constant), "Expected 'value' to be an ir.Constant"
+
+            if isinstance(gen.type, ir.PointerType):
+                # Undo the dereference of the pointer
+
+                self.last_block.add_instr(
+                    mips_inst.Lw(
+                        Reg.t1,
+                        Reg.fp,
+                        self.variables[gen.operands[0].name].offset,
+                        mips_inst.Comment(f"Load {gen.operands[0].name} (StoreInstr) undo dereference"),
+                    ),
+                    # load constant value into $t2
+                    mips_inst.Li(Reg.t2, value.constant, mips_inst.Comment(f"Load constant {value.constant} into $t1")),
+                    mips_inst.Sw(
+                        Reg.t2,
+                        Reg.t1,
+                        0,
+                        mips_inst.Comment("Store value from $t2 into address of $t1"),
+                    ),
+                    mips_inst.Blank(),
+                )
+
+            else:
+                self.last_block.add_instr(
+                    # load variable of load instruction(e.g. %0) into $t1
+                    mips_inst.Lw(
+                        Reg.t1,
+                        Reg.fp,
+                        self.variables[gen.name].offset,
+                        mips_inst.Comment(f"Load {gen.name} (StoreInstr)"),
+                    ),
+                    # load constant value into $t2
+                    mips_inst.Li(Reg.t2, value.constant, mips_inst.Comment(f"Load constant {value.constant} into $t1")),
+                    mips_inst.Sw(
+                        Reg.t2,
+                        Reg.t1,
+                        0,
+                        mips_inst.Comment("Store value from $t2 into address of $t1"),
+                    ),
+                    mips_inst.Blank(),
+                )
+
+        else:
+            # If value is not a pointer, load the value itself into the register
+            self.last_block.add_instr(self.load_value(value, Reg.t1))
+
         # create store value
-        self.last_block.add_instr(
-            self.load_value(value, Regf.f0 if is_float else Reg.t1, mips_inst.IrComment(f"{instr}"))
-        )
+        # self.last_block.add_instr(
+        #     self.load_value(value, Regf.f0 if is_float else Reg.t1, mips_inst.IrComment(f"{instr}"))
+        # )
 
         # store created value
-        assert gen.name in self.variables
-        var = self.variables[gen.name]
-        self.last_block.add_instr(
-            self.store_value(value, Regf.f0 if is_float else Reg.t1, var.offset),
-            mips_inst.Blank(),
-        )
+        if not isinstance(gen, ir.LoadInstr):
+            assert gen.name in self.variables
+            var = self.variables[gen.name]
+            self.last_block.add_instr(
+                self.store_value(value, Regf.f0 if is_float else Reg.t1, var.offset),
+                mips_inst.Blank(),
+            )
 
     def handle_fcmp(self, instr: ir_inst.FCMPInstr):
         assert len(instr.operands) == 2
@@ -682,6 +772,14 @@ class MipsVisitor(ir.Visitor):
                 self.last_block.add_instr(mips_inst.Or(Reg.t1, Reg.t1, Reg.t2), mips_inst.Comment("or"))
             case "xor":
                 self.last_block.add_instr(mips_inst.Xor(Reg.t1, Reg.t1, Reg.t2), mips_inst.Comment("xor"))
+            case "shl":
+                self.last_block.add_instr(
+                    mips_inst.Sll(Reg.t1, Reg.t1, instr.operands[1].constant, mips_inst.Comment("Shl")),
+                )
+            case "ashr":
+                self.last_block.add_instr(
+                    mips_inst.Srl(Reg.t1, Reg.t1, instr.operands[1].constant, mips_inst.Comment("Slr")),
+                )
             case "fadd":
                 self.last_block.add_instr(mips_inst.Add_s(Regf.f0, Regf.f0, Regf.f2))
             case "fsub":
@@ -697,5 +795,56 @@ class MipsVisitor(ir.Visitor):
 
         self.last_block.add_instr(
             self.store_value(instr, Regf.f0 if is_float else Reg.t1, var.offset),
+            mips_inst.Blank(),
+        )
+
+    def handle_icmp(self, instr: ir_inst.ICMPInstr):
+        """
+        Performs integer comparison
+        """
+
+        assert len(instr.operands) == 2
+
+        size: int = get_type_size(instr.type)  # TODO allow for arrays
+        self.align_to(size)
+        var = self.variables.new_var(Label(instr.name), self.stack_offset)
+        self.stack_offset -= size
+
+        self.last_block.add_instr(
+            self.load_int(instr.operands[0], Reg.t1, mips_inst.IrComment(f"{instr}")),
+            self.load_int(instr.operands[1], Reg.t2),
+        )
+
+        match instr.op:
+            case "eq":
+                print("\t\t -eq")
+                self.last_block.add_instr(mips_inst.Seq(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp eq")))
+            case "ne":
+                print("\t\t ne")
+                self.last_block.add_instr(mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp ne")))
+            case "ugt":
+                print("unhandled : ugt")
+            case "uge":
+                print("unhandled : uge")
+            case "ult":
+                print("unhandled : ult")
+            case "ule":
+                print("unhandled : ule")
+            case "sgt":
+                print("unhandled : sgt")
+            case "sge":
+                print("unhandled : sge")
+            case "slt":
+                print("\t\t slt")
+                self.last_block.add_instr(mips_inst.Slt(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp slt")))
+            case "sle":
+                print("unhandled : sle")
+            case _:
+                raise ValueError(f"Unsupported icmp operation: '{instr.op}'")
+
+        self.last_block.add_instr(
+            self.store_int(instr, Reg.t1, var.offset),
+            # mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
+            mips_inst.Addiu(Reg.sp, Reg.sp, -size),
             mips_inst.Blank(),
         )
