@@ -13,12 +13,12 @@ Project 1:
 Project 2:
 - [x] function
 - [x] int
-- [] char
-- [] float (busy)
+- [ ] char
+- [ ] float (busy)
 - [x] variables
-- [] pointers (busy) (functions not working with it)
-- [] implicit conversions (int to float working)
-- [] pointer arithmetic (to be tested)
+- [ ] pointers (busy) (functions not working with it)
+- [ ] implicit conversions (int to float working)
+- [ ] pointer arithmetic (to be tested)
 - [x] increment and decrement
 
 Project 3:
@@ -31,26 +31,26 @@ Project 4:
 - [x] for
 - [x] break
 - [x] continue
-- [] switch
-- [] break
-- [] case
+- [ ] switch
+- [ ] break
+- [ ] case
 - [x] enumeration
 
 
 Project 5:
-- [] global variables
-- [] void functions (crashes)
-- [] recursive calls (to test):w
+- [ ] global variables
+- [ ] void functions (crashes)
+- [ ] recursive calls (to test):w
 
 Project 6:
-- [] one dimensional arrays
-- [] multi-dimensional arrays
-- [] assignment of arrays
-- [] operations on arrays
-- [] Strings encoded as zero-terminated char-arrays. String literals. Passing strings around as char*
-- [] printf
-- [] scanf
+- [ ] one dimensional arrays
+- [ ] multi-dimensional arrays
+- [ ] assignment of arrays
+- [ ] operations on arrays
+- [ ] Strings encoded as zero-terminated char-arrays. String literals. Passing strings around as char*
+- [ ] printf
+- [ ] scanf
 
 
 Project 7:
-- [] structs
+- [ ] structs
