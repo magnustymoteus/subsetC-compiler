@@ -414,6 +414,8 @@ class MipsVisitor(ir.Visitor):
                 var = self.variables.new_var(Label(instr.name), self.stack_offset)
                 self.stack_offset -= size
 
+                is_float = isinstance(operand.type, ir.FloatType)
+
                 if isinstance(instr.type, ir.PointerType):
                     # address of operand(=var) gets stored in $t1
                     assert not isinstance(instr.type.pointee, (ir.IntType, ir.PointerType)), "only pointers and ints implemented"
@@ -484,7 +486,7 @@ class MipsVisitor(ir.Visitor):
                 self.handle_switch(instr)
 
             case ir_inst.ICMPInstr():
-                self.handleICMP(instr)
+                self.handle_icmp(instr)
 
             case ir_inst.FCMPInstr():
                 self.handle_fcmp(instr)
@@ -606,7 +608,7 @@ class MipsVisitor(ir.Visitor):
 
         else:
             # If value is not a pointer, load the value itself into the register
-            self.last_block.add_instr(self.load_value(value, Reg.t1))
+            self.last_block.add_instr(self.load_value(value, Regf.f0 if is_float else Reg.t1))
 
         # create store value
         # self.last_block.add_instr(
