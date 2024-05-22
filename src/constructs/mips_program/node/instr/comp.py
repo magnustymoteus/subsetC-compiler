@@ -149,6 +149,31 @@ class Seq(Instruction):
             )
 
 
+class Sge(Instruction):
+    """
+    MIPS `sge` (set greater than or equal) instruction.
+    """
+
+    def __new__(
+        cls, dest: Reg, lhs: Reg, rhs: Reg | int, text: str | Comment = ""
+    ) -> tuple[Slt, Ori, Subu] | tuple[Addi, Slt, Ori, Subu]:
+        """
+        example: sge $t1, $t2, $t3
+        :param dest: $t1
+        :param lhs: $t2
+        :param rhs: $t3 (if register) or 5 (for example if immediate)
+        """
+        if isinstance(rhs, Reg):
+            return Slt(dest, lhs, rhs, text), Ori(Reg.t0, Reg.zero, 1), Subu(dest, Reg.t0, dest)
+        if isinstance(rhs, int):
+            return (
+                Addi(Reg.t0, Reg.zero, rhs, text),
+                Slt(dest, lhs, Reg.t0),
+                Ori(Reg.t0, Reg.zero, 1),
+                Subu(dest, Reg.t0, dest),
+            )
+
+
 class FpCompOp(Instruction):
     """
     Base class for all floating point comparison instructions

@@ -833,12 +833,13 @@ class MipsVisitor(ir.Visitor):
             case "sgt":
                 print("unhandled : sgt")
             case "sge":
-                print("unhandled : sge")
+                print("\t\t sge")
+                self.last_block.add_instr(mips_inst.Sge(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp sge")))
             case "slt":
                 print("\t\t slt")
                 self.last_block.add_instr(mips_inst.Slt(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp slt")))
             case "sle":
-                print("unhandled : sle")
+                self.last_block.add_instr(mips_inst.Sle(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp sle")))
             case _:
                 raise ValueError(f"Unsupported icmp operation: '{instr.op}'")
 

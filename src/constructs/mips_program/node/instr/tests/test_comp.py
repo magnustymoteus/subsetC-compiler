@@ -1,4 +1,4 @@
-from src.constructs.mips_program.node.instr.comp import Slt, Slti, Sltu, Sle, Sne, Seq, C_eq_s, C_le_s, C_lt_s
+from src.constructs.mips_program.node.instr.comp import Slt, Slti, Sltu, Sle, Sne, Seq, Sge, C_eq_s, C_le_s, C_lt_s
 from src.constructs.mips_program.node.reg import Reg, Regf
 
 
@@ -62,6 +62,23 @@ def test_seq_imm():
     assert str(instruction[1]) == "subu $t1, $t2, $t0"
     assert str(instruction[2]) == "ori $t0, $zero, 1"
     assert str(instruction[3]) == "sltu $t1, $t1, $t0"
+
+
+def test_sge_reg():
+    instructions = Sge(Reg.t1, Reg.t2, Reg.t3)
+    assert len(instructions) == 3
+    assert str(instructions[0]) == "slt $t1, $t2, $t3"
+    assert str(instructions[1]) == "ori $t0, $zero, 1"
+    assert str(instructions[2]) == "subu $t1, $t0, $t1"
+
+
+def test_sge_imm():
+    instructions = Sge(Reg.t1, Reg.t2, 5)
+    assert len(instructions) == 4
+    assert str(instructions[0]) == "addi $t0, $zero, 5"
+    assert str(instructions[1]) == "slt $t1, $t2, $t0"
+    assert str(instructions[2]) == "ori $t0, $zero, 1"
+    assert str(instructions[3]) == "subu $t1, $t0, $t1"
 
 
 def test_c_eq_s():
