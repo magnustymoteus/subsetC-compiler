@@ -110,7 +110,9 @@ class MipsVisitor(ir.Visitor):
         elif isinstance(i, ir.Argument):  # if loading instruction is a function argument
             func: ir.Function = self.function
             arg_index: int = func.args.index(i)
-            offset = get_args_size(func.args[arg_index:])  # offset is size of argument to load and all following arguments
+            offset = get_args_size(
+                func.args[arg_index:]
+            )  # offset is size of argument to load and all following arguments
             return mips_inst.L_s(r, Reg.fp, offset, text)  # lw $r, offset($fp)
         else:  # all other instructions
             return mips_inst.L_s(r, Reg.fp, self.variables[i.name].offset, text)  # lw $r, offset($fp)
@@ -187,7 +189,7 @@ class MipsVisitor(ir.Visitor):
         """Store an int in register ``r`` at ``offset`` from the frame pointer."""
         # decide what store instruction to use based on the size of the type
         match get_type_size(i.type):
-            case 4:
+            case 4 | 8:
                 return mips_inst.Sw(r, Reg.fp, offset, text)
             case 2:
                 return mips_inst.Sh(r, Reg.fp, offset, text)
@@ -304,16 +306,21 @@ class MipsVisitor(ir.Visitor):
                 var = self.variables.new_var(Label(instr.name), self.stack_offset)
                 # only increase stack offset by return size to overwrite arguments after call ends
                 # in mips the stack pointer is increased by total size and reset before return jump
-                self.stack_offset -= ret_size 
+                self.stack_offset -= ret_size
 
                 self.last_block.add_instr(
-                    
                     # allocate stack space for function and return arguments
-                    mips_inst.Addiu(Reg.sp, Reg.sp, -tot_size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -(ret_size + arg_size)
+                    mips_inst.Addiu(
+                        Reg.sp, Reg.sp, -tot_size, mips_inst.IrComment(f"{instr}")
+                    ),  # addiu $sp, $sp, -(ret_size + arg_size)
                     [
                         (
                             # load argument value into t1 or f0
-                            self.load_value(oper, Regf.f0 if isinstance(oper.type, ir.FloatType) else Reg.t1, mips_inst.Comment(f"load arg {i}")),
+                            self.load_value(
+                                oper,
+                                Regf.f0 if isinstance(oper.type, ir.FloatType) else Reg.t1,
+                                mips_inst.Comment(f"load arg {i}"),
+                            ),
                             # store argument value on stack. stored at return offset (negative) - return size - argument size up to stored argument
                             self.store_value(
                                 oper,
@@ -355,51 +362,44 @@ class MipsVisitor(ir.Visitor):
                 # moves the pointer %"0" forward by one element of type i32 and stores the result in %"2".
 
                 assert len(instr.operands) == 2 and isinstance(instr.operands[1], ir.CastInstr)
+
                 base_ptr = instr.operands[0]
                 offset = get_type_size(base_ptr.type)
 
+                # Store the new pointer address in the variables list
+                self.variables.new_var(Label(instr.name), self.stack_offset)
+                self.stack_offset -= offset
+
                 self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
-
-                # TODO: undo dereference
-
-                # self.last_block.add_instr(
-                #     mips_inst.Lw(
-                #         Reg.t1,
-                #         Reg.fp,
-                #         self.variables[base_ptr.name].offset,
-                #         mips_inst.Comment(f"Load {base_ptr.name} (StoreInstr) undo dereference"),
-                #     ),
-                #     # TODO
-                #     mips_inst.Sw(
-                #         Reg.t2,
-                #         Reg.t1,
-                #         0,
-                #         mips_inst.Comment("Store value from $t2 into address of $t1"),
-                #     ),
-                # )
-
                 self.last_block.add_instr(
+                    # Load the adress of the base pointer into $t1
                     mips_inst.Lw(
                         Reg.t1,
                         Reg.fp,
+                        # IR: %"2" = getelementptr inbounds i32, i32* %"0", i64 %"1"
+                        # this gets the pointer that %0 points to
                         self.variables[instr.operands[0].operands[0].name].offset,
                         mips_inst.Comment(f"Load value of %{instr.operands[0].operands[0].name}"),
                     ),
-                )
-
-                self.last_block.add_instr(
-                    # Load the adress of the base pointer into $t1
-                    # self.load_address(base_ptr, base_ptr, Reg.t1),
                     # Load the base pointer into $t2
                     mips_inst.Li(Reg.t2, offset, mips_inst.Comment("Load offset")),
                     # Sub the offset from the address of the base pointer
-                    mips_inst.Sub(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("Sub offset from base pointer")),
+                    (
+                        # pointer++
+                        mips_inst.Sub(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("Sub offset from base pointer"))
+                        if isinstance(instr.operands[1].operands[0], ir.Constant)
+                        # pointer--
+                        else mips_inst.Add(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("Add offset to base pointer"))
+                    ),
+                    # Store result on the stack on the variables offset
+                    mips_inst.Sw(
+                        Reg.t1,
+                        Reg.fp,
+                        self.variables[instr.name].offset,
+                        mips_inst.Comment("Store new ptr address on the stack"),
+                    ),
                 )
-
-                # Store the new pointer address in the variables list
-                var = self.variables.new_var(Label(instr.name), self.stack_offset)
-                self.stack_offset -= offset
-                self.last_block.add_instr(mips_inst.Blank())
+                self.last_block.add_instr(mips_inst.Blank()),
 
                 print("unhandled! for arrays")
 
@@ -418,7 +418,9 @@ class MipsVisitor(ir.Visitor):
 
                 if isinstance(instr.type, ir.PointerType):
                     # address of operand(=var) gets stored in $t1
-                    assert not isinstance(instr.type.pointee, (ir.IntType, ir.PointerType)), "only pointers and ints implemented"
+                    assert isinstance(
+                        instr.type.pointee, (ir.IntType, ir.PointerType)
+                    ), "only pointers and ints implemented"
                     self.last_block.add_instr(
                         # mips_inst.Lw(
                         #     Reg.t1,
@@ -442,7 +444,9 @@ class MipsVisitor(ir.Visitor):
                             mips_inst.Comment(f"Load value of %{operand.name}"),
                         ),
                     )
-                    self.load_value(operand, Regf.f0 if is_float else Reg.t1, mips_inst.Comment(f"Load {operand.name}  (LoadInstr)")),
+                    self.load_value(
+                        operand, Regf.f0 if is_float else Reg.t1, mips_inst.Comment(f"Load {operand.name}  (LoadInstr)")
+                    ),
 
                 self.last_block.add_instr(
                     mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
@@ -453,7 +457,7 @@ class MipsVisitor(ir.Visitor):
             case ir_inst.Ret():
                 assert len(instr.operands) == 1  # ? likely wrong for structs
                 ret_val: ir.Instruction = instr.operands[0]
-                ret_size = get_type_size(ret_val.type) # TODO unused
+                ret_size = get_type_size(ret_val.type)  # TODO unused
                 arg_size = get_args_size(self.function.args)
                 tot_size = arg_size + ret_size
 
@@ -516,8 +520,17 @@ class MipsVisitor(ir.Visitor):
         assert len(instr.operands) == 2
 
         is_float = isinstance(value.type, ir.FloatType)
-        # Check if the value to be stored is a pointer
-        if isinstance(value.type, ir.PointerType):
+
+        # if it is a gep instruction for pointer arithmetic
+        if isinstance(value, ir.GEPInstr):
+            # self.last_block.add_instr(
+            #     # Load address of the previously stored new address for the pointer
+            #     self.load_address(value, value, Reg.t1),
+            # )
+            mips_inst.Blank(),
+
+            # Check if the value to be stored is a pointer
+        elif isinstance(value.type, ir.PointerType):
             # If value is a pointer, load the address it points to into the register
             self.last_block.add_instr(self.load_address(value, value, Reg.t1))
 
@@ -737,7 +750,10 @@ class MipsVisitor(ir.Visitor):
                 )
             case "sext":
                 assert not is_float
-                print("unhandled: sext")
+                self.last_block.add_instr(
+                    self.load_int(value, Reg.t1),
+                    self.store_int(instr, Reg.t1, var.offset),
+                )
             case "fptosi":
                 assert is_float
                 self.last_block.add_instr(
