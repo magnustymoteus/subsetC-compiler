@@ -1,8 +1,10 @@
+import math, struct
+
 import llvmlite.ir as ir
 import llvmlite.ir.instructions as ir_inst
 
 from src.constructs.mips_program import MipsProgram, Variables, Global
-from src.constructs.mips_program.node import LabeledBlock, Reg, instr as mips_inst, Label
+from src.constructs.mips_program.node import LabeledBlock, Reg, Regf, instr as mips_inst, Label
 
 """
 MIPS code layout:
@@ -43,13 +45,15 @@ def get_type_size(type: ir.Type) -> int:
     # TODO allow for arrays
     match type:
         case ir.IntType():
-            return int(type.width / 8)
+            res = math.ceil(type.width / 8)
         case ir.PointerType():
-            return get_type_size(type.pointee)
+            res = get_type_size(type.pointee)
         case ir.FloatType():
-            return 4
+            res = 4
         case _:
             assert False
+    assert res > 0
+    return res
 
 
 def get_args_size(args) -> int:
@@ -84,24 +88,99 @@ class MipsVisitor(ir.Visitor):
         self.stack_offset = 0
         super().__init__()
 
-    def load_value(self, i: ir.Instruction | tuple[ir.Argument, ir.Function], r: Reg) -> mips_inst.Instruction:
+    def align_to(self, alignment: int):
+        """Align the stack to the given alignment in bytes"""
+        shift_bits = int(math.log2(alignment))
+        self.stack_offset = math.floor(self.stack_offset / alignment) * alignment
+        self.last_block.add_instr(
+            mips_inst.Srl(Reg.sp, Reg.sp, shift_bits),
+            mips_inst.Sll(Reg.sp, Reg.sp, shift_bits),
+        )
+
+    def load_float(
+        self, i: ir.Instruction | tuple[ir.Argument, ir.Function], r: Regf, text: str | mips_inst.Comment = ""
+    ) -> mips_inst.Instruction:
         """Load a value from an instruction or a constant into the register."""
-        if isinstance(i, ir.Constant):
-            return mips_inst.Li(r, i.constant)  # TODO support full i32 range load
-        elif isinstance(i, ir.Argument):
+        assert isinstance(i.type, ir.FloatType)
+
+        if isinstance(i, ir.Constant):  # if loading instruction is a constant
+            assert isinstance(i.type, ir.FloatType)
+            h = hex(struct.unpack("<I", struct.pack("<f", i.constant))[0])
+            return (mips_inst.Li(Reg.t1, h, text), mips_inst.Mtc1(Reg.t1, r))
+        elif isinstance(i, ir.Argument):  # if loading instruction is a function argument
+            func: ir.Function = self.function
+            arg_index: int = func.args.index(i)
+            offset = get_args_size(func.args[arg_index:])  # offset is size of argument to load and all following arguments
+            return mips_inst.L_s(r, Reg.fp, offset, text)  # lw $r, offset($fp)
+        else:  # all other instructions
+            return mips_inst.L_s(r, Reg.fp, self.variables[i.name].offset, text)  # lw $r, offset($fp)
+
+    def load_int(
+        self, i: ir.Instruction | tuple[ir.Argument, ir.Function], r: Reg, text: str | mips_inst.Comment = ""
+    ) -> mips_inst.Instruction:
+        """Load a value from an instruction or a constant into the register."""
+        assert isinstance(i.type, (ir.IntType, ir.PointerType))
+
+        load_instr = None
+        # decide what load instruction to use based on the size of the type
+        match get_type_size(i.type):
+            case 4:
+                load_instr = mips_inst.Lw
+            case 2:
+                load_instr = mips_inst.Lh
+            case 1:
+                load_instr = mips_inst.Lb
+            case _:
+                assert False
+
+        if isinstance(i, ir.Constant):  # if loading instruction is a constant
+            return mips_inst.Li(r, i.constant, text)
+        elif isinstance(i, ir.Argument):  # if loading instruction is a function argument
             func: ir.Function = self.function
             arg_index: int = func.args.index(i)
             offset = get_args_size(func.args[arg_index:])
-            return mips_inst.Lw(r, Reg.fp, offset)  # lw $r, offset($fp)
-        # elif isinstance(i, ir.CallInstr):
-        #     func, *args = i.operands
-        # elif isinstance(i, tuple) and len(i) == 2 and isinstance(i[0], ir.Argument) and isinstance(i[1], ir.Function):
-        #     [arg, func] = i
-        #     arg_index: int = func.args.index(arg)
-        #     offset = get_args_size(func.args[arg_index:])
-        #     return mips_inst.Lw(r, Reg.fp, offset)  # lw $r, offset($fp)
-        else:
-            return mips_inst.Lw(r, Reg.fp, self.variables[i.name].offset)  # lw $r, offset($fp)
+            return load_instr(r, Reg.fp, offset, text)  # lw $r, offset($fp)
+        else:  # all other instructions
+            return load_instr(r, Reg.fp, self.variables[i.name].offset, text)  # lw $r, offset($fp)
+
+    def load_value(
+        self, i: ir.Instruction | tuple[ir.Argument, ir.Function], r: Reg | Regf, text: str | mips_inst.Comment = ""
+    ) -> mips_inst.Instruction:
+        """
+        Load an instruction result or constant into the normal/float register.
+        For normal registers the size of the type is used to determine the load type.
+        Eg. a type of 1 byte uses `lb` instead of `lw`.
+        """
+        # decide to load float or int based on the register type to load into
+        if isinstance(r, Regf):
+            return self.load_float(i, r, text)
+        return self.load_int(i, r, text)
+
+    def store_float(self, r: Regf, offset: int, text: str | mips_inst.Comment = "") -> mips_inst.Instruction:
+        """Store a float in register ``r`` at ``offset`` from the frame pointer."""
+        return mips_inst.S_s(r, Reg.fp, offset, text)
+
+    def store_int(
+        self, i: ir.Instruction, r: Reg, offset: int, text: str | mips_inst.Comment = ""
+    ) -> mips_inst.Instruction:
+        """Store an int in register ``r`` at ``offset`` from the frame pointer."""
+        # decide what store instruction to use based on the size of the type
+        match get_type_size(i.type):
+            case 4:
+                return mips_inst.Sw(r, Reg.fp, offset, text)
+            case 2:
+                return mips_inst.Sh(r, Reg.fp, offset, text)
+            case 1:
+                return mips_inst.Sb(r, Reg.fp, offset, text)
+        assert False, "unsupported type size"
+
+    def store_value(
+        self, i: ir.Instruction, r: Reg | Regf, offset: int, text: str | mips_inst.Comment = ""
+    ) -> mips_inst.Instruction:
+        """Store content of a normal/float register ``r`` at ``offset`` from the frame pointer."""
+        if isinstance(r, Regf):
+            return self.store_float(r, offset, text)
+        return self.store_int(i, r, offset, text)
 
     def visit(self, module: ir.Module):
         """Visit a module. Top level visit function."""
@@ -141,9 +220,9 @@ class MipsVisitor(ir.Visitor):
         super().visit_BasicBlock(bb)
 
     def visit_Instruction(self, instr: ir_inst.Instruction):
+        """Visit an instruction."""
         print(f"    - {type(instr).__name__}")
 
-        """Visit an instruction."""
         match instr:
             case ir_inst.AllocaInstr():
                 """
@@ -159,6 +238,7 @@ class MipsVisitor(ir.Visitor):
 
                 # size of the allocated type
                 size = get_type_size(instr.operands[0].type)
+                self.align_to(instr.align)
                 # add variable to the list of variables of that function scope
                 self.variables.new_var(Label(instr.name), self.stack_offset)
                 self.stack_offset -= size
@@ -193,26 +273,36 @@ class MipsVisitor(ir.Visitor):
                 | stack of callee |  ┃
                 +-----------------+  ┛
                 """
-                var = self.variables.new_var(Label(instr.name), self.stack_offset)
                 func: ir.Function = instr.operands[0]
                 ret_size = get_type_size(func.return_value.type)
                 arg_size = get_args_size(func.args)
                 tot_size = ret_size + arg_size
-                self.stack_offset -= ret_size
+                self.align_to(ret_size)
+                var = self.variables.new_var(Label(instr.name), self.stack_offset)
+                # only increase stack offset by return size to overwrite arguments after call ends
+                # in mips the stack pointer is increased by total size and reset before return jump
+                self.stack_offset -= ret_size 
+
                 self.last_block.add_instr(
-                    mips_inst.IrComment(f"{instr}"),
+                    
                     # allocate stack space for function and return arguments
-                    mips_inst.Addiu(Reg.sp, Reg.sp, -tot_size),  # addiu $sp, $sp, -(ret_size + arg_size)
+                    mips_inst.Addiu(Reg.sp, Reg.sp, -tot_size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -(ret_size + arg_size)
                     [
                         (
-                            # load argument value into t1
-                            self.load_value(oper, Reg.t1),
+                            # load argument value into t1 or f0
+                            self.load_value(oper, Regf.f0 if isinstance(oper.type, ir.FloatType) else Reg.t1, mips_inst.Comment(f"load arg {i}")),
                             # store argument value on stack. stored at return offset (negative) - return size - argument size up to stored argument
-                            mips_inst.Sw(Reg.t1, Reg.fp, var.offset - ret_size - get_args_size(func.args[:i])),
+                            self.store_value(
+                                oper,
+                                Regf.f0 if isinstance(oper.type, ir.FloatType) else Reg.t1,
+                                var.offset - ret_size - get_args_size(func.args[:i]),
+                                mips_inst.Comment(f"store arg {i}"),
+                            ),
                         )
                         for i, oper in enumerate(instr.operands[1:])
                     ],
                     mips_inst.Jal(Label(f"{func.name}.{func.basic_blocks[0].name}")),
+                    mips_inst.Blank(),
                 )
 
             case ir_inst.ConditionalBranch():
@@ -220,7 +310,7 @@ class MipsVisitor(ir.Visitor):
 
                 self.last_block.add_instr(
                     # Load the condition value into a register
-                    self.load_value(condition, Reg.t1),
+                    self.load_int(condition, Reg.t1),
                     # Branch if the condition is true
                     mips_inst.Bne(
                         Reg.t1,
@@ -248,8 +338,10 @@ class MipsVisitor(ir.Visitor):
                 assert isinstance(alloc, (ir.AllocaInstr, ir.GEPInstr))
 
                 size = get_type_size(alloc.operands[0].type)
+                self.align_to(alloc.align)
                 var = self.variables.new_var(Label(instr.name), self.stack_offset)
                 self.stack_offset -= size
+
                 self.last_block.add_instr(
                     mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
                     # load value into reg
@@ -262,16 +354,19 @@ class MipsVisitor(ir.Visitor):
             case ir_inst.Ret():
                 assert len(instr.operands) == 1  # ? likely wrong for structs
                 ret_val: ir.Instruction = instr.operands[0]
+                ret_size = get_type_size(ret_val.type) # TODO unused
                 arg_size = get_args_size(self.function.args)
-                tot_size = arg_size + get_type_size(ret_val.type)
-                # size = get_type_size(ret_val.type) # TODO unused
+                tot_size = arg_size + ret_size
+
+                is_float = isinstance(ret_val.type, ir.FloatType)
+
                 self.last_block.add_instr(
-                    mips_inst.IrComment(f"{instr}"),
                     mips_inst.Comment("clean up stack frame"),
                     # load return value and store it at return address on the stack
-                    self.load_value(ret_val, Reg.t1),
-                    # mips_inst.Lw(Reg.t1, Reg.fp, self.variables[ret_val.name].offset),  # lw $t1, $fp, src
-                    mips_inst.Sw(Reg.t1, Reg.fp, tot_size),  # sw $t1, $fp, 4
+                    self.load_value(ret_val, Regf.f0 if is_float else Reg.t1, mips_inst.IrComment(f"{instr}")),
+                    # mips_inst.Sw(Reg.t1, Reg.fp, tot_size),  # sw $t1, $fp, 4
+                    self.store_value(ret_val, Regf.f0 if is_float else Reg.t1, tot_size),
+                    # self.copy_data(Reg.fp, self.variables[ret_val.name].offset, Reg.fp, tot_size, ret_size),
                     # restore return register
                     mips_inst.Lw(Reg.ra, Reg.fp, -4),  # lw  $ra, -4($fp)
                     # restore stack pointer to start of frame
@@ -279,7 +374,7 @@ class MipsVisitor(ir.Visitor):
                     # restore previous frame pointer
                     mips_inst.Lw(Reg.fp, Reg.sp),  # lw  $fp, 0($sp)
                     # reset stack by size of arguments
-                    mips_inst.Addiu(Reg.sp, Reg.sp, arg_size),
+                    mips_inst.Addiu(Reg.sp, Reg.sp, arg_size),  # reset stack pointer to "deallocate" arguments
                     # jump back to caller
                     mips_inst.Jr(Reg.ra),  # jr  $ra
                     mips_inst.Blank(),
@@ -296,14 +391,16 @@ class MipsVisitor(ir.Visitor):
                 Performs integer comparison
                 """
 
-                self.variables.new_var(Label(instr.name), self.stack_offset)
-                size: int = int(instr.type.width / 8)  # TODO allow for arrays
-                self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
+                size: int = get_type_size(instr.type)  # TODO allow for arrays
+                self.align_to(size)
+                var = self.variables.new_var(Label(instr.name), self.stack_offset)
+                self.stack_offset -= size
+
                 assert len(instr.operands) == 2
 
                 self.last_block.add_instr(
-                    self.load_value(instr.operands[0], Reg.t1),
-                    self.load_value(instr.operands[1], Reg.t2),
+                    self.load_int(instr.operands[0], Reg.t1, mips_inst.IrComment(f"{instr}")),
+                    self.load_int(instr.operands[1], Reg.t2),
                 )
 
                 match instr.op:
@@ -334,38 +431,22 @@ class MipsVisitor(ir.Visitor):
                         raise ValueError(f"Unsupported icmp operation: '{instr.op}'")
 
                 self.last_block.add_instr(
-                    mips_inst.Sw(Reg.t1, Reg.fp, self.variables[instr.name].offset),
+                    self.store_int(instr, Reg.t1, var.offset),
+                    # mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
                     mips_inst.Addiu(Reg.sp, Reg.sp, -size),
                     mips_inst.Blank(),
                 )
 
-                self.stack_offset -= size
+            case ir_inst.FCMPInstr():
+                self.handle_fcmp(instr)
 
             case ir_inst.CompareInstr():
                 print("unhandled!")
 
             case ir_inst.CastInstr():
-                assert len(instr.operands) == 1
-                # ? instruction ignored because mips is 32bit, possibly a problem in future
-                if isinstance(instr.operands[0], ir.Constant):
-                    size = get_type_size(instr.operands[0].type)
-                    var = self.variables.new_var(Label(instr.name), self.stack_offset)
-                    self.stack_offset -= size
-                    self.last_block.add_instr(
-                        mips_inst.Li(
-                            Reg.t0, instr.operands[0].constant, mips_inst.IrComment(f"{instr}")
-                        ),  # TODO support full i32 range load
-                        mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
-                        mips_inst.Addiu(Reg.sp, Reg.sp, -size),  # addiu $sp, $sp, -size
-                        mips_inst.Blank(),
-                    )
-                    self.stack_offset -= size
-                else:
-                    self.variables.new_alias(Label(instr.name), self.variables[instr.operands[0].name])
-                    self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
+                self.handle_cast(instr)
 
             case ir_inst.Instruction():
-                assert len(instr.operands) == 2  # ? possibly needs to be <= 2 for unary ops
                 assert_type(instr, "Instruction")
                 self.handle_instruction(instr)
 
@@ -373,6 +454,7 @@ class MipsVisitor(ir.Visitor):
                 raise ValueError(f"Unsupported type: '{type(instr).__name__}'")
 
     def handle_store(self, instr: ir_inst.StoreInstr):
+        assert len(instr.operands) == 2
         value: ir.Instruction = instr.operands[0]
         "value to be stored"
 
@@ -380,30 +462,191 @@ class MipsVisitor(ir.Visitor):
         "instruction that allocated the value space (expect alloca or gep)"
 
         assert isinstance(gen, (ir.AllocaInstr, ir.GEPInstr))
-        assert len(instr.operands) == 2
 
-        self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
-
+        is_float = isinstance(value.type, ir.FloatType)
         # create store value
-        self.last_block.add_instr(self.load_value(value, Reg.t1))
+        self.last_block.add_instr(
+            self.load_value(value, Regf.f0 if is_float else Reg.t1, mips_inst.IrComment(f"{instr}"))
+        )
 
         # store created value
         assert gen.name in self.variables
         var = self.variables[gen.name]
         self.last_block.add_instr(
-            mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
+            self.store_value(value, Regf.f0 if is_float else Reg.t1, var.offset),
             mips_inst.Blank(),
         )
 
-    def handle_instruction(self, instr: ir.Instruction):
-        var = self.variables.new_var(Label(instr.name), self.stack_offset)
-        size = get_type_size(instr.type)
-        self.last_block.add_instr(mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")))
+    def handle_fcmp(self, instr: ir_inst.FCMPInstr):
         assert len(instr.operands) == 2
 
+        value1: ir.Instruction = instr.operands[0]
+        value2: ir.Instruction = instr.operands[1]
+
+        size = get_type_size(instr.type)
+        self.align_to(size)
+        var = self.variables.new_var(Label(instr.name), self.stack_offset)
+        self.stack_offset -= size
+
+        branch_true_label = Label(f"{self.function.name}.{self.basic_block.name}.{instr.name}.true")
+        branch_false_label = Label(f"{self.function.name}.{self.basic_block.name}.{instr.name}.false")
+        branch_end_label = Label(f"{self.function.name}.{self.basic_block.name}.{instr.name}.end")
+
         self.last_block.add_instr(
-            self.load_value(instr.operands[0], Reg.t1),
-            self.load_value(instr.operands[1], Reg.t2),
+            mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
+            self.load_float(value1, Regf.f0),
+            self.load_float(value2, Regf.f2),
+        )
+
+        match instr.op:
+            case "false":
+                self.last_block.add_instr(mips_inst.J(branch_false_label))
+            case "ueq":
+                self.last_block.add_instr(
+                    mips_inst.C_eq_s(Regf.f0, Regf.f2),
+                    mips_inst.Bc1t(branch_true_label),
+                    mips_inst.Bc1f(branch_false_label),
+                )
+            case "ugt":
+                self.last_block.add_instr(
+                    mips_inst.C_le_s(Regf.f0, Regf.f2),
+                    mips_inst.Bc1t(branch_false_label),
+                    mips_inst.Bc1f(branch_true_label),
+                )
+            case "uge":
+                self.last_block.add_instr(
+                    mips_inst.C_lt_s(Regf.f0, Regf.f2),
+                    mips_inst.Bc1t(branch_false_label),
+                    mips_inst.Bc1f(branch_true_label),
+                )
+            case "ult":
+                self.last_block.add_instr(
+                    mips_inst.C_lt_s(Regf.f0, Regf.f2),
+                    mips_inst.Bc1t(branch_true_label),
+                    mips_inst.Bc1f(branch_false_label),
+                )
+            case "ule":
+                self.last_block.add_instr(
+                    mips_inst.C_le_s(Regf.f0, Regf.f2),
+                    mips_inst.Bc1t(branch_true_label),
+                    mips_inst.Bc1f(branch_false_label),
+                )
+            case "une":
+                self.last_block.add_instr(
+                    mips_inst.C_eq_s(Regf.f0, Regf.f2),
+                    mips_inst.Bc1t(branch_false_label),
+                    mips_inst.Bc1f(branch_true_label),
+                )
+            case "true":
+                self.last_block.add_instr(mips_inst.J(branch_true_label))
+            case "oeq" | "ogt" | "oge" | "olt" | "ole" | "one" | "ord" | "uno":
+                print("unhandled: ", instr.op)
+                assert False
+            case _:
+                assert False
+
+        self.tree.add_block(LabeledBlock(branch_true_label))
+        self.last_block.add_instr(
+            mips_inst.Li(Reg.t1, 1, mips_inst.Comment(f"branch if true")),
+            mips_inst.J(branch_end_label),
+        )
+        self.tree.add_block(LabeledBlock(branch_false_label))
+        self.last_block.add_instr(
+            mips_inst.Li(Reg.t1, 0, mips_inst.Comment(f"branch if false")),
+            mips_inst.J(branch_end_label),
+        )
+        self.tree.add_block(LabeledBlock(branch_end_label))
+        self.last_block.add_instr(self.store_value(instr, Reg.t1, var.offset))
+
+    def handle_cast(self, instr: ir_inst.CastInstr):
+        assert len(instr.operands) == 1
+
+        size = get_type_size(instr.type)
+        self.align_to(size)
+        var = self.variables.new_var(Label(instr.name), self.stack_offset)
+        self.stack_offset -= size
+
+        value = instr.operands[0]
+
+        is_float = isinstance(value.type, ir.FloatType)
+        "whether the result is a float"
+
+        self.last_block.add_instr(
+            mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -size
+        )
+
+        match instr.opname:
+            case "trunc":
+                assert not is_float
+                self.last_block.add_instr(
+                    self.load_int(value, Reg.t1),
+                    self.store_int(instr, Reg.t1, var.offset),
+                )
+            case "zext":
+                assert not is_float
+                self.last_block.add_instr(
+                    self.load_int(value, Reg.t1),
+                    self.store_int(instr, Reg.t1, var.offset),
+                )
+            case "sext":
+                assert not is_float
+                print("unhandled: sext")
+            case "fptosi":
+                assert is_float
+                self.last_block.add_instr(
+                    self.load_float(value, Regf.f0),
+                    mips_inst.Cvt_w_s(Regf.f0, Regf.f0),
+                    mips_inst.Mfc1(Reg.t1, Regf.f0),
+                    self.store_int(value, Reg.t1, var.offset),
+                )
+            case "sitofp":
+                assert not is_float
+                self.last_block.add_instr(
+                    self.load_int(value, Reg.t1),
+                    mips_inst.Mtc1(Reg.t1, Regf.f0),
+                    mips_inst.Cvt_s_w(Regf.f0, Regf.f0),
+                    self.store_float(Regf.f0, var.offset),
+                )
+            case "ptrtoint":
+                print("unhandled: ptrtoint")
+            case "inttoptr":
+                print("unhandled: inttoptr")
+            case "bitcast":
+                print("unhandled: bitcast")
+            case "addrspacecast":
+                print("unhandled: addrspacecast")
+
+            case "fptoui":
+                print("no mips support: unhandled: fptoui")
+                assert False
+            case "uitofp":
+                print("no mips support: unhandled: uitofp")
+                assert False
+            case "fptrunc":
+                print("only float support: unhandled: fptrunc")
+                assert False
+            case "fpext":
+                print("only float support: unhandled: fpext")
+                assert False
+            case _:
+                raise ValueError(f"Unsupported cast operation: '{instr.opname}'")
+
+        self.last_block.add_instr(mips_inst.Blank())
+
+    def handle_instruction(self, instr: ir.Instruction):
+        assert 0 < len(instr.operands) <= 2
+
+        size = get_type_size(instr.type)
+        self.align_to(size)
+        var = self.variables.new_var(Label(instr.name), self.stack_offset)
+        self.stack_offset -= size
+
+        is_float = isinstance(instr.type, ir.FloatType)
+
+        self.last_block.add_instr(
+            mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -size
+            self.load_value(instr.operands[0], Regf.f0 if is_float else Reg.t1),
+            (self.load_value(instr.operands[1], Regf.f2 if is_float else Reg.t2) if len(instr.operands) == 2 else ()),
         )
 
         match instr.opname:
@@ -439,12 +682,20 @@ class MipsVisitor(ir.Visitor):
                 self.last_block.add_instr(mips_inst.Or(Reg.t1, Reg.t1, Reg.t2), mips_inst.Comment("or"))
             case "xor":
                 self.last_block.add_instr(mips_inst.Xor(Reg.t1, Reg.t1, Reg.t2), mips_inst.Comment("xor"))
+            case "fadd":
+                self.last_block.add_instr(mips_inst.Add_s(Regf.f0, Regf.f0, Regf.f2))
+            case "fsub":
+                self.last_block.add_instr(mips_inst.Sub_s(Regf.f0, Regf.f0, Regf.f2, "fsub"))
+            case "fmul":
+                self.last_block.add_instr(mips_inst.Mul_s(Regf.f0, Regf.f0, Regf.f2))
+            case "fdiv":
+                self.last_block.add_instr(mips_inst.Div_s(Regf.f0, Regf.f0, Regf.f2))
+            case "fneg" if is_float:
+                self.last_block.add_instr(mips_inst.Neg_s(Regf.f0, Regf.f0))
             case _:
                 print(f"Unhandled instruction: '{instr.opname}'")
 
         self.last_block.add_instr(
-            mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
+            self.store_value(instr, Regf.f0 if is_float else Reg.t1, var.offset),
             mips_inst.Blank(),
         )
-
-        self.stack_offset -= size

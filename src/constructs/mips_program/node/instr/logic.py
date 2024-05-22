@@ -57,14 +57,14 @@ class Xor(ArithBinOp):
         super().__init__("xor", dest, operand1, operand2, text)
 
 
-class Ssl(ArithBinOp):
+class Sll(ArithBinOp):
     """
-    MIPS `ssl` (shift left logical) instruction.
+    MIPS `sll` (shift left logical) instruction.
     Shift :operand1: by :operand2: bits left and store result into :dest: register.
     """
 
     def __init__(self, dest: Reg, operand1: Reg, operand2: int, text: str | Comment = "") -> None:
-        super().__init__("ssl", dest, operand1, operand2, text)
+        super().__init__("sll", dest, operand1, operand2, text)
 
 
 class Srl(ArithBinOp):

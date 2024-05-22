@@ -5,4 +5,4 @@ from src.constructs.mips_program.node.instr.cond import Beq, Bge, Bgt, Ble, Blt,
 from src.constructs.mips_program.node.instr.data import La, Li, Lui, Lw, Lb, Lbu, Lh, Lhu, Mfhi, Mflo, Move, Sw, Sh, Shu, Sb, Sbu, Cvt_s_w, Cvt_w_s, Mov_s, L_s, S_s, Mtc1, Mfc1
 from src.constructs.mips_program.node.instr.jump import J, Jr, Jal, Jalr
 from src.constructs.mips_program.node.instr.instruction import Instruction
-from src.constructs.mips_program.node.instr.logic import And, Andi, Or, Ori, Xor, Ssl, Srl
+from src.constructs.mips_program.node.instr.logic import And, Andi, Or, Ori, Xor, Sll, Srl

@@ -1,4 +1,4 @@
-from src.constructs.mips_program.node.instr import And, Andi, Or, Ori, Xor, Ssl, Srl
+from src.constructs.mips_program.node.instr import And, Andi, Or, Ori, Xor, Sll, Srl
 from src.constructs.mips_program.node.reg import Reg
 
 
@@ -27,9 +27,9 @@ def test_xor():
     assert str(instruction) == "xor $t1, $t2, $t3"
 
 
-def test_ssl():
-    instruction = Ssl(Reg.t0, Reg.t1, 1)
-    assert str(instruction) == "ssl $t0, $t1, 1"
+def test_sll():
+    instruction = Sll(Reg.t0, Reg.t1, 1)
+    assert str(instruction) == "sll $t0, $t1, 1"
 
 
 def test_srl():
