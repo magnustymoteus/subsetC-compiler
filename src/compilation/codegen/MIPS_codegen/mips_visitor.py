@@ -11,6 +11,7 @@ from .alloca_mixin import MVHandleAllocaMixin
 from .base import assert_type, get_args_size, get_type_size
 from .branch_mixin import MVHandleBranchMixin
 from .call_mixin import MVHandleCallMixin
+from .conditional_branch_mixin import MVHandleConditionalBranchMixin
 
 """
 MIPS code layout:
@@ -47,6 +48,7 @@ class MipsVisitor(
     MVHandleAllocaMixin,
     MVHandleBranchMixin,
     MVHandleCallMixin,
+    MVHandleConditionalBranchMixin,
 ):
     def __init__(self) -> None:
         self.tree = MipsProgram()
@@ -293,23 +295,7 @@ class MipsVisitor(
                 super().handle_call(instr)
 
             case ir_inst.ConditionalBranch():
-                condition, true_block, false_block = instr.operands
-
-                self.last_block.add_instr(
-                    # Load the condition value into a register
-                    self.load_int(condition, Reg.t1),
-                    # Branch if the condition is true
-                    mips_inst.Bne(
-                        Reg.t1,
-                        Reg.zero,
-                        Label(f"{self.function.name}.{true_block.name}"),
-                        mips_inst.Comment(f"{instr} condition true"),
-                    ),
-                    # Branch to the false block if the condition is zero
-                    mips_inst.J(
-                        Label(f"{self.function.name}.{false_block.name}"), mips_inst.Comment(f"{instr} condition false")
-                    ),
-                )
+                super().handle_conditional_branch(instr)
 
             case ir_inst.Comment():
                 self.last_block.add_instr(mips_inst.CComment(instr.text))
