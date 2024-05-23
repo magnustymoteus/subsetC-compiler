@@ -168,14 +168,3 @@ class MVBase:
         if isinstance(r, Regf):
             return self.store_float(r, offset, text)
         return self.store_int(i, r, offset, text)
-
-    def visit(self, module: ir.Module):
-        """Visit a module. Top level visit function."""
-        print(type(module).__name__)
-        for glob in module.global_values:
-            if isinstance(glob, ir.GlobalVariable):
-                self.visit_Global(glob)
-            elif isinstance(glob, ir.Function):
-                self.visit_Function(glob)
-            else:
-                print("unhandled glob")

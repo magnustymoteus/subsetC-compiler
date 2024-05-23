@@ -71,6 +71,17 @@ class MipsVisitor(
         self.stack_offset = 0
         super().__init__()
 
+    def visit(self, module: ir.Module):
+        """Visit a module. Top level visit function."""
+        print(type(module).__name__)
+        for glob in module.global_values:
+            if isinstance(glob, ir.GlobalVariable):
+                self.visit_Global(glob)
+            elif isinstance(glob, ir.Function):
+                self.visit_Function(glob)
+            else:
+                print("unhandled glob")
+
     def get_glob_type(self, glob_initializer, glob_type: ir.Type) -> str:
         if glob_initializer is not None:
             if isinstance(glob_initializer.constant, bytearray):
