@@ -1,10 +1,14 @@
-import math, struct
+import math
+import struct
 
 import llvmlite.ir as ir
 import llvmlite.ir.instructions as ir_inst
+from src.constructs.mips_program import Global, MipsProgram, Variables
+from src.constructs.mips_program.node import Label, LabeledBlock, Reg, Regf
+from src.constructs.mips_program.node import instr as mips_inst
 
-from src.constructs.mips_program import MipsProgram, Variables, Global
-from src.constructs.mips_program.node import LabeledBlock, Reg, Regf, instr as mips_inst, Label
+from .alloca_mixin import MVHandleAllocaMixin
+from .base import assert_type, get_args_size, get_type_size
 
 """
 MIPS code layout:
@@ -36,50 +40,10 @@ Module
 # pseudo instructions may only use $t0 !!!
 
 
-def assert_type(value, typename):
-    assert type(value).__name__ == typename, f"type '{type(value).__name__}' not implemented"
-
-
-def get_type_size(type: ir.Type) -> int:
-    """Get the size of the type in bytes."""
-    match type:
-        case ir.IntType():
-            res = math.ceil(type.width / 8)
-        case ir.PointerType():
-            res = get_type_size(type.pointee)
-        case ir.FloatType():
-            res = 4
-        case ir.ArrayType():
-            res = type.count * get_type_size(type.element)
-        case _:
-            assert False
-    assert res > 0
-    return res
-
-
-def get_args_size(args) -> int:
-    """Get the size of the provided arguments in bytes."""
-    return sum(get_type_size(arg.type) for arg in args)
-
-
-class MipsVisitor(ir.Visitor):
-    tree: MipsProgram
-    "Tree of the mips program blocks with instructions."
-
-    @property
-    def last_block(self):
-        """Current block being visited."""
-        return self.tree.blocks[-1]
-
-    variables: Variables
-    "List of passed variables in current function scope"
-
-    stack_offset: int
-    "Largest stack offset used"
-
-    new_function_started: bool
-    "True if a new function has just started. Used to indicate to the block visit a new stack frame should be created."
-
+class MipsVisitor(
+    ir.Visitor,
+    MVHandleAllocaMixin,
+):
     def __init__(self) -> None:
         self.tree = MipsProgram()
         self.variables = Variables()
@@ -316,31 +280,7 @@ class MipsVisitor(ir.Visitor):
 
         match instr:
             case ir_inst.AllocaInstr():
-                """
-                :count: array size
-                :size: size of array content, in bytes
-                advance sp by :count: * :size:
-                save stack offset of array start
-
-                addiu $sp, $sp, -:count:*:size:
-                # save variable offset from $fp
-                """
-
-                assert len(instr.operands) == 1
-
-                # size of the allocated type
-                size = get_type_size(instr.operands[0].type)
-                self.align_to(instr.align)
-                # add variable to the list of variables of that function scope
-                self.variables.new_var(Label(instr.name), self.stack_offset)
-                self.stack_offset -= size
-
-                # add instruction to the block and create new space on the stack for the var
-                self.last_block.add_instr(
-                    # move the stack pointer by the size of the variable
-                    mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -size
-                    mips_inst.Blank(),
-                )
+                super().handle_alloca(instr)
 
             case ir_inst.Branch():
                 block: ir.Block = instr.operands[0]
