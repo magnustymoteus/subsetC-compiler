@@ -39,7 +39,7 @@ class LLVMVisitor(CFGVisitor):
     def push_regs_stack(self):
         self.regs_stack.append({})
 
-    def __init__(self, ast: Ast, name: str, disable_comments: bool = False):
+    def __init__(self, ast: Ast, name: str, disable_comments: bool = False, included_stdio: bool = False):
         self.disable_comments: bool = disable_comments
         self.no_load: bool = False
         self.regs_stack: list[dict[str, ir.Instruction | ir.Function | ir.GlobalVariable]] = [{}]
@@ -55,9 +55,9 @@ class LLVMVisitor(CFGVisitor):
         self.io_functions: dict[str, ir.Function] = {}
 
         io_type = ir.FunctionType(ir.IntType(32), [ir.IntType(8).as_pointer()], var_arg=True)
-        self.io_functions["printf"] = ir.Function(self.module, io_type, name="printf")
-        self.io_functions["scanf"] = ir.Function(self.module, io_type, name="scanf")
-
+        if included_stdio:
+            self.io_functions["printf"] = ir.Function(self.module, io_type, name="printf")
+            self.io_functions["scanf"] = ir.Function(self.module, io_type, name="scanf")
         self.builder: ir.IRBuilder = ir.IRBuilder()
 
         self.visit(ast.root_w)

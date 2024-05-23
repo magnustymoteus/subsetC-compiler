@@ -15,17 +15,17 @@ main:
 """
 
 class MipsProgram:
-    data: list[Global]
-    blocks: list[LabeledBlock]
 
     def __init__(self) -> None:
-        self.blocks = []
+        self.blocks: list[LabeledBlock] = []
+        self.data: list[Global] = []
 
     def add_block(self, block: LabeledBlock):
         self.blocks.append(block)
 
     def to_asm(self) -> str:
         globl = ".globl main"
+        data = "\n".join([f"{d}" for d in self.data])
         # convert all blocks in the program to asm and join them with a newline
         blocks = "\n".join([f"{b}" for b in self.blocks])
-        return f"{globl}\n\n{entry}\n{blocks}"
+        return f"{globl}\n.data\n{data}\n{entry}\n{blocks}"

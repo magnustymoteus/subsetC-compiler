@@ -118,11 +118,6 @@ class TACVisitor(CFGVisitor):
                 self.add_node_to_subject(wrap(copy(node_w.n)))
 
                 node_w.n = resulting_node
-        else:
-            if node_w.n.definition_w.n is not None:
-                if not isinstance(node_w.n.definition_w.n, Literal):
-                    self.raiseSemanticErr("Global variable definition must be a compile time constant")
-
 
 
 
