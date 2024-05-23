@@ -11,6 +11,7 @@ from .alloca_mixin import MVHandleAllocaMixin
 from .base import assert_type, get_args_size, get_type_size
 from .branch_mixin import MVHandleBranchMixin
 from .call_mixin import MVHandleCallMixin
+from .cast_mixin import MVHandleCastMixin
 from .conditional_branch_mixin import MVHandleConditionalBranchMixin
 from .fcmp_mixin import MVHandleFCMPMixin
 from .gep_mixin import MVHandleGEPMixin
@@ -63,6 +64,7 @@ class MipsVisitor(
     MVHandleSwitchMixin,
     MVHandleICMPMixin,
     MVHandleFCMPMixin,
+    MVHandleCastMixin,
 ):
     def __init__(self) -> None:
         self.tree = MipsProgram()
@@ -339,7 +341,7 @@ class MipsVisitor(
                 print("unhandled!")
 
             case ir_inst.CastInstr():
-                self.handle_cast(instr)
+                super().handle_cast(instr)
 
             case ir_inst.Instruction():
                 assert_type(instr, "Instruction")
@@ -347,84 +349,6 @@ class MipsVisitor(
 
             case _:
                 raise ValueError(f"Unsupported type: '{type(instr).__name__}'")
-
-    def handle_cast(self, instr: ir_inst.CastInstr):
-        assert len(instr.operands) == 1
-
-        size = get_type_size(instr.type)
-        self.align_to(size)
-        var = self.variables.new_var(Label(instr.name), self.stack_offset)
-        self.stack_offset -= size
-
-        value = instr.operands[0]
-
-        is_float = isinstance(value.type, ir.FloatType)
-        "whether the result is a float"
-
-        self.last_block.add_instr(
-            mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -size
-        )
-
-        match instr.opname:
-            case "trunc":
-                assert not is_float
-                self.last_block.add_instr(
-                    self.load_int(value, Reg.t1),
-                    self.store_int(instr, Reg.t1, var.offset),
-                )
-            case "zext":
-                assert not is_float
-                self.last_block.add_instr(
-                    self.load_int(value, Reg.t1),
-                    self.store_int(instr, Reg.t1, var.offset),
-                )
-            case "sext":
-                assert not is_float
-                self.last_block.add_instr(
-                    self.load_int(value, Reg.t1),
-                    self.store_int(instr, Reg.t1, var.offset),
-                )
-            case "fptosi":
-                assert is_float
-                self.last_block.add_instr(
-                    self.load_float(value, Regf.f0),
-                    mips_inst.Cvt_w_s(Regf.f0, Regf.f0),
-                    mips_inst.Mfc1(Reg.t1, Regf.f0),
-                    self.store_int(value, Reg.t1, var.offset),
-                )
-            case "sitofp":
-                assert not is_float
-                self.last_block.add_instr(
-                    self.load_int(value, Reg.t1),
-                    mips_inst.Mtc1(Reg.t1, Regf.f0),
-                    mips_inst.Cvt_s_w(Regf.f0, Regf.f0),
-                    self.store_float(Regf.f0, var.offset),
-                )
-            case "ptrtoint":
-                print("unhandled: ptrtoint")
-            case "inttoptr":
-                print("unhandled: inttoptr")
-            case "bitcast":
-                print("unhandled: bitcast")
-            case "addrspacecast":
-                print("unhandled: addrspacecast")
-
-            case "fptoui":
-                print("no mips support: unhandled: fptoui")
-                assert False
-            case "uitofp":
-                print("no mips support: unhandled: uitofp")
-                assert False
-            case "fptrunc":
-                print("only float support: unhandled: fptrunc")
-                assert False
-            case "fpext":
-                print("only float support: unhandled: fpext")
-                assert False
-            case _:
-                raise ValueError(f"Unsupported cast operation: '{instr.opname}'")
-
-        self.last_block.add_instr(mips_inst.Blank())
 
     def handle_instruction(self, instr: ir.Instruction):
         assert 0 < len(instr.operands) <= 2
