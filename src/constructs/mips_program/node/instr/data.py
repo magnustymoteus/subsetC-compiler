@@ -77,8 +77,9 @@ class LoadInstruction(Instruction):
     offset: int
     "Offset from the source address"
 
-    def __init__(self, op: str, dest: Reg, src: Reg, offset: int = 0, text: str | Comment = "") -> None:
-        assert -32768 <= offset <= 32767  # ? TODO exception
+    def __init__(self, op: str, dest: Reg, src: Reg | str, offset: int | None = 0, text: str | Comment = "") -> None:
+        if offset is not None:
+            assert -32768 <= offset <= 32767  # ? TODO exception
 
         super().__init__(text)
         self.op = op
@@ -87,6 +88,9 @@ class LoadInstruction(Instruction):
         self.offset = offset
     
     def __str__(self) -> str:
+        if self.offset is None:
+            # global variable load
+            return f"{self.op} {self.dest}, {self.src}{super().__str__()}"
         return f"{self.op} {self.dest}, {self.offset}({self.src}){super().__str__()}"
 
 
@@ -96,7 +100,7 @@ class Lw(LoadInstruction):
     Load data at address in :src: register with offset :offset: into :dest: register.
     """
 
-    def __init__(self, dest: Reg, src: Reg, offset: int = 0, text: str | Comment = "") -> None:
+    def __init__(self, dest: Reg, src: Reg | str, offset: int | None = 0, text: str | Comment = "") -> None:
         super().__init__("lw", dest, src, offset, text)
 
 
@@ -218,8 +222,9 @@ class StoreInstruction(Instruction):
     offset: int
     "Offset from the source address"
 
-    def __init__(self, op: str, src: Reg, dest: Reg, offset: int = 0, text: str | Comment = "") -> None:
-        assert -32768 <= offset <= 32767  # ? TODO exception
+    def __init__(self, op: str, src: Reg, dest: Reg, offset: int | None = 0, text: str | Comment = "") -> None:
+        if offset is not None:
+            assert -32768 <= offset <= 32767  # ? TODO exception
         super().__init__(text)
         self.op = op
         self.src = src
@@ -227,6 +232,8 @@ class StoreInstruction(Instruction):
         self.offset = offset
 
     def __str__(self) -> str:
+        if self.offset is None:
+            return f"{self.op} {self.src}, {self.dest}{super().__str__()}"
         return f"{self.op} {self.src}, {self.offset}({self.dest}){super().__str__()}"
 
 

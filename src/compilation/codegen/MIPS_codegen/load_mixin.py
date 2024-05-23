@@ -9,16 +9,17 @@ class MVHandleLoadMixin(MVBase):
     def handle_load(self, instr: ir.LoadInstr):
         assert len(instr.operands) == 1
         operand = instr.operands[0]
-        assert isinstance(operand, (ir.AllocaInstr, ir.GEPInstr, ir.LoadInstr))
+        assert isinstance(operand, (ir.AllocaInstr, ir.GEPInstr, ir.LoadInstr, ir.GlobalVariable))
+
 
         # Allocate space for the new variable and store the loaded value
-        size = get_type_size(operand.operands[0].type)
+        size = get_type_size(operand.operands[0].type) if not isinstance(operand, ir.GlobalVariable) else get_type_size(operand.type.pointee)
+        self.stack_offset -= size
         self.align_to(operand.align)
         var = self.variables.new_var(Label(instr.name), self.stack_offset)
-        self.stack_offset -= size
 
         is_float = isinstance(operand.type, ir.FloatType)
-
+        self.load_value(operand, Regf.f0 if is_float else Reg.t1, mips_inst.Comment(f"Load {operand.name}  (LoadInstr)"))
         if isinstance(instr.type, ir.PointerType):
             # address of operand(=var) gets stored in $t1
             assert isinstance(
@@ -38,21 +39,27 @@ class MVHandleLoadMixin(MVBase):
             )
 
         else:
-            # Load the value directly if not a pointer
-            self.last_block.add_instr(
-                mips_inst.Lw(
-                    Reg.t1,
-                    Reg.fp,
-                    self.variables[operand.name].offset,
-                    mips_inst.Comment(f"Load value of %{operand.name}"),
-                ),
-            )
-            self.load_value(
-                operand, Regf.f0 if is_float else Reg.t1, mips_inst.Comment(f"Load {operand.name}  (LoadInstr)")
-            ),
+            if isinstance(operand, ir.GlobalVariable):
+                self.last_block.add_instr(self.load_value(operand,
+                                Regf.f0 if is_float else Reg.t1,
+                                mips_inst.Comment(f"Load global variable {operand.name}  (LoadInstr)")
+                                ))
+            else:
+                # Load the value directly if not a pointer
+                self.last_block.add_instr(
+                    mips_inst.Lw(
+                        Reg.t1,
+                        Reg.fp,
+                        self.variables[operand.name].offset,
+                        mips_inst.Comment(f"Load value of %{operand.name}"),
+                    ),
+                )
+                self.load_value(
+                    operand, Regf.f0 if is_float else Reg.t1, mips_inst.Comment(f"Load {operand.name}  (LoadInstr)")
+                )
 
-        self.last_block.add_instr(
-            mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
-            mips_inst.Sw(Reg.t1, Reg.fp, var.offset),  # Store value in new variable
-            mips_inst.Blank(),
-        )
+            self.last_block.add_instr(
+                mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
+                mips_inst.Sw(Reg.t1, Reg.fp, var.offset),  # Store value in new variable
+                mips_inst.Blank(),
+            )

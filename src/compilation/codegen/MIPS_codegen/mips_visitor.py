@@ -3,6 +3,7 @@ import llvmlite.ir.instructions as ir_inst
 from src.constructs.mips_program import Global, MipsProgram, Variables
 from src.constructs.mips_program.node import Label, LabeledBlock, Reg, Regf
 from src.constructs.mips_program.node import instr as mips_inst
+import struct
 
 from .alloca_mixin import MVHandleAllocaMixin
 from .base import assert_type, get_args_size, get_type_size
@@ -110,7 +111,7 @@ class MipsVisitor(
                         if initializer.constant.startswith("getelementptr"):
                             for elem in initializer.constant.split():
                                 if elem[0] == "@":
-                                    return ["$LC" + elem[2:-2]]
+                                    return ["$G"+elem[2:-2]]
                         return [str(get_type_size(glob_type))]
                     case ir.ArrayType():
                         res = []
@@ -118,7 +119,26 @@ class MipsVisitor(
                             res += self.get_glob_values(element, glob_type)
                         return res
                     case _:
-                        return [initializer.constant]
+                        result = initializer.constant
+                        if isinstance(initializer, ir.FormattedConstant):
+                            result_split = initializer.constant.split()
+                            for i, elem in enumerate(result_split):
+                                if elem == "to":
+                                    result = result_split[i-1]
+                                    print(result)
+                                    if '0x' in result[:2]:
+                                        result = int(result, 16)
+                                        byte_pattern = struct.pack('>Q', result)
+                                        # Interpret the byte pattern as a double-precision float
+                                        double_value = struct.unpack('>d', byte_pattern)[0]
+                                        # Convert the double to an integer by truncating
+                                        result = int(double_value)
+                                        if result < -128:
+                                            result = 127
+                                        elif result > 127:
+                                            result = 127
+                                    break
+                        return [str(result)]
             case None:
                 return [str(get_type_size(glob_type))]
             case _:
@@ -131,12 +151,10 @@ class MipsVisitor(
         glob_values: list[str] = self.get_glob_values(variable.initializer, variable.type.pointee)
         # type of glob is string
         if glob_type == "ascii":
-            name = "$LC" + name
-        # glob value is a GEP to a string
-        for glob_value in glob_values:
-            if len(str(glob_value)) >= 3 and "$LC" == glob_value[:3]:
-                glob_type = "word"
-                break
+            name = "$G"+name
+        # here glob value is a GEP to a string
+        if len(glob_values) == 1 and len(str(glob_values[0])) >= 3 and "$G" == glob_values[0][:3]:
+            glob_type = "word"
         glob = Global(name, glob_type, glob_values)
         self.tree.data.append(glob)
 

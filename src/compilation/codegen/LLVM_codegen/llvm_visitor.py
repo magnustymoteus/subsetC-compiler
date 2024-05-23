@@ -432,9 +432,10 @@ class LLVMVisitor(CFGVisitor):
                     return allocaInstr
 
             else:
-                type = self._get_llvm_type(node_w.n.type)
-                result = ir.GlobalVariable(self.module, type[0], node_w.n.identifier)
+                llvm_type = self._get_llvm_type(node_w.n.type)
+                result = ir.GlobalVariable(self.module, llvm_type[0], node_w.n.identifier)
                 result.linkage = "dso_local"
+                result.align = llvm_type[1]
                 if node_w.n.definition_w.n is not None:
                     visited = self.visit(node_w.n.definition_w)
                     if not self.types_compatible(node_w.n.definition_w.n.type, node_w.n.type):

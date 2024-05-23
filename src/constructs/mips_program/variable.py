@@ -3,7 +3,24 @@ from __future__ import annotations
 from src.constructs.mips_program.node.label import Label
 
 
-class Global:
+
+class BaseVariable():
+    label: Label
+    "Name of the variable"
+    def __init__(self, label: Label) -> None:
+        self.label: Label = label
+class Variable(BaseVariable):
+    """
+    MIPS variable
+    """
+
+    offset: int
+    "Variable stack offset from the start of the frame"
+
+    def __init__(self, label: Label, offset: int) -> None:
+        self.offset = offset
+        super().__init__(label)
+class Global(BaseVariable):
     """
     Mips global variable
     """
@@ -22,27 +39,12 @@ class Global:
         self.name: str = name
         self.type: str = type
         self.values: list[str] = values
+        super().__init__(Label(name))
     def __str__(self) -> str:
         result = f"{self.name}:\n"
         for value in self.values:
             result += f'\t.{self.type} {value}\n'
         return result
-
-
-class Variable:
-    """
-    MIPS variable
-    """
-
-    label: Label
-    "Name of the variable"
-
-    offset: int
-    "Variable stack offset from the start of the frame"
-
-    def __init__(self, label: Label, offset: int) -> None:
-        self.label = label
-        self.offset = offset
 
 class VariableAlias(Variable):
     """
@@ -53,7 +55,7 @@ class VariableAlias(Variable):
     "Variable being aliased"
 
     @property
-    def offset(self) -> Label:
+    def offset(self) -> int:
         """Offset hook, returns offset of the aliased variable instead of its own"""
         return self.var.offset
     
@@ -67,10 +69,10 @@ class Variables:
     List of MIPS variables
     """
 
-    vars: dict[str, Variable]
+    vars: dict[str, BaseVariable]
 
     def __init__(self) -> None:
-        self.vars = {}
+        self.vars: BaseVariable = {}
 
     def __contains__(self, var: Variable | str) -> bool:
         return self.vars.get(var if isinstance(var, str) else var.label.label) is not None

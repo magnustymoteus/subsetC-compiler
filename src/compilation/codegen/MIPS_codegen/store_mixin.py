@@ -13,7 +13,7 @@ class MVHandleStoreMixin(MVBase):
         gen: ir.AllocaInstr = instr.operands[1]
         "instruction that allocated the value space (expect alloca or gep)"
 
-        assert isinstance(gen, (ir.AllocaInstr, ir.GEPInstr, ir.LoadInstr))
+        assert isinstance(gen, (ir.AllocaInstr, ir.GEPInstr, ir.LoadInstr, ir.GlobalVariable))
         assert len(instr.operands) == 2
 
         is_float = isinstance(value.type, ir.FloatType)
@@ -124,9 +124,10 @@ class MVHandleStoreMixin(MVBase):
         # self.last_block.add_instr(
         #     self.load_value(value, Regf.f0 if is_float else Reg.t1, mips_inst.IrComment(f"{instr}"))
         # )
-
+        if isinstance(gen, ir.GlobalVariable):
+            self.last_block.add_instr(self.store_value(instr.operands[1], Regf.f0 if is_float else Reg.t1, None)),
         # store created value
-        if not isinstance(gen, ir.LoadInstr):
+        elif not isinstance(gen, ir.LoadInstr):
             assert gen.name in self.variables
             var = self.variables[gen.name]
             self.last_block.add_instr(

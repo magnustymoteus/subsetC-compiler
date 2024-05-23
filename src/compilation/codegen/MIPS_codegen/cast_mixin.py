@@ -56,7 +56,7 @@ class MVHandleCastMixin(MVBase):
                     self.load_int(value, Reg.t1),
                     mips_inst.Mtc1(Reg.t1, Regf.f0),
                     mips_inst.Cvt_s_w(Regf.f0, Regf.f0),
-                    self.store_float(Regf.f0, var.offset),
+                    self.store_float(value, Regf.f0, var.offset),
                 )
             case "ptrtoint":
                 print("unhandled: ptrtoint")
