@@ -3,9 +3,13 @@ import struct
 
 from llvmlite import ir
 from src.constructs.mips_program.node import instr as mips_inst
+from src.constructs.mips_program.node.label import Label
 from src.constructs.mips_program.node.reg import Reg, Regf
 from src.constructs.mips_program.program import MipsProgram
 from src.constructs.mips_program.variable import Variables
+
+
+PTR_SIZE = 4
 
 
 def assert_type(value, typename):
@@ -57,12 +61,16 @@ class MVBase:
         shift_bits = int(math.log2(alignment))
         self.stack_offset = math.floor(self.stack_offset / alignment) * alignment
         self.last_block.add_instr(
-            mips_inst.Srl(Reg.sp, Reg.sp, shift_bits),
+            mips_inst.Srl(Reg.sp, Reg.sp, shift_bits, mips_inst.Comment(f"align stack to {alignment} bytes")),
             mips_inst.Sll(Reg.sp, Reg.sp, shift_bits),
         )
 
     def load_float(
-        self, i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function], r: Regf, text: str | mips_inst.Comment = ""
+        self,
+        i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function],
+        r: Regf,
+        text: str | mips_inst.Comment = "",
+        mem_base: Reg = Reg.fp,
     ) -> mips_inst.Instruction:
         """Load a value from an instruction or a constant into the register."""
         assert isinstance(i.type, ir.FloatType)
@@ -77,12 +85,16 @@ class MVBase:
             offset = get_args_size(
                 func.args[arg_index:]
             )  # offset is size of argument to load and all following arguments
-            return mips_inst.L_s(r, Reg.fp, offset, text)  # lw $r, offset($fp)
+            return mips_inst.L_s(r, mem_base, offset, text)  # lw $r, offset($fp)
         else:  # all other instructions
-            return mips_inst.L_s(r, Reg.fp, self.variables[i.name].offset, text)  # lw $r, offset($fp)
+            return mips_inst.L_s(r, mem_base, self.variables[i.name].offset, text)  # lw $r, offset($fp)
 
     def load_int(
-        self, i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function], r: Reg, text: str | mips_inst.Comment = ""
+        self,
+        i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function],
+        r: Reg,
+        text: str | mips_inst.Comment = "",
+        mem_base: Reg = Reg.fp,
     ) -> mips_inst.Instruction:
         """Load a value from an instruction or a constant into the register."""
         assert isinstance(i.type, (ir.IntType, ir.PointerType))
@@ -104,15 +116,20 @@ class MVBase:
             func: ir.Function = self.function
             arg_index: int = func.args.index(i)
             offset = get_args_size(func.args[arg_index:])
-            return load_instr(r, Reg.fp, offset, text)  # lw $r, offset($fp)
+            return load_instr(r, mem_base, offset, text)  # lw $r, offset($fp)
         elif isinstance(i, ir.GlobalVariable):
-            result = load_instr(r, i.name, None)
+            assert i.type.is_pointer
+            result = mips_inst.La(r, Label(i.name), text)
             return result
         else:  # all other instructions
-            return load_instr(r, Reg.fp, self.variables[i.name].offset, text)  # lw $r, offset($fp)
+            return load_instr(r, mem_base, self.variables[i.name].offset, text)  # lw $r, offset($fp)
 
     def load_value(
-        self, i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function], r: Reg | Regf, text: str | mips_inst.Comment = ""
+        self,
+        i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function],
+        r: Reg | Regf,
+        text: str | mips_inst.Comment = "",
+        mem_base: Reg = Reg.fp,
     ) -> mips_inst.Instruction:
         """
         Load an instruction result or constant into the normal/float register.
@@ -121,8 +138,8 @@ class MVBase:
         """
         # decide to load float or int based on the register type to load into
         if isinstance(r, Regf):
-            return self.load_float(i, r, text)
-        return self.load_int(i, r, text)
+            return self.load_float(i, r, text, mem_base)
+        return self.load_int(i, r, text, mem_base)
 
     def load_address(self, i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function], value, r: Reg) -> mips_inst.Instruction:
         """
@@ -145,16 +162,34 @@ class MVBase:
         # Load the address into the register by adding the variable's offset to the frame pointer
         return mips_inst.Addiu(r, Reg.fp, var_offset, mips_inst.Comment(f"Store address of {value.name}"))
 
-    def store_float(self, i: ir.Instruction, r: Regf, offset: int | None, text: str | mips_inst.Comment = "") -> mips_inst.Instruction:
-        """Store a float in register ``r`` at ``offset`` from the frame pointer."""
-        dest = Reg.fp if not isinstance(i, ir.GlobalVariable) else i.name
+    def store_float(
+        self, i: ir.Instruction, r: Regf, offset: int, text: str | mips_inst.Comment = "", mem_base: Reg = Reg.fp
+    ) -> mips_inst.Instruction:
+        """
+        Store a float in register ``r`` at ``offset`` from the frame pointer.
+
+        :param r: The register to store the float in.
+        :param offset: The offset to store the float at.
+        :param text: The comment to add to the instruction.
+        :param mem_base: The base register to use for the store instruction.
+        """
+        dest = mem_base if not isinstance(i, ir.GlobalVariable) else i.name
+
         return mips_inst.S_s(r, dest, offset, text)
 
     def store_int(
-        self, i: ir.Instruction, r: Reg, offset: int | None, text: str | mips_inst.Comment = ""
+        self, i: ir.Instruction, r: Reg, offset: int | None, text: str | mips_inst.Comment = "", mem_base: Reg = Reg.fp
     ) -> mips_inst.Instruction:
-        """Store an int in register ``r`` at ``offset`` from the frame pointer."""
-        dest = Reg.fp if not isinstance(i, ir.GlobalVariable) else i.name
+        """
+        Store an int in register ``r`` at ``offset`` from the frame pointer.
+
+        :param i: The of which the result is stored. Needed for the size of it's type.
+        :param r: The register to store the int in.
+        :param offset: The offset to store the int at.
+        :param text: The comment to add to the instruction.
+        :param mem_base: The base register to use for the store instruction.
+        """
+        dest = mem_base if not isinstance(i, ir.GlobalVariable) else i.name
         # decide what store instruction to use based on the size of the type
         match get_type_size(i.type):
             case 4 | 8:
@@ -166,9 +201,16 @@ class MVBase:
         assert False, "unsupported type size"
 
     def store_value(
-        self, i: ir.Instruction, r: Reg | Regf, offset: int | None, text: str | mips_inst.Comment = ""
+        self, i: ir.Instruction, r: Reg | Regf, offset: int | None, text: str | mips_inst.Comment = "", mem_base: Reg = Reg.fp
     ) -> mips_inst.Instruction:
-        """Store content of a normal/float register ``r`` at ``offset`` from the frame pointer."""
+        """
+        Store content of a normal/float register ``r`` at ``offset`` from the frame pointer.
+
+        :param i: The of which the result is stored. Needed for the size of it's type.
+        :param r: The register to store the value in.
+        :param offset: The offset to store the value at.
+        :param text: The comment to add to the instruction.
+        """
         if isinstance(r, Regf):
-            return self.store_float(i, r, offset, text)
-        return self.store_int(i, r, offset, text)
+            return self.store_float(i, r, offset, text, mem_base)
+        return self.store_int(i, r, offset, text, mem_base)
