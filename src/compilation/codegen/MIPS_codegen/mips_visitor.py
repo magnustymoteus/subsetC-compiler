@@ -9,6 +9,7 @@ from src.constructs.mips_program.node import instr as mips_inst
 
 from .alloca_mixin import MVHandleAllocaMixin
 from .base import assert_type, get_args_size, get_type_size
+from .branch_mixin import MVHandleBranchMixin
 
 """
 MIPS code layout:
@@ -43,6 +44,7 @@ Module
 class MipsVisitor(
     ir.Visitor,
     MVHandleAllocaMixin,
+    MVHandleBranchMixin,
 ):
     def __init__(self) -> None:
         self.tree = MipsProgram()
@@ -283,11 +285,7 @@ class MipsVisitor(
                 super().handle_alloca(instr)
 
             case ir_inst.Branch():
-                block: ir.Block = instr.operands[0]
-                assert isinstance(block, ir.Block)
-                self.last_block.add_instr(
-                    mips_inst.J(Label(f"{self.function.name}.{block.name}"), mips_inst.IrComment(f"{instr}")),
-                )
+                super().handle_branch(instr)
 
             case ir_inst.CallInstr():
                 """
