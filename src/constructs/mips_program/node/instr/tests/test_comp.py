@@ -1,4 +1,19 @@
-from src.constructs.mips_program.node.instr.comp import Slt, Slti, Sltu, Sle, Sne, Seq, Sge, C_eq_s, C_le_s, C_lt_s
+from src.constructs.mips_program.node.instr.comp import (
+    Slt,
+    Slti,
+    Sltu,
+    Sle,
+    Sne,
+    Seq,
+    Sgtu,
+    Sge,
+    Sgeu,
+    Sleu,
+    Sgt,
+    C_eq_s,
+    C_le_s,
+    C_lt_s,
+)
 from src.constructs.mips_program.node.reg import Reg, Regf
 
 
@@ -79,6 +94,57 @@ def test_sge_imm():
     assert str(instructions[1]) == "slt $t1, $t2, $t0"
     assert str(instructions[2]) == "ori $t0, $zero, 1"
     assert str(instructions[3]) == "subu $t1, $t0, $t1"
+
+
+def test_sgtu():
+    instruction = Sgtu(Reg.t1, Reg.t2, Reg.t3)
+    assert str(instruction) == "sltu $t1, $t3, $t2"
+
+
+def test_sgeu_reg():
+    instructions = Sgeu(Reg.t1, Reg.t2, Reg.t3)
+    assert len(instructions) == 3
+    assert str(instructions[0]) == "sltu $t1, $t2, $t3"
+    assert str(instructions[1]) == "ori $t0, $zero, 1"
+    assert str(instructions[2]) == "subu $t1, $t0, $t1"
+
+
+def test_sgeu_imm():
+    instructions = Sgeu(Reg.t1, Reg.t2, 5)
+    assert len(instructions) == 4
+    assert str(instructions[0]) == "addi $t0, $zero, 5"
+    assert str(instructions[1]) == "sltu $t1, $t2, $t0"
+    assert str(instructions[2]) == "ori $t0, $zero, 1"
+    assert str(instructions[3]) == "subu $t1, $t0, $t1"
+
+
+def test_sleu_reg():
+    instructions = Sleu(Reg.t1, Reg.t2, Reg.t3)
+    assert len(instructions) == 3
+    assert str(instructions[0]) == "sltu $t1, $t3, $t2"
+    assert str(instructions[1]) == "ori $t0, $zero, 1"
+    assert str(instructions[2]) == "subu $t1, $t0, $t1"
+
+
+def test_sleu_imm():
+    instructions = Sleu(Reg.t1, Reg.t2, 5)
+    assert len(instructions) == 4
+    assert str(instructions[0]) == "addi $t0, $zero, 5"
+    assert str(instructions[1]) == "sltu $t1, $t0, $t2"
+    assert str(instructions[2]) == "ori $t0, $zero, 1"
+    assert str(instructions[3]) == "subu $t1, $t0, $t1"
+
+
+def test_sgt_reg():
+    instruction = Sgt(Reg.t1, Reg.t2, Reg.t3)
+    assert str(instruction) == "slt $t1, $t3, $t2"
+
+
+def test_sgt_imm():
+    instructions = Sgt(Reg.t1, Reg.t2, 5)
+    assert len(instructions) == 2
+    assert str(instructions[0]) == "addi $t0, $zero, 5"
+    assert str(instructions[1]) == "slt $t1, $t0, $t2"
 
 
 def test_c_eq_s():

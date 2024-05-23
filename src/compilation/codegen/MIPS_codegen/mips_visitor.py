@@ -86,7 +86,6 @@ class MipsVisitor(ir.Visitor):
         self.stack_offset = 0
         super().__init__()
 
-
     def align_to(self, alignment: int):
         """Align the stack to the given alignment in bytes"""
         shift_bits = int(math.log2(alignment))
@@ -232,6 +231,7 @@ class MipsVisitor(ir.Visitor):
                     case _:
                         assert False
         return "space"
+
     def get_glob_values(self, initializer, glob_type: ir.Type) -> list[str]:
         match initializer:
             case ir.Constant():
@@ -242,7 +242,7 @@ class MipsVisitor(ir.Visitor):
                         if initializer.constant.startswith("getelementptr"):
                             for elem in initializer.constant.split():
                                 if elem[0] == "@":
-                                    return ["$LC"+elem[2:-2]]
+                                    return ["$LC" + elem[2:-2]]
                         return [str(get_type_size(glob_type))]
                     case ir.ArrayType():
                         res = []
@@ -252,7 +252,7 @@ class MipsVisitor(ir.Visitor):
                     case _:
                         return [initializer.constant]
             case None:
-                 return [str(get_type_size(glob_type))]
+                return [str(get_type_size(glob_type))]
             case _:
                 assert False
 
@@ -263,7 +263,7 @@ class MipsVisitor(ir.Visitor):
         glob_values: list[str] = self.get_glob_values(variable.initializer, variable.type.pointee)
         # type of glob is string
         if glob_type == "ascii":
-            name = "$LC"+name
+            name = "$LC" + name
         # glob value is a GEP to a string
         for glob_value in glob_values:
             if len(str(glob_value)) >= 3 and "$LC" == glob_value[:3]:
@@ -271,7 +271,6 @@ class MipsVisitor(ir.Visitor):
                 break
         glob = Global(name, glob_type, glob_values)
         self.tree.data.append(glob)
-
 
     def visit_Function(self, func: ir_inst.Function):
         """Visit a function."""
@@ -470,7 +469,7 @@ class MipsVisitor(ir.Visitor):
                 )
                 self.last_block.add_instr(mips_inst.Blank()),
 
-                print("unhandled! for arrays")
+                # print("unhandled! for arrays")
 
             case ir_inst.LoadInstr():
                 assert len(instr.operands) == 1
@@ -488,7 +487,7 @@ class MipsVisitor(ir.Visitor):
                 if isinstance(instr.type, ir.PointerType):
                     # address of operand(=var) gets stored in $t1
                     assert isinstance(
-                        instr.type.pointee, (ir.IntType, ir.PointerType)
+                        instr.type.pointee, (ir.IntType, ir.FloatType, ir.PointerType)
                     ), "only pointers and ints implemented"
                     self.last_block.add_instr(
                         # mips_inst.Lw(
@@ -959,26 +958,22 @@ class MipsVisitor(ir.Visitor):
 
         match instr.op:
             case "eq":
-                print("\t\t -eq")
                 self.last_block.add_instr(mips_inst.Seq(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp eq")))
             case "ne":
-                print("\t\t ne")
                 self.last_block.add_instr(mips_inst.Sne(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp ne")))
             case "ugt":
-                print("unhandled : ugt")
+                self.last_block.add_instr(mips_inst.Sgtu(Reg.t1, Reg.t2, Reg.t1, mips_inst.Comment("icmp ugt")))
             case "uge":
-                print("unhandled : uge")
+                self.last_block.add_instr(mips_inst.Sgeu(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp uge")))
             case "ult":
-                print("unhandled : ult")
+                self.last_block.add_instr(mips_inst.Sleu(Reg.t1, Reg.t2, Reg.t1, mips_inst.Comment("icmp ult")))
             case "ule":
-                print("unhandled : ule")
+                self.last_block.add_instr(mips_inst.Sltu(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp ule")))
             case "sgt":
-                print("unhandled : sgt")
+                self.last_block.add_instr(mips_inst.Sgt(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp sgt")))
             case "sge":
-                print("\t\t sge")
                 self.last_block.add_instr(mips_inst.Sge(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp sge")))
             case "slt":
-                print("\t\t slt")
                 self.last_block.add_instr(mips_inst.Slt(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp slt")))
             case "sle":
                 self.last_block.add_instr(mips_inst.Sle(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("icmp sle")))

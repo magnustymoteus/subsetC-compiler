@@ -174,6 +174,103 @@ class Sge(Instruction):
             )
 
 
+class Sgtu(SlInstruction):
+    """
+    MIPS `sgtu` (set greater than unsigned) instruction.
+    Set :dest: register to 1 if :operand1: register is greater than contents of :operand2: register and 0 otherwise.
+    """
+
+    operand2: Reg
+    "Second operand to compare"
+
+    def __init__(self, dest: Reg, operand1: Reg, operand2: Reg, text: str | Comment = "") -> None:
+        super().__init__(dest, operand1, text)
+        self.operand2 = operand2
+
+    def __str__(self) -> str:
+        # sltu $dest, $operand2, $operand1
+        return f"sltu {self.dest}, {self.operand2}, {self.operand1}{super().__str__()}"
+
+
+class Sgeu(SlInstruction):
+    """
+    MIPS `sgeu` (set greater than or equal unsigned) instruction.
+    Set :dest: register to 1 if :operand1: register is greater than or equal to contents of :operand2: register and 0 otherwise.
+    """
+
+    operand2: Reg
+    "Second operand to compare"
+
+    def __new__(
+        cls, dest: Reg, lhs: Reg, rhs: Reg | int, text: str | Comment = ""
+    ) -> tuple[Sltu, Ori, Subu] | tuple[Addi, Sltu, Ori, Subu]:
+        """
+        example: sge $t1, $t2, $t3
+        :param dest: $t1
+        :param lhs: $t2
+        :param rhs: $t3 (if register) or 5 (for example if immediate)
+        """
+        if isinstance(rhs, Reg):
+            return Sltu(dest, lhs, rhs, text), Ori(Reg.t0, Reg.zero, 1), Subu(dest, Reg.t0, dest)
+        if isinstance(rhs, int):
+            return (
+                Addi(Reg.t0, Reg.zero, rhs, text),
+                Sltu(dest, lhs, Reg.t0),
+                Ori(Reg.t0, Reg.zero, 1),
+                Subu(dest, Reg.t0, dest),
+            )
+
+
+class Sleu(Instruction):
+    """
+    MIPS `sleu` (set less than or equal unsigned) instruction.
+    Set :dest: register to 1 if :operand1: register is less than or equal to contents of :operand2: register and 0 otherwise.
+    """
+
+    def __new__(
+        cls, dest: Reg, lhs: Reg, rhs: Reg | int, text: str | Comment = ""
+    ) -> tuple[Sltu, Ori, Subu] | tuple[Addi, Sltu, Ori, Subu]:
+        """
+        example: sleu $t1, $t2, $t3
+        :param dest: $t1
+        :param lhs: $t2
+        :param rhs: $t3 (if register) or 5 (for example if immediate)
+        """
+        if isinstance(rhs, Reg):
+            return Sltu(dest, rhs, lhs, text), Ori(Reg.t0, Reg.zero, 1), Subu(dest, Reg.t0, dest)
+        if isinstance(rhs, int):
+            return (
+                Addi(Reg.t0, Reg.zero, rhs, text),
+                Sltu(dest, Reg.t0, lhs),
+                Ori(Reg.t0, Reg.zero, 1),
+                Subu(dest, Reg.t0, dest),
+            )
+
+
+class Sgt(Instruction):
+    """
+    MIPS `sgt` (set greater than) instruction.
+    Set :dest: register to 1 if :operand1: register is greater than contents of :operand2: register and 0 otherwise.
+    """
+
+    def __new__(
+        cls, dest: Reg, lhs: Reg, rhs: Reg | int, text: str | Comment = ""
+    ) -> tuple[Slt] | tuple[Addi, Slt]:
+        """
+        example: sgt $t1, $t2, $t3
+        :param dest: $t1
+        :param lhs: $t2
+        :param rhs: $t3 (if register) or 5 (for example if immediate)
+        """
+        if isinstance(rhs, Reg):
+            return Slt(dest, rhs, lhs, text)
+        if isinstance(rhs, int):
+            return (
+                Addi(Reg.t0, Reg.zero, rhs, text),
+                Slt(dest, Reg.t0, lhs)
+            )
+
+
 class FpCompOp(Instruction):
     """
     Base class for all floating point comparison instructions
