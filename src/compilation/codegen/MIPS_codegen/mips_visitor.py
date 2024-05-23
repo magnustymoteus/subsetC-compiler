@@ -42,7 +42,6 @@ def assert_type(value, typename):
 
 def get_type_size(type: ir.Type) -> int:
     """Get the size of the type in bytes."""
-    # TODO allow for arrays
     match type:
         case ir.IntType():
             res = math.ceil(type.width / 8)
@@ -50,6 +49,8 @@ def get_type_size(type: ir.Type) -> int:
             res = get_type_size(type.pointee)
         case ir.FloatType():
             res = 4
+        case ir.ArrayType():
+            res = type.count * get_type_size(type.element)
         case _:
             assert False
     assert res > 0
@@ -70,9 +71,6 @@ class MipsVisitor(ir.Visitor):
         """Current block being visited."""
         return self.tree.blocks[-1]
 
-    globals: list[Global]
-    "List of global variables"
-
     variables: Variables
     "List of passed variables in current function scope"
 
@@ -87,6 +85,7 @@ class MipsVisitor(ir.Visitor):
         self.variables = Variables()
         self.stack_offset = 0
         super().__init__()
+
 
     def align_to(self, alignment: int):
         """Align the stack to the given alignment in bytes"""
@@ -206,7 +205,71 @@ class MipsVisitor(ir.Visitor):
     def visit(self, module: ir.Module):
         """Visit a module. Top level visit function."""
         print(type(module).__name__)
-        super().visit(module)
+        for glob in module.global_values:
+            if isinstance(glob, ir.GlobalVariable):
+                self.visit_Global(glob)
+            elif isinstance(glob, ir.Function):
+                self.visit_Function(glob)
+            else:
+                print("unhandled glob")
+
+    def get_glob_type(self, glob_initializer, glob_type: ir.Type) -> str:
+        if glob_initializer is not None:
+            if isinstance(glob_initializer.constant, bytearray):
+                return "ascii"
+            else:
+                match glob_type:
+                    case ir.FloatType():
+                        return "float"
+                    case ir.IntType():
+                        return "word" if get_type_size(glob_type) == 4 else "byte"
+                    case ir.PointerType():
+                        return "space"
+                    case ir.ArrayType():
+                        return self.get_glob_type(glob_initializer, glob_type.element)
+                    case _:
+                        assert False
+        return "space"
+    def get_glob_values(self, initializer, glob_type: ir.Type) -> list[str]:
+        match initializer:
+            case ir.Constant():
+                if isinstance(initializer.constant, bytearray):
+                    return [f'"{initializer.constant.decode("utf8").encode("unicode_escape").decode("utf8")}"']
+                match initializer.type:
+                    case ir.PointerType():
+                        if initializer.constant.startswith("getelementptr"):
+                            for elem in initializer.constant.split():
+                                if elem[0] == "@":
+                                    return ["$LC"+elem[2:-2]]
+                        return [str(get_type_size(glob_type))]
+                    case ir.ArrayType():
+                        res = []
+                        for element in initializer.constant:
+                            res += self.get_glob_values(element, glob_type)
+                        return res
+                    case _:
+                        return [initializer.constant]
+            case None:
+                 return [str(get_type_size(glob_type))]
+            case _:
+                assert False
+
+    def visit_Global(self, variable: ir.GlobalVariable):
+        print(f"- {type(variable).__name__}")
+        name = variable.name
+        glob_type: str = self.get_glob_type(variable.initializer, variable.type.pointee)
+        glob_values: list[str] = self.get_glob_values(variable.initializer, variable.type.pointee)
+        # type of glob is string
+        if glob_type == "ascii":
+            name = "$LC"+name
+        # glob value is a GEP to a string
+        for glob_value in glob_values:
+            if len(str(glob_value)) >= 3 and "$LC" == glob_value[:3]:
+                glob_type = "word"
+                break
+        glob = Global(name, glob_type, glob_values)
+        self.tree.data.append(glob)
+
 
     def visit_Function(self, func: ir_inst.Function):
         """Visit a function."""
@@ -215,7 +278,13 @@ class MipsVisitor(ir.Visitor):
         self.variables.clear()
         self.stack_offset = 0
         self.new_function_started = True
-        super().visit_Function(func)
+        match func.name:
+            case "printf":
+                pass
+            case "scanf":
+                pass
+            case _:
+                super().visit_Function(func)
 
     def visit_BasicBlock(self, bb: ir_inst.Block):
         """Visit a basic block."""

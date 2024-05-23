@@ -128,6 +128,9 @@ class SymbolTableVisitor(ASTVisitor):
             node_w (Wrapper[VariableDeclaration]): The wrapped variable declaration node to visit.
         """
         super().variable_decl(node_w)
+        if node_w.n.definition_w.n is not None and node_w.n.storage_class_specifier is None:
+            if not self._get_most_local_sym_tab().n.has_parent() and not isinstance(node_w.n.definition_w.n, (Literal, CompoundStatement)):
+                self.raiseSemanticErr("Global variable definition must be a compile time constant")
         symbol_name = node_w.n.identifier
         if node_w.n.local_symtab_w.n.symbol_exists_in_scope(symbol_name):
             decl_or_def: str = "Redeclaration" if not node_w.n.definition_w.n else "Redefinition"

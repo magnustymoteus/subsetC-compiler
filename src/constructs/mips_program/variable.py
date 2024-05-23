@@ -14,9 +14,19 @@ class Global:
     name: str
     "Name of the variable"
 
-    def __init__(self, type: str, name: str) -> None:
-        self.type = type
-        self.name = name
+    value: str
+    "Value of the variable:"
+
+    def __init__(self,  name: str, type: str, values: list[str]) -> None:
+        # we are currently assuming all values are of type 'type' since C only allows homogenous arrays
+        self.name: str = name
+        self.type: str = type
+        self.values: list[str] = values
+    def __str__(self) -> str:
+        result = f"{self.name}:\n"
+        for value in self.values:
+            result += f'\t.{self.type} {value}\n'
+        return result
 
 
 class Variable:
