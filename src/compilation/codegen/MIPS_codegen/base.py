@@ -25,8 +25,17 @@ def get_type_size(type: ir.Type) -> int:
             res = PTR_SIZE
         case ir.FloatType():
             res = 4
+        case ir.VoidType():
+            return 0
         case ir.ArrayType():
             res = type.count * get_type_size(type.element)
+        case ir.LiteralStructType():
+            # largest align of contained types
+            assert False, f"unimplemented: {type(i.type).__name__}"
+        case ir.IdentifiedStructType():
+            assert False, f"unimplemented: {type(i.type).__name__}"
+        case ir.BaseStructType():
+            assert False, f"unimplemented: {type(i.type).__name__}"
         case _:
             assert False
     assert res > 0
@@ -36,6 +45,30 @@ def get_type_size(type: ir.Type) -> int:
 def get_args_size(args) -> int:
     """Get the size of the provided arguments in bytes."""
     return sum(get_type_size(arg.type) for arg in args)
+
+
+def get_align(i: ir.Instruction) -> int:
+    match i.type:
+        case ir.IntType():
+            return get_type_size(i.type)
+        case ir.PointerType():
+            return PTR_SIZE
+        case ir.FloatType():
+            return 4
+        case ir.VoidType():
+            return 0
+        case ir.ArrayType():
+            # align of contained type
+            assert False, f"unimplemented: {type(i.type).__name__}"
+        case ir.LiteralStructType():
+            # largest align of contained types
+            assert False, f"unimplemented: {type(i.type).__name__}"
+        case ir.IdentifiedStructType():
+            assert False, f"unimplemented: {type(i.type).__name__}"
+        case ir.BaseStructType():
+            assert False, f"unimplemented: {type(i.type).__name__}"
+        case _:
+            assert False, f"unimplemented: {type(i.type).__name__}"
 
 
 class MVBase:
@@ -58,6 +91,12 @@ class MVBase:
 
     def align_to(self, alignment: int):
         """Align the stack to the given alignment in bytes"""
+        if alignment == 1:
+            self.last_block.add_instr(
+                mips_inst.Comment(f"align stack to {alignment} bytes, no change happened")
+            )
+            return
+
         shift_bits = int(math.log2(alignment))
         self.stack_offset = math.floor(self.stack_offset / alignment) * alignment
         self.last_block.add_instr(
@@ -67,7 +106,7 @@ class MVBase:
 
     def load_float(
         self,
-        i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function],
+        i: ir.Instruction | ir.GlobalVariable,
         r: Regf,
         text: str | mips_inst.Comment = "",
         mem_base: Reg = Reg.fp,
@@ -91,7 +130,7 @@ class MVBase:
 
     def load_int(
         self,
-        i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function],
+        i: ir.Instruction | ir.GlobalVariable,
         r: Reg,
         text: str | mips_inst.Comment = "",
         mem_base: Reg = Reg.fp,
@@ -126,7 +165,7 @@ class MVBase:
 
     def load_value(
         self,
-        i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function],
+        i: ir.Instruction | ir.GlobalVariable,
         r: Reg | Regf,
         text: str | mips_inst.Comment = "",
         mem_base: Reg = Reg.fp,
@@ -142,7 +181,7 @@ class MVBase:
         return self.load_int(i, r, text, mem_base)
 
     def load_address(
-        self, i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function], value, r: Reg
+        self, i: ir.Instruction | ir.GlobalVariable, value, r: Reg
     ) -> mips_inst.Instruction:
         """
         Load the address of a pointer into the register.
@@ -230,7 +269,6 @@ class MVBase:
         dst_ofst: int,
         len: int,
         align: int,
-        text: str | mips_inst.Comment = "",
     ) -> mips_inst.Instruction:
         """
         Copy ``len`` bytes of data from ``src_ofst``(``src_reg``) to ``dst_ofst``(``dst_reg``).
@@ -261,8 +299,18 @@ class MVBase:
         while todo > align % 4:
             move_instrs.extend(
                 (
-                    l_instr(Reg.t7, src_reg, src_ofst - done, mips_inst.Comment(f"load {size_moved} at -{done} from src start")),
-                    s_instr(Reg.t7, dst_reg, dst_ofst - done, mips_inst.Comment(f"store {size_moved} at -{done} from dest start")),
+                    l_instr(
+                        Reg.t7,
+                        src_reg,
+                        src_ofst - done,
+                        mips_inst.Comment(f"load {size_moved} at -{done} from src start"),
+                    ),
+                    s_instr(
+                        Reg.t7,
+                        dst_reg,
+                        dst_ofst - done,
+                        mips_inst.Comment(f"store {size_moved} at -{done} from dest start"),
+                    ),
                 )
             )
             todo -= size_moved

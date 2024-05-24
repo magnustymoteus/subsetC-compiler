@@ -1,6 +1,6 @@
 import llvmlite.ir as ir
 from src.constructs.mips_program.node import instr as mips_inst
-from src.compilation.codegen.MIPS_codegen.base import MVBase, get_type_size, PTR_SIZE
+from src.compilation.codegen.MIPS_codegen.base import MVBase, get_align, get_type_size, PTR_SIZE
 from src.constructs.mips_program.node.label import Label
 from src.constructs.mips_program.node.reg import Reg
 
@@ -19,19 +19,27 @@ class MVHandleAllocaMixin(MVBase):
 
         assert len(instr.operands) == 1
 
+        alloced: ir.Instruction = instr.operands[0]
+
         # size of the allocated type
-        size = get_type_size(instr.operands[0].type)
-        tot_size = size + PTR_SIZE
-        self.align_to(instr.align)
+        size = get_type_size(alloced.type)
+        self.align_to(get_align(alloced))
+
+        self.stack_offset -= size
+        self.last_block.add_instr(
+            # move the stack pointer by the size of the variable
+            mips_inst.Addiu(Reg.sp, Reg.sp, -(size), mips_inst.IrComment(f"{instr}")), # addiu $sp, $sp, -size
+        )
+
+
         # add variable to the list of variables of that function scope
-        var = self.variables.new_var(Label(instr.name), self.stack_offset - size)
-        self.stack_offset -= tot_size
+        var = self.variables.new_var(Label(instr.name), self.stack_offset)
+        self.align_to(instr.align)
+        self.stack_offset -= PTR_SIZE
+        self.last_block.add_instr(mips_inst.Addiu(Reg.sp, Reg.sp, -PTR_SIZE))
 
         # add instruction to the block and create new space on the stack for the var
         self.last_block.add_instr(
-            # move the stack pointer by the size of the variable
-            mips_inst.Addiu(Reg.sp, Reg.sp, -(tot_size), mips_inst.IrComment(f"{instr}")), # addiu $sp, $sp, -size
-
             # calculate address of allocated variable
             mips_inst.Addiu(Reg.t1, Reg.fp, var.offset + size),
 
