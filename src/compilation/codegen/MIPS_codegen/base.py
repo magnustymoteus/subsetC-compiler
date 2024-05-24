@@ -91,6 +91,7 @@ class MVBase:
 
     def align_to(self, alignment: int):
         """Align the stack to the given alignment in bytes"""
+        alignment = max(alignment, 1)
         if alignment == 1:
             self.last_block.add_instr(
                 mips_inst.Comment(f"align stack to {alignment} bytes, no change happened")
@@ -103,6 +104,17 @@ class MVBase:
             mips_inst.Srl(Reg.sp, Reg.sp, shift_bits, mips_inst.Comment(f"align stack to {alignment} bytes")),
             mips_inst.Sll(Reg.sp, Reg.sp, shift_bits),
         )
+
+    def get_offset(self, i: ir.Instruction):
+        assert not isinstance(i, ir.Constant)
+        if isinstance(i, ir.Argument):
+            func: ir.Function = self.function
+            arg_index: int = func.args.index(i)
+             # offset is size of argument to load and all following arguments
+            offset = get_args_size(func.args[arg_index:])
+            return offset
+        else:
+            return self.variables[i.name].offset
 
     def load_float(
         self,

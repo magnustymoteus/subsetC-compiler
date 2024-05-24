@@ -22,6 +22,7 @@ class MVHandleStoreMixin(MVBase):
 
         is_const = isinstance(value, ir.Constant)
         is_float = isinstance(value.type, ir.FloatType)
+        src_offset = None if is_const else self.get_offset(value)
 
         self.last_block.add_instr(
             # load store address
@@ -34,7 +35,8 @@ class MVHandleStoreMixin(MVBase):
                     self.store_value(value, Regf.f0 if is_float else Reg.t1, 0, mem_base=Reg.t2),
                 )
                 if is_const
-                else self.copy_data(Reg.fp, self.variables[value.name].offset, Reg.t2, 0, size, get_align(dest))
+                else self.copy_data(Reg.fp, src_offset, Reg.t2, 0, size, get_align(dest))
             ),
             mips_inst.Blank(),
         )
+
