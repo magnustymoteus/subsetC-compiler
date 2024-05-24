@@ -22,7 +22,7 @@ def get_type_size(type: ir.Type) -> int:
         case ir.IntType():
             res = math.ceil(type.width / 8)
         case ir.PointerType():
-            res = get_type_size(type.pointee)
+            res = PTR_SIZE
         case ir.FloatType():
             res = 4
         case ir.ArrayType():
@@ -141,7 +141,9 @@ class MVBase:
             return self.load_float(i, r, text, mem_base)
         return self.load_int(i, r, text, mem_base)
 
-    def load_address(self, i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function], value, r: Reg) -> mips_inst.Instruction:
+    def load_address(
+        self, i: ir.Instruction | ir.GlobalVariable | tuple[ir.Argument, ir.Function], value, r: Reg
+    ) -> mips_inst.Instruction:
         """
         Load the address of a pointer into the register.
         """
@@ -201,7 +203,12 @@ class MVBase:
         assert False, "unsupported type size"
 
     def store_value(
-        self, i: ir.Instruction, r: Reg | Regf, offset: int | None, text: str | mips_inst.Comment = "", mem_base: Reg = Reg.fp
+        self,
+        i: ir.Instruction,
+        r: Reg | Regf,
+        offset: int | None,
+        text: str | mips_inst.Comment = "",
+        mem_base: Reg = Reg.fp,
     ) -> mips_inst.Instruction:
         """
         Store content of a normal/float register ``r`` at ``offset`` from the frame pointer.
@@ -214,3 +221,77 @@ class MVBase:
         if isinstance(r, Regf):
             return self.store_float(i, r, offset, text, mem_base)
         return self.store_int(i, r, offset, text, mem_base)
+
+    def copy_data(
+        self,
+        src_reg: Reg,
+        src_ofst: int,
+        dst_reg: Reg,
+        dst_ofst: int,
+        len: int,
+        align: int,
+        text: str | mips_inst.Comment = "",
+    ) -> mips_inst.Instruction:
+        """
+        Copy ``len`` bytes of data from ``src_ofst``(``src_reg``) to ``dst_ofst``(``dst_reg``).
+        Start of data must be aligned to ``align`` bytes.
+        """
+
+        assert len > 0
+        assert src_reg != Reg.t7, dst_reg != Reg.t7
+
+        move_instrs: list[mips_inst.Instruction] = []
+        done = 0
+        todo = len
+        l_instr, s_instr, size_moved = None, None, 0
+
+        # determine copy size per instruction
+        match align % 4:
+            case 0:
+                l_instr, s_instr, size_moved = mips_inst.Lw, mips_inst.Sw, 4
+            case 1:
+                l_instr, s_instr, size_moved = mips_inst.Lb, mips_inst.Sb, 1
+            case 2:
+                l_instr, s_instr, size_moved = mips_inst.Lh, mips_inst.Sh, 2
+            case _:
+                assert False, f"alignment of {align%4=} not possible"
+
+        # copy data at of rate min(4, alignment)
+        # stop once there is less to do than the alignment size
+        while todo > align % 4:
+            move_instrs.extend(
+                (
+                    l_instr(Reg.t7, src_reg, src_ofst - done, mips_inst.Comment(f"load {size_moved} at -{done} from src start")),
+                    s_instr(Reg.t7, dst_reg, dst_ofst - done, mips_inst.Comment(f"store {size_moved} at -{done} from dest start")),
+                )
+            )
+            todo -= size_moved
+            done += size_moved
+
+        # copy the remaining data over (if any)
+        match todo:
+            case 1:
+                move_instrs.extend(
+                    (
+                        mips_inst.Lb(Reg.t7, src_reg, src_ofst - done),
+                        mips_inst.Lb(Reg.t7, src_reg, src_ofst - done),
+                    )
+                )
+            case 2:
+                move_instrs.extend(
+                    (
+                        mips_inst.Lh(Reg.t7, src_reg, src_ofst - done),
+                        mips_inst.Lh(Reg.t7, src_reg, src_ofst - done),
+                    )
+                )
+            case 3:
+                move_instrs.extend(
+                    (
+                        mips_inst.Lh(Reg.t7, src_reg, src_ofst - done),
+                        mips_inst.Lh(Reg.t7, src_reg, src_ofst - done),
+                        mips_inst.Lb(Reg.t7, src_reg, src_ofst - (done + 2)),
+                        mips_inst.Lb(Reg.t7, src_reg, src_ofst - (done + 2)),
+                    )
+                )
+
+        return move_instrs
