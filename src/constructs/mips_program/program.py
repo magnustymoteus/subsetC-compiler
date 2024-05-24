@@ -7,10 +7,9 @@ main:
     move $fp, $sp       # set frame pointer
     addiu $sp, $sp, -4  # allocate space for return value
     jal main.entry      # call main function
+   
     lw $a0, 0($fp)      # load return value from main function
-    li $v0, 1           # set syscall code to 1 (print int)
-    syscall             # print return value
-    li $v0, 10          # set syscall code to 10 (exit)
+    li $v0, 17          # set syscall code to 10 (exit)
     syscall             # exit
 """
 
