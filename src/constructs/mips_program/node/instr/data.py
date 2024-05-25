@@ -329,6 +329,13 @@ class Cvt_s_w(FpDataOp):
     def __init__(self, dest: Reg, src: Reg, text: str | Comment = "") -> None:
         super().__init__("cvt.s.w", dest, src, text)
 
+class Cvt_d_s(FpDataOp):
+    """
+    MIPS `cvt.d.s` instruction.
+    Convert from single precision (float) in :src: register into double precision (double) in :dest: register.
+    """
+    def __init__(self, dest: Regf, src: Regf, text: str | Comment = "") -> None:
+        super().__init__("cvt.d.s", dest, src, text)
 
 class Cvt_w_s(FpDataOp):
     """

@@ -50,13 +50,13 @@ class MVHandleCallMixin(MVBase):
                     # load argument value into t1 or f0
                     self.load_value(
                         oper,
-                        Regf.f0 if isinstance(oper.type, ir.FloatType) else Reg.t1,
+                        Regf.f0 if isinstance(oper.type, (ir.FloatType, ir.DoubleType)) else Reg.t1,
                         mips_inst.Comment(f"load arg {i}"),
                     ),
                     # store argument value on stack. stored at return offset (negative) - return size - argument size up to stored argument
                     self.store_value(
                         oper,
-                        Regf.f0 if isinstance(oper.type, ir.FloatType) else Reg.t1,
+                        Regf.f0 if isinstance(oper.type, (ir.FloatType, ir.DoubleType)) else Reg.t1,
                         var.offset - ret_size - get_args_size(func_args[:i]),
                         mips_inst.Comment(f"store arg {i}"),
                     ),

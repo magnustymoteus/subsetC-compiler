@@ -58,6 +58,11 @@ class MVHandleCastMixin(MVBase):
                     mips_inst.Cvt_s_w(Regf.f0, Regf.f0),
                     self.store_float(value, Regf.f0, var.offset),
                 )
+            case "fpext":
+                assert is_float
+                self.last_block.add_instr(self.load_float(value, Regf.f0),
+                                          self.store_float(value, Regf.f0, var.offset))
+                print("unhandled: fpext")
             case "ptrtoint":
                 print("unhandled: ptrtoint")
             case "inttoptr":
@@ -75,9 +80,6 @@ class MVHandleCastMixin(MVBase):
                 assert False
             case "fptrunc":
                 print("only float support: unhandled: fptrunc")
-                assert False
-            case "fpext":
-                print("only float support: unhandled: fpext")
                 assert False
             case _:
                 raise ValueError(f"Unsupported cast operation: '{instr.opname}'")

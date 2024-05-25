@@ -20,13 +20,11 @@ def get_type_size(type: ir.Type) -> int:
     """Get the size of the type in bytes."""
     match type:
         case ir.IntType():
-            res = math.ceil(type.width / 8)
+            res = 4
         case ir.PointerType():
             res = PTR_SIZE
-        case ir.FloatType():
+        case ir.FloatType() | ir.DoubleType():
             res = 4
-        case ir.DoubleType():
-            res = 8
         case ir.VoidType():
             return 0
         case ir.ArrayType():
@@ -55,7 +53,7 @@ def get_align(i: ir.Instruction) -> int:
             return get_type_size(i.type)
         case ir.PointerType():
             return PTR_SIZE
-        case ir.FloatType():
+        case ir.FloatType() | ir.DoubleType():
             return 4
         case ir.VoidType():
             return 0
@@ -126,12 +124,12 @@ class MVBase:
         mem_base: Reg = Reg.fp,
     ) -> mips_inst.Instruction:
         """Load a value from an instruction or a constant into the register."""
-        assert isinstance(i.type, ir.FloatType)
+        assert isinstance(i.type, (ir.FloatType, ir.DoubleType))
 
         if isinstance(i, ir.Constant):  # if loading instruction is a constant
-            assert isinstance(i.type, ir.FloatType)
+            assert isinstance(i.type, (ir.FloatType, ir.DoubleType))
             h = hex(struct.unpack("<I", struct.pack("<f", i.constant))[0])
-            return (mips_inst.Li(Reg.t1, h, text), mips_inst.Mtc1(Reg.t1, r))
+            return mips_inst.Li(Reg.t1, h, text), mips_inst.Mtc1(Reg.t1, r)
         elif isinstance(i, ir.Argument):  # if loading instruction is a function argument
             func: ir.Function = self.function
             arg_index: int = func.args.index(i)
