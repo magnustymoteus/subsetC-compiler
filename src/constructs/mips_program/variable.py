@@ -73,14 +73,25 @@ class Variables:
 
     def __init__(self) -> None:
         self.vars: BaseVariable = {}
+        self.globs: Global = {}
 
-    def __contains__(self, var: Variable | str) -> bool:
-        return self.vars.get(var if isinstance(var, str) else var.label.label) is not None
+    def __contains__(self, var: BaseVariable | str) -> bool:
+        result = self.vars.get(var if isinstance(var, str) else var.label.label) is not None
+        if not result:
+            return self.globs.get(var if isinstance(var, str) else var.label.label, None) is not None
+        return result
 
-    def __getitem__(self, var: Variable | str) -> Variable | None:
-        return self.vars.get(var if isinstance(var, str) else var.label.label)
+    def __getitem__(self, var: BaseVariable | str) -> Variable | None:
+        result = self.vars.get(var if isinstance(var, str) else var.label.label)
+        if result is None:
+            return self.globs.get(var if isinstance(var, str) else var.label.label, None)
+        return result
 
-    def add_var(self, var: Variable):
+    def add_glob(self, var: Global):
+        assert var not in self.globs
+        self.globs[var.label.label] = var
+
+    def add_var(self, var: BaseVariable):
         assert var not in self
         self.vars[var.label.label] = var
 

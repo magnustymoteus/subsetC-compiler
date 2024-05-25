@@ -24,15 +24,22 @@ class MVHandleCallMixin(MVBase):
         +-----------------+  ┛
         """
         func: ir.Function = instr.operands[0]
+        func_args: list = instr.args
+        jal_block = ""
         ret_size = get_type_size(func.return_value.type)
-        arg_size = get_args_size(func.args)
+        if instr.called_function.name in ["printf", "scanf"]:
+            jal_block = Label(instr.called_function.name)
+            func_args.append(ir.Constant(ir.IntType(32), len(func_args)))
+            ret_size = 0
+        else:
+            jal_block = Label(f"{func.name}.{func.basic_blocks[0].name}")
+        arg_size = get_args_size(func_args)
         tot_size = ret_size + arg_size
         self.align_to(ret_size)
         var = self.variables.new_var(Label(instr.name), self.stack_offset)
         # only increase stack offset by return size to overwrite arguments after call ends
         # in mips the stack pointer is increased by total size and reset before return jump
         self.stack_offset -= ret_size
-
         self.last_block.add_instr(
             # allocate stack space for function and return arguments
             mips_inst.Addiu(
@@ -50,12 +57,12 @@ class MVHandleCallMixin(MVBase):
                     self.store_value(
                         oper,
                         Regf.f0 if isinstance(oper.type, ir.FloatType) else Reg.t1,
-                        var.offset - ret_size - get_args_size(func.args[:i]),
+                        var.offset - ret_size - get_args_size(func_args[:i]),
                         mips_inst.Comment(f"store arg {i}"),
                     ),
                 )
-                for i, oper in enumerate(instr.operands[1:])
+                for i, oper in enumerate(func_args)
             ],
-            mips_inst.Jal(Label(f"{func.name}.{func.basic_blocks[0].name}")),
+            mips_inst.Jal(jal_block),
             mips_inst.Blank(),
         )

@@ -31,16 +31,16 @@ Project 4:
 - [x] for
 - [x] break
 - [x] continue
-- [ ] switch
-- [ ] break
-- [ ] case
+- [x] switch
+- [x] break
+- [x] case
 - [x] enumeration
 
 
 Project 5:
-- [ ] global variables
+- [x] global variables
 - [ ] void functions (crashes)
-- [ ] recursive calls (to test):w
+- [x] recursive calls 
 
 Project 6:
 - [ ] one dimensional arrays

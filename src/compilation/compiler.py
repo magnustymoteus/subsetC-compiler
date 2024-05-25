@@ -10,8 +10,7 @@ from llvmlite.binding import *
 from pathlib import Path
 
 import graphviz
-import subprocess
-
+import shutil
 
 class Compiler:
     @staticmethod
@@ -65,6 +64,7 @@ class Compiler:
     def __init__(self, disable=None, viz=None):
         self.disable: set[str] = disable if disable is not None else set()
         self.viz: set[str] = viz if viz is not None else set()
+        self.included_stdio: bool = False
 
     def do_viz(self, what: str):
         return "all" in self.viz or what in self.viz
@@ -80,6 +80,7 @@ class Compiler:
     def compile_llvm(self, filepath: Path) -> ir.Module:
         filename = str(os.path.splitext(os.path.basename(filepath))[0])
         preprocessor = Compiler.getPreprocessor(filepath)
+        self.included_stdio = preprocessor.included_stdio
         # Lexes the input file
         tokens = Compiler.getTokens(preprocessor.get_processed_result())
         parser = C_GrammarParser(tokens)
@@ -92,7 +93,7 @@ class Compiler:
             Compiler.visualizeCST(tree, parser.ruleNames, f"./{filename}/viz/cst")
         # conversion from CST to AST
         ast = Compiler.getAST(tree, tokens, preprocessor.environment_node)
-        ResolverVisitor(ast, preprocessor.included_stdio)
+        ResolverVisitor(ast, self.included_stdio)
 
         SimplifierVisitor(ast)
 
@@ -121,7 +122,7 @@ class Compiler:
         if self.do_viz("cfg"):
             Compiler.visualizeCFG(cfg, f"./{filename}/viz/cfg")
 
-        llvm = LLVMVisitor(ast, filename, self.is_disabled("comments"), preprocessor.included_stdio)
+        llvm = LLVMVisitor(ast, filename, self.is_disabled("comments"), self.included_stdio)
 
         if self.do_viz("cfg"):
             for function in llvm.module.functions:
@@ -139,6 +140,8 @@ class Compiler:
 
     def export_mips(self, program: MipsProgram, filepath: Path):
         filepath.parent.mkdir(parents=True, exist_ok=True)
+        if self.included_stdio:
+            shutil.copyfile("src/constructs/mips_program/stdio.asm", "stdio.asm")
         with open(f"{str(filepath)}", "w") as f:
             f.write(program.to_asm())
         f.close()

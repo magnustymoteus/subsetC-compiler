@@ -78,10 +78,7 @@ class MipsVisitor(
         for glob in module.global_values:
             if isinstance(glob, ir.GlobalVariable):
                 self.visit_Global(glob)
-            elif isinstance(glob, ir.Function):
-                self.visit_Function(glob)
-            else:
-                print("unhandled glob")
+        super().visit(module)
 
     def get_glob_type(self, glob_initializer, glob_type: ir.Type) -> str:
         if glob_initializer is not None:
@@ -105,7 +102,8 @@ class MipsVisitor(
         match initializer:
             case ir.Constant():
                 if isinstance(initializer.constant, bytearray):
-                    return [f'"{initializer.constant.decode("utf8").encode("unicode_escape").decode("utf8")}"']
+                    result = f'"{initializer.constant.decode("utf8").encode("unicode_escape").decode("utf8")}"'
+                    return [result.replace("\\x00", "\\00")]
                 match initializer.type:
                     case ir.PointerType():
                         if initializer.constant.startswith("getelementptr"):
@@ -153,9 +151,10 @@ class MipsVisitor(
         if glob_type == "ascii":
             name = "$G"+name
         # here glob value is a GEP to a string
-        if len(glob_values) == 1 and len(str(glob_values[0])) >= 3 and "$G" == glob_values[0][:3]:
+        if len(glob_values) == 1 and len(str(glob_values[0])) >= 3 and "$G" == glob_values[0][:2]:
             glob_type = "word"
         glob = Global(name, glob_type, glob_values)
+        self.variables.add_glob(glob)
         self.tree.data.append(glob)
 
     def visit_Function(self, func: ir_inst.Function):

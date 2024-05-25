@@ -6,7 +6,7 @@ from src.constructs.mips_program.node import instr as mips_inst
 from src.constructs.mips_program.node.label import Label
 from src.constructs.mips_program.node.reg import Reg, Regf
 from src.constructs.mips_program.program import MipsProgram
-from src.constructs.mips_program.variable import Variables
+from src.constructs.mips_program.variable import Variables, Global
 
 
 PTR_SIZE = 4
@@ -25,6 +25,8 @@ def get_type_size(type: ir.Type) -> int:
             res = PTR_SIZE
         case ir.FloatType():
             res = 4
+        case ir.DoubleType():
+            res = 8
         case ir.VoidType():
             return 0
         case ir.ArrayType():
@@ -161,7 +163,14 @@ class MVBase:
                 load_instr = mips_inst.Lb
             case _:
                 assert False
-        if isinstance(i, ir.Constant):  # if loading instruction is a constant
+        if isinstance(i, ir.FormattedConstant):
+            # assuming it is a string
+            formatted_str = "$G" + [elem for elem in i.constant.split() if elem[0] == "@"][0][2:-2]
+            var = self.variables[formatted_str]
+            if isinstance(var, Global) and var.type in ["ascii", "asciiz"]:
+                return mips_inst.La(r, var.label)
+            return mips_inst.Lw(r, formatted_str, None, text)
+        elif isinstance(i, ir.Constant):  # if loading instruction is a constant
             return mips_inst.Li(r, i.constant, text)
         elif isinstance(i, ir.Argument):  # if loading instruction is a function argument
             func: ir.Function = self.function
@@ -172,6 +181,8 @@ class MVBase:
             assert i.type.is_pointer
             result = mips_inst.La(r, Label(i.name), text)
             return result
+
+
         else:  # all other instructions
             return load_instr(r, mem_base, self.variables[i.name].offset, text)  # lw $r, offset($fp)
 
