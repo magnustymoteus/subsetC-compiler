@@ -1,19 +1,83 @@
 import os.path
 import pytest
-from pathlib import Path
 from src.compilation.compiler import *
 import subprocess
+import re
 
 all = Path("../../example_source_files/CorrectCode").glob("*.c")
 fundamental = Path("../../example_source_files/CorrectCode/").glob("*pass*.c")
 
 
+# gives all files that match the regex
+def test_mips_char():
+    filtered = []
+    filtered_all = [file for file in all if file.name not in filtered]
+    print("\n")
+    files_with_char = []
+    for path in filtered_all:
+        file_with_char = get_files_containing_char(path, "printf")
+        if file_with_char:
+            files_with_char.append(file_with_char)
+
+    if files_with_char:
+        print(files_with_char)
+
+
+def get_files_containing_char(filepath, regex):
+    file_with_char = ""
+    with open(filepath, "r") as file:
+        # Read the file
+        content = file.read()
+
+        # If the file contains the regex, add it to the list
+        if re.search(regex, content):
+            filename = str(os.path.splitext(os.path.basename(filepath))[0])
+            file_with_char = filename
+
+    return file_with_char
+
+
 def test_mips_fundamentals():
     failed = False
     compiler = Compiler()
-    filtered = ["proj2_man_pass_pointerToPointer2.c"]
+    """
+    °has printf in tests:
+        - proj3_man_pass_printf.c
+        - proj4_man_pass_whileLoop.c
+        - proj4_man_pass_assignmentExample.c
+        - proj4_man_pass_forLoop.c
+        - proj4_man_pass_if.c
+        - proj4_man_pass_ifChar.c
+        - proj4_man_pass_ifEnum.c
+        - proj4_man_pass_ifFloat.c
+        - proj4_man_pass_switch.c
+        - proj4_man_pass_switchChar.c
+        - proj4_man_pass_switchEnum.c
+        - proj4_man_pass_whileLoop.c
+    """
+    filtered = [
+        "proj3_man_pass_printf.c",
+        "proj4_man_pass_whileLoop.c",
+        "proj4_man_pass_assignmentExample.c",
+        "proj4_man_pass_forLoop.c",
+        "proj4_man_pass_if.c",
+        "proj4_man_pass_ifChar.c",
+        "proj4_man_pass_ifEnum.c",
+        "proj4_man_pass_ifFloat.c",
+        "proj4_man_pass_switch.c",
+        "proj4_man_pass_switchChar.c",
+        "proj4_man_pass_switchEnum.c",
+        "proj4_man_pass_whileLoop.c",
+    ]
+
+    tested_files: int = 0
     filtered_all = [file for file in fundamental if file.name not in filtered]
+    # filtered_all += "floatToIntConversion.c"
+    filtered_all.append(Path("../../example_source_files/CorrectCode/floatToIntConversion.c"))
+    filtered_all.append(Path("../../example_source_files/CorrectCode/intToFloatConversion.c"))
+
     for path in filtered_all:
+        tested_files += 1
         filename = str(os.path.splitext(os.path.basename(path))[0])
         print("\nFilename:" + filename + ".c")
         llvm = compiler.compile_llvm(path)
@@ -30,6 +94,8 @@ def test_mips_fundamentals():
         print(f"{success_str}{path}")
         print(f"expected: {reference_output}")
         print(f"actual: {tested_output}")
+        print()
+        # print("tested: " + tested_files)
         print()
         if not success:
             failed = True
