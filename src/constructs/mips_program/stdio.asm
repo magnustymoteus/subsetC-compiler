@@ -13,6 +13,7 @@
 
     lw $t7, 0($t7)
 
+    li $t9, 1
 
     j print_loop
 
@@ -31,22 +32,58 @@ print_loop:
     addi $t7, $t7, 1      # Move to next character
     j print_loop
 
+
+
 handle_format:
 
     addi $t7, $t7, 1      # Move to next character to check format specifier
     lb $t3, 0($t7)        # Load the format specifier
 
+    move $a0, $t3
+    move $v1, $t6
+    jal is_digit
+    beq $t6, 1, handle_padding
+    beq $v1, 1, apply_padding
+
+check_format:
+    li $t9, 0
+    li $t4, 0
     beq $t3, 's', print_string  # If 's', print string
     beq $t3, 'd', print_integer # If 'd', print integer
     beq $t3, 'f', print_float
     beq $t3, 'c', print_character
     beq $t3, 'x', print_hex
+
+
     # If unknown specifier, just print it as is
     li $v0, 11            # Print character syscall
     move $a0, $t3         # Print the specifier
     syscall
     addi $t7, $t7, 1      # Move to next character
     j print_loop
+
+
+is_digit:
+    sge $t0, $a0, 48
+    sle $t1, $a0, 57
+    and $t6, $t0, $t1
+    jr $ra
+
+handle_padding:
+    andi $t8,$t3,0x0F
+    mul $t4, $t4, 10
+    add $t4, $t4, $t8
+
+    j handle_format
+
+apply_padding:
+    li $a0, 32
+    li $v0, 11
+    syscall
+
+    addi $t4, $t4, -1
+    beqz $t4, check_format
+    j apply_padding
 
 print_string:
     lw $t2, 0($t5)
@@ -108,5 +145,3 @@ end_print:
     lw $fp, 0($sp)
     addu $sp, $sp, $t5
     jr $ra
-
-
