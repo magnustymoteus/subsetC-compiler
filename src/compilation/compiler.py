@@ -10,7 +10,6 @@ from llvmlite.binding import *
 from pathlib import Path
 
 import graphviz
-import shutil
 
 class Compiler:
     @staticmethod
@@ -140,8 +139,10 @@ class Compiler:
 
     def export_mips(self, program: MipsProgram, filepath: Path):
         filepath.parent.mkdir(parents=True, exist_ok=True)
-        if self.included_stdio:
-            shutil.copyfile("src/constructs/mips_program/stdio.asm", "stdio.asm")
         with open(f"{str(filepath)}", "w") as f:
             f.write(program.to_asm())
+            if self.included_stdio:
+                with open(f"{str('src/constructs/mips_program/stdio.asm')}", "r") as f2:
+                    f.write(f2.read())
+
         f.close()

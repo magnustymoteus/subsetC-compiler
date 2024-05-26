@@ -1,5 +1,6 @@
 .text
-.globl printf
+#.globl printf
+
  printf:
     sw $fp, 0($sp)  #new stack frame
     move $fp, $sp
@@ -145,3 +146,6 @@ end_print:
     lw $fp, 0($sp)
     addu $sp, $sp, $t5
     jr $ra
+
+
+
