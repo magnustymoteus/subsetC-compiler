@@ -142,7 +142,9 @@ class Compiler:
         with open(f"{str(filepath)}", "w") as f:
             f.write(program.to_asm())
             if self.included_stdio:
-                with open(f"{str('src/constructs/mips_program/stdio.asm')}", "r") as f2:
+                base_path = Path(__file__).resolve().parent.parent.parent
+                stdio_path = base_path / "src" / "constructs" / "mips_program" / "stdio.asm"
+                with open(stdio_path, "r") as f2:
                     f.write(f2.read())
 
         f.close()

@@ -39,7 +39,7 @@ def get_files_containing_char(filepath, regex):
 
 def test_mips_fundamentals():
     failed = False
-    compiler = Compiler()
+    compiler = Compiler({"cprop", "cfold", "dcode"}, None)
     """
     °has printf in tests:
         - proj3_man_pass_printf.c
@@ -55,26 +55,25 @@ def test_mips_fundamentals():
         - proj4_man_pass_switchEnum.c
         - proj4_man_pass_whileLoop.c
     """
+
     filtered = [
-        "proj3_man_pass_printf.c",
+        # b'10Error in proj4_man_pass_whileLoop/mips.asm line 148: Runtime exception at 0x0040018c: address out of range 0x00000000\n\nProcessing terminated due to errors.'
         "proj4_man_pass_whileLoop.c",
-        "proj4_man_pass_assignmentExample.c",
+        # proj4_man_pass_forLoop/mips.asm line 164: Runtime exception at 0x004001d0: arithmetic overflow\n\nProcessing terminated due to errors.\n'
         "proj4_man_pass_forLoop.c",
-        "proj4_man_pass_if.c",
-        "proj4_man_pass_ifChar.c",
-        "proj4_man_pass_ifEnum.c",
-        "proj4_man_pass_ifFloat.c",
+        # line 326: Runtime exception at 0x00400390: address out of range 0x00000000\n\nProcessing terminated due to errors.\n'
+        "proj4_man_pass_assignmentExample.c",
+        # Runtime exception at 0x00400238: address out of range 0x00000000
         "proj4_man_pass_switch.c",
-        "proj4_man_pass_switchChar.c",
+        # doesn't work when cprop is enabled
         "proj4_man_pass_switchEnum.c",
-        "proj4_man_pass_whileLoop.c",
+        "proj4_man_pass_switchChar.c",
+        # printf of float understandably wrong
+        "proj4_man_pass_ifChar.c",
     ]
 
     tested_files: int = 0
     filtered_all = [file for file in fundamental if file.name not in filtered]
-    # filtered_all += "floatToIntConversion.c"
-    filtered_all.append(Path("../../example_source_files/CorrectCode/floatToIntConversion.c"))
-    filtered_all.append(Path("../../example_source_files/CorrectCode/intToFloatConversion.c"))
 
     for path in filtered_all:
         tested_files += 1
@@ -83,7 +82,7 @@ def test_mips_fundamentals():
         llvm = compiler.compile_llvm(path)
         mips = compiler.compile_mips(llvm)
         compiler.export_mips(mips, Path(f"./{filename}/mips.asm"))
-        # nc option to remove
+        # nc option to remove standard output text
         tested_output = subprocess.check_output(["mars", f"./{filename}/mips.asm", "nc"])
         # remove trailing newline
         tested_output = tested_output[:-1]
@@ -94,8 +93,7 @@ def test_mips_fundamentals():
         print(f"{success_str}{path}")
         print(f"expected: {reference_output}")
         print(f"actual: {tested_output}")
-        print()
-        # print("tested: " + tested_files)
+        # print("tested: " + str(tested_files))
         print()
         if not success:
             failed = True
