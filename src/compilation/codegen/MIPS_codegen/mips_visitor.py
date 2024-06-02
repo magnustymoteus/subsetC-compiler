@@ -74,7 +74,7 @@ class MipsVisitor(
 
     def visit(self, module: ir.Module):
         """Visit a module. Top level visit function."""
-        print(type(module).__name__)
+        # print(type(module).__name__)  # TODO remove when finished
         for glob in module.global_values:
             if isinstance(glob, ir.GlobalVariable):
                 self.visit_Global(glob)
@@ -143,13 +143,13 @@ class MipsVisitor(
                 assert False
 
     def visit_Global(self, variable: ir.GlobalVariable):
-        print(f"- {type(variable).__name__}")
+        # print(f"- {type(variable).__name__}")  # TODO remove when finished
         name = variable.name
         glob_type: str = self.get_glob_type(variable.initializer, variable.type.pointee)
         glob_values: list[str] = self.get_glob_values(variable.initializer, variable.type.pointee)
         # type of glob is string
         if glob_type in ["ascii", "asciiz"]:
-            name = "$G"+name
+            name = "$G" + name
         # here glob value is a GEP to a string
         if len(glob_values) == 1 and len(str(glob_values[0])) >= 3 and "$G" == glob_values[0][:2]:
             glob_type = "word"
@@ -159,7 +159,7 @@ class MipsVisitor(
 
     def visit_Function(self, func: ir_inst.Function):
         """Visit a function."""
-        print(f"- {type(func).__name__}")
+        # print(f"- {type(func).__name__}")  # TODO remove when finished
 
         self.variables.clear()
         self.stack_offset = 0
@@ -187,7 +187,7 @@ class MipsVisitor(
 
     def visit_BasicBlock(self, bb: ir_inst.Block):
         """Visit a basic block."""
-        print(f"  - {type(bb).__name__}")
+        # print(f"  - {type(bb).__name__}")  # TODO remove when finished
 
         self.tree.add_block(LabeledBlock(Label(f"{self.function.name}.{bb.name}")))
 
@@ -210,8 +210,14 @@ class MipsVisitor(
 
     def visit_Instruction(self, instr: ir_inst.Instruction):
         """Visit an instruction."""
-        print(f"    - {type(instr).__name__}")
+        # print(f"    - {type(instr).__name__}")  # TODO remove when finished
 
+        # for debugging stack pointer desyncs, marks location in mars before each instruction
+        # if not isinstance(instr, ir_inst.Comment):
+        #     self.last_block.add_instr(
+        #         mips_inst.Lw(Reg.t1, Reg.sp, text="mark sp location"),
+        #         mips_inst.Sw(Reg.t1, Reg.sp, text="mark sp location"),
+        #     )
         match instr:
             case ir_inst.AllocaInstr():
                 super().handle_alloca(instr)

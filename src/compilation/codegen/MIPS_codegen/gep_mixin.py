@@ -5,49 +5,54 @@ from src.constructs.mips_program.node.label import Label
 from src.constructs.mips_program.node.reg import Reg
 
 
+def contained_type(t: ir.Type) -> ir.Type:
+    match t:
+        case ir.PointerType():
+            return t.pointee
+        case ir.ArrayType():
+            return t.element
+        case ir.LiteralStructType():
+            assert False, f"unimplemented: {type(t.type).__name__}"
+        case ir.IdentifiedStructType():
+            assert False, f"unimplemented: {type(t.type).__name__}"
+        case ir.BaseStructType():
+            assert False, f"unimplemented: {type(t.type).__name__}"
+        case _:
+            assert False, f"type '{type(t.type).__name__}' has no contained type"
+
+
 class MVHandleGEPMixin(MVBase):
     def handle_gep(self, instr: ir.GEPInstr):
         # %"2" = getelementptr inbounds i32, i32* %"0", i64 %"1"
         # moves the pointer %"0" forward by one element of type i32 and stores the result in %"2".
 
-        assert len(instr.operands) == 2 and isinstance(instr.operands[1], ir.CastInstr)
+        base_ptr: ir.Instruction = instr.pointer
+        indices = instr.indices
+        # ret_type = instr.type
+        size = get_type_size(instr.type)
 
-        base_ptr = instr.operands[0]
-        offset = get_type_size(base_ptr.type)
+        # self.align_to(size)
+        var = self.variables.new_var(Label(instr.name), self.stack_offset)
+        self.stack_offset -= size
 
-        # Store the new pointer address in the variables list
-        self.variables.new_var(Label(instr.name), self.stack_offset)
-        self.stack_offset -= offset
-
-        self.last_block.add_instr(mips_inst.IrComment(f"{instr}"))
         self.last_block.add_instr(
-            # Load the adress of the base pointer into $t1
-            mips_inst.Lw(
-                Reg.t1,
-                Reg.fp,
-                # IR: %"2" = getelementptr inbounds i32, i32* %"0", i64 %"1"
-                # this gets the pointer that %0 points to
-                self.variables[instr.operands[0].operands[0].name].offset,
-                mips_inst.Comment(f"Load value of %{instr.operands[0].operands[0].name}"),
-            ),
-            # Load the base pointer into $t2
-            mips_inst.Li(Reg.t2, offset, mips_inst.Comment("Load offset")),
-            # Sub the offset from the address of the base pointer
-            (
-                # pointer++
-                mips_inst.Sub(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("Sub offset from base pointer"))
-                if isinstance(instr.operands[1].operands[0], ir.Constant)
-                # pointer--
-                else mips_inst.Add(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment("Add offset to base pointer"))
-            ),
-            # Store result on the stack on the variables offset
-            mips_inst.Sw(
-                Reg.t1,
-                Reg.fp,
-                self.variables[instr.name].offset,
-                mips_inst.Comment("Store new ptr address on the stack"),
-            ),
+            mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
+            mips_inst.Move(Reg.t1, Reg.zero),
         )
-        self.last_block.add_instr(mips_inst.Blank()),
+        
+        ptr_type: ir.PointerType = base_ptr.type
 
-        # print("unhandled! for arrays")
+        for i in indices:
+            ptr_type = contained_type(ptr_type)
+            self.last_block.add_instr(
+                self.load_int(i, Reg.t2, mips_inst.Comment(f"load index \"{i}\"")),
+                mips_inst.Li(Reg.t3, get_type_size(ptr_type), mips_inst.Comment(f"load type size")),
+                mips_inst.Mul(Reg.t2, Reg.t2, Reg.t3, mips_inst.Comment(f"index * type size")),
+                mips_inst.Add(Reg.t1, Reg.t1, Reg.t2, mips_inst.Comment(f"add offset")),
+            )
+        self.last_block.add_instr(
+            self.load_int(base_ptr, Reg.t2),
+            mips_inst.Sub(Reg.t1, Reg.t2, Reg.t1),
+            self.store_int(instr, Reg.t1, var.offset),  # store calculated offset
+            mips_inst.Blank(),
+        )

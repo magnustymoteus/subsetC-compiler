@@ -78,7 +78,7 @@ class MVHandleCallMixin(MVBase):
                         ),
                     )
                     if isinstance(arg, ir.Constant)
-                    else self.copy_data(Reg.fp, self.variables[arg.name].offset, Reg.fp, arg_offset, arg_size, get_align(arg))
+                    else self.copy_data(Reg.fp, self.variables[arg.name].offset, Reg.fp, arg_offset, arg_size, get_align(arg.type))
                 )
                 for arg, arg_offset, arg_size in args_with_offset
             ],

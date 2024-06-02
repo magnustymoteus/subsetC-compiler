@@ -35,7 +35,7 @@ class MVHandleStoreMixin(MVBase):
                     self.store_value(value, Regf.f0 if is_float else Reg.t1, 0, mem_base=Reg.t2),
                 )
                 if is_const
-                else self.copy_data(Reg.fp, src_offset, Reg.t2, 0, size, get_align(dest))
+                else self.copy_data(Reg.fp, src_offset, Reg.t2, 0, size, get_align(dest.type))
             ),
             mips_inst.Blank(),
         )

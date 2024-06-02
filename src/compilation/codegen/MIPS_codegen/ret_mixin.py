@@ -35,11 +35,11 @@ class MVHandleRetMixin(MVBase):
                             # load value to be stored
                             self.load_value(ret_val, Regf.f0 if is_float else Reg.t1),
                             # store value at store address
-                            self.store_value(ret_val, Regf.f0 if is_float else Reg.t1, 0, mem_base=Reg.t2),
+                            self.store_value(ret_val, Regf.f0 if is_float else Reg.t1, tot_size),
                         )
                         if is_const
                         else self.copy_data(
-                            Reg.fp, self.variables[ret_val.name].offset, Reg.fp, tot_size, ret_size, get_align(ret_val)
+                            Reg.fp, self.variables[ret_val.name].offset, Reg.fp, tot_size, ret_size, get_align(ret_val.type)
                         )
                     ),
                 )
@@ -47,7 +47,7 @@ class MVHandleRetMixin(MVBase):
                 else ()
             ),
             # restore return register
-            mips_inst.Lw(Reg.ra, Reg.fp, -4),  # lw  $ra, -4($fp)
+            mips_inst.Lw(Reg.ra, Reg.fp, -4, mips_inst.IrComment(f"{instr}")),  # lw  $ra, -4($fp)
             # restore stack pointer to start of frame
             mips_inst.Move(Reg.sp, Reg.fp),  # move    $sp, $fp
             # restore previous frame pointer

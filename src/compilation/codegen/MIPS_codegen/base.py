@@ -43,10 +43,10 @@ def get_type_size(t: ir.Type) -> int:
     return res
 
 
-def get_align(i: ir.Instruction) -> int:
-    match i.type:
+def get_align(t: ir.Type) -> int:
+    match t:
         case ir.IntType():
-            return get_type_size(i.type)
+            return get_type_size(t)
         case ir.PointerType():
             return PTR_SIZE
         case ir.FloatType() | ir.DoubleType():
@@ -55,16 +55,16 @@ def get_align(i: ir.Instruction) -> int:
             return 0
         case ir.ArrayType():
             # align of contained type
-            assert False, f"unimplemented: {type(i.type).__name__}"
+            return get_align(t.element)
         case ir.LiteralStructType():
             # largest align of contained types
-            assert False, f"unimplemented: {type(i.type).__name__}"
+            assert False, f"unimplemented: {type(t).__name__}"
         case ir.IdentifiedStructType():
-            assert False, f"unimplemented: {type(i.type).__name__}"
+            assert False, f"unimplemented: {type(t).__name__}"
         case ir.BaseStructType():
-            assert False, f"unimplemented: {type(i.type).__name__}"
+            assert False, f"unimplemented: {type(t).__name__}"
         case _:
-            assert False, f"unimplemented: {type(i.type).__name__}"
+            assert False, f"unimplemented: {type(t).__name__}"
 
 
 class _ArgOffset():
