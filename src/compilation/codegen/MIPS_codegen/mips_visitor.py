@@ -83,7 +83,7 @@ class MipsVisitor(
     def get_glob_type(self, glob_initializer, glob_type: ir.Type) -> str:
         if glob_initializer is not None:
             if isinstance(glob_initializer.constant, bytearray):
-                return "ascii"
+                return "asciiz"
             else:
                 match glob_type:
                     case ir.FloatType():
@@ -103,7 +103,7 @@ class MipsVisitor(
             case ir.Constant():
                 if isinstance(initializer.constant, bytearray):
                     result = f'"{initializer.constant.decode("utf8").encode("unicode_escape").decode("utf8")}"'
-                    return [result.replace("\\x00", "\\00")]
+                    return [result.replace("\\x00", "")]
                 match initializer.type:
                     case ir.PointerType():
                         if initializer.constant.startswith("getelementptr"):
@@ -148,7 +148,7 @@ class MipsVisitor(
         glob_type: str = self.get_glob_type(variable.initializer, variable.type.pointee)
         glob_values: list[str] = self.get_glob_values(variable.initializer, variable.type.pointee)
         # type of glob is string
-        if glob_type == "ascii":
+        if glob_type in ["ascii", "asciiz"]:
             name = "$G"+name
         # here glob value is a GEP to a string
         if len(glob_values) == 1 and len(str(glob_values[0])) >= 3 and "$G" == glob_values[0][:2]:
