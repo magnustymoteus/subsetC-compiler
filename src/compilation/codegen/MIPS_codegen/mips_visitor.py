@@ -6,7 +6,7 @@ from src.constructs.mips_program.node import instr as mips_inst
 import struct
 
 from .alloca_mixin import MVHandleAllocaMixin
-from .base import assert_type, get_args_size, get_type_size
+from .base import assert_type, get_type_size
 from .branch_mixin import MVHandleBranchMixin
 from .call_mixin import MVHandleCallMixin
 from .cast_mixin import MVHandleCastMixin
@@ -109,7 +109,7 @@ class MipsVisitor(
                         if initializer.constant.startswith("getelementptr"):
                             for elem in initializer.constant.split():
                                 if elem[0] == "@":
-                                    return ["$G"+elem[2:-2]]
+                                    return ["$G" + elem[2:-2]]
                         return [str(get_type_size(glob_type))]
                     case ir.ArrayType():
                         res = []
@@ -122,13 +122,13 @@ class MipsVisitor(
                             result_split = initializer.constant.split()
                             for i, elem in enumerate(result_split):
                                 if elem == "to":
-                                    result = result_split[i-1]
+                                    result = result_split[i - 1]
                                     print(result)
-                                    if '0x' in result[:2]:
+                                    if "0x" in result[:2]:
                                         result = int(result, 16)
-                                        byte_pattern = struct.pack('>Q', result)
+                                        byte_pattern = struct.pack(">Q", result)
                                         # Interpret the byte pattern as a double-precision float
-                                        double_value = struct.unpack('>d', byte_pattern)[0]
+                                        double_value = struct.unpack(">d", byte_pattern)[0]
                                         # Convert the double to an integer by truncating
                                         result = int(double_value)
                                         if result < -128:
@@ -165,11 +165,24 @@ class MipsVisitor(
         self.stack_offset = 0
         self.new_function_started = True
         match func.name:
-            case "printf":
-                pass
-            case "scanf":
+            case "printf" | "scanf":
                 pass
             case _:
+                # create argument variables
+                args_with_offset = self.calc_arg_offsets(func.args, 0)
+                tot_arg_size = (
+                    -(args_with_offset[-1].offset - get_type_size(args_with_offset[-1].instr.type))
+                    if len(args_with_offset) > 0
+                    else 0
+                )
+                first_empty = (
+                    args_with_offset[-1].offset - args_with_offset[-1].size if len(args_with_offset) > 0 else 0
+                )
+                # Align to word for start of next frame
+                tot_arg_size += self.align_to(4, apply=False, base=first_empty)[1]
+                for arg, arg_offset, _ in args_with_offset:
+                    # `size + offset` because offset is already negative
+                    self.variables.new_var(Label(arg.name), tot_arg_size + arg_offset)
                 super().visit_Function(func)
 
     def visit_BasicBlock(self, bb: ir_inst.Block):

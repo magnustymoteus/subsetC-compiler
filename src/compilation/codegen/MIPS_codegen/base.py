@@ -16,10 +16,11 @@ def assert_type(value, typename):
     assert type(value).__name__ == typename, f"type '{type(value).__name__}' not implemented"
 
 
-def get_type_size(type: ir.Type) -> int:
+def get_type_size(t: ir.Type) -> int:
     """Get the size of the type in bytes."""
-    match type:
+    match t:
         case ir.IntType():
+            # res = math.ceil(t.width / 8)
             res = 4
         case ir.PointerType():
             res = PTR_SIZE
@@ -28,23 +29,18 @@ def get_type_size(type: ir.Type) -> int:
         case ir.VoidType():
             return 0
         case ir.ArrayType():
-            res = type.count * get_type_size(type.element)
+            res = t.count * get_type_size(t.element)
         case ir.LiteralStructType():
             # largest align of contained types
-            assert False, f"unimplemented: {type(i.type).__name__}"
+            assert False, f"unimplemented: {type(t.type).__name__}"
         case ir.IdentifiedStructType():
-            assert False, f"unimplemented: {type(i.type).__name__}"
+            assert False, f"unimplemented: {type(t.type).__name__}"
         case ir.BaseStructType():
-            assert False, f"unimplemented: {type(i.type).__name__}"
+            assert False, f"unimplemented: {type(t.type).__name__}"
         case _:
             assert False
     assert res > 0
     return res
-
-
-def get_args_size(args) -> int:
-    """Get the size of the provided arguments in bytes."""
-    return sum(get_type_size(arg.type) for arg in args)
 
 
 def get_align(i: ir.Instruction) -> int:
@@ -71,6 +67,19 @@ def get_align(i: ir.Instruction) -> int:
             assert False, f"unimplemented: {type(i.type).__name__}"
 
 
+class _ArgOffset():
+    def __init__(self, instr: ir.Instruction, offset: int, size: int) -> None:
+        self.instr = instr
+        self.offset = offset
+        self.size = size
+
+    def __iter__(self):  # needed to allow unpacking
+        return iter((self.instr, self.offset, self.size))
+
+    def __repr__(self) -> str:
+        return f"<_ArgOffset({self.instr.__repr__()}, {self.offset}, {self.size})>"
+
+
 class MVBase:
     tree: MipsProgram
     "Tree of the mips program blocks with instructions."
@@ -89,32 +98,47 @@ class MVBase:
     new_function_started: bool
     "True if a new function has just started. Used to indicate to the block visit a new stack frame should be created."
 
-    def align_to(self, alignment: int):
-        """Align the stack to the given alignment in bytes"""
-        alignment = max(alignment, 1)
+    def align_to(self, alignment: int, apply=True, base=None) -> tuple[int, int, tuple[mips_inst.Srl, mips_inst.Sll] | None]:
+        """
+        Align the stack to the given alignment in bytes
+
+        :aligment: The number of bytes to align to. Must be a power of 2.
+        :apply: If True (default) the code will be immediately applied.
+        If false the resulting offset and instructions will be returned.
+        NOTE: If ``base`` is provided apply will be forced to False.
+        :base: Base address to align from. If base is set ``apply`` is disabled.
+
+        :return: (offset, diff, instructions)
+        """
+        if base is not None:
+            apply = False
+        else:
+            base = self.stack_offset
+
+        # alignment = max(alignment, 1)
+        if alignment == 0:
+            assert False
+
         if alignment == 1:
-            self.last_block.add_instr(
-                mips_inst.Comment(f"align stack to {alignment} bytes, no change happened")
-            )
-            return
+            if apply:
+                self.last_block.add_instr(
+                    mips_inst.Comment(f"align stack to {alignment} bytes, no change happened")
+                )
+            return base, 1, ()
 
         shift_bits = int(math.log2(alignment))
-        self.stack_offset = math.floor(self.stack_offset / alignment) * alignment
-        self.last_block.add_instr(
+        new_offset = math.floor(base / alignment) * alignment
+        diff = new_offset - base
+        if apply:
+            self.stack_offset = new_offset
+
+        instructions = (
             mips_inst.Srl(Reg.sp, Reg.sp, shift_bits, mips_inst.Comment(f"align stack to {alignment} bytes")),
             mips_inst.Sll(Reg.sp, Reg.sp, shift_bits),
         )
-
-    def get_offset(self, i: ir.Instruction):
-        assert not isinstance(i, ir.Constant)
-        if isinstance(i, ir.Argument):
-            func: ir.Function = self.function
-            arg_index: int = func.args.index(i)
-             # offset is size of argument to load and all following arguments
-            offset = get_args_size(func.args[arg_index:])
-            return offset
-        else:
-            return self.variables[i.name].offset
+        if apply:
+            self.last_block.add_instr(instructions)
+        return new_offset, diff, instructions
 
     def load_float(
         self,
@@ -130,13 +154,6 @@ class MVBase:
             assert isinstance(i.type, (ir.FloatType, ir.DoubleType))
             h = hex(struct.unpack("<I", struct.pack("<f", i.constant))[0])
             return mips_inst.Li(Reg.t1, h, text), mips_inst.Mtc1(Reg.t1, r)
-        elif isinstance(i, ir.Argument):  # if loading instruction is a function argument
-            func: ir.Function = self.function
-            arg_index: int = func.args.index(i)
-            offset = get_args_size(
-                func.args[arg_index:]
-            )  # offset is size of argument to load and all following arguments
-            return mips_inst.L_s(r, mem_base, offset, text)  # lw $r, offset($fp)
         else:  # all other instructions
             return mips_inst.L_s(r, mem_base, self.variables[i.name].offset, text)  # lw $r, offset($fp)
 
@@ -170,17 +187,10 @@ class MVBase:
             return mips_inst.Lw(r, formatted_str, None, text)
         elif isinstance(i, ir.Constant):  # if loading instruction is a constant
             return mips_inst.Li(r, i.constant, text)
-        elif isinstance(i, ir.Argument):  # if loading instruction is a function argument
-            func: ir.Function = self.function
-            arg_index: int = func.args.index(i)
-            offset = get_args_size(func.args[arg_index:])
-            return load_instr(r, mem_base, offset, text)  # lw $r, offset($fp)
         elif isinstance(i, ir.GlobalVariable):
             assert i.type.is_pointer
             result = mips_inst.La(r, Label(i.name), text)
             return result
-
-
         else:  # all other instructions
             return load_instr(r, mem_base, self.variables[i.name].offset, text)  # lw $r, offset($fp)
 
@@ -207,12 +217,6 @@ class MVBase:
         """
         Load the address of a pointer into the register.
         """
-        if isinstance(i, ir.Argument):
-            func: ir.Function = self.function
-            arg_index: int = func.args.index(i)
-            offset = get_args_size(func.args[arg_index:])
-            return mips_inst.Addiu(r, Reg.fp, offset, mips_inst.Comment(f"Load address of argument {i.name}"))
-
         # Ensure the value is a variable with an allocated memory space
         assert value.name in self.variables, f"Variable {value.name} not found in allocated variables."
 
@@ -343,24 +347,46 @@ class MVBase:
                 move_instrs.extend(
                     (
                         mips_inst.Lb(Reg.t7, src_reg, src_ofst - done),
-                        mips_inst.Lb(Reg.t7, src_reg, src_ofst - done),
+                        mips_inst.Sb(Reg.t7, dst_reg, dst_ofst - done),
                     )
                 )
             case 2:
                 move_instrs.extend(
                     (
                         mips_inst.Lh(Reg.t7, src_reg, src_ofst - done),
-                        mips_inst.Lh(Reg.t7, src_reg, src_ofst - done),
+                        mips_inst.Sh(Reg.t7, dst_reg, dst_ofst - done),
                     )
                 )
             case 3:
                 move_instrs.extend(
                     (
                         mips_inst.Lh(Reg.t7, src_reg, src_ofst - done),
-                        mips_inst.Lh(Reg.t7, src_reg, src_ofst - done),
+                        mips_inst.Sh(Reg.t7, dst_reg, dst_ofst - done),
                         mips_inst.Lb(Reg.t7, src_reg, src_ofst - (done + 2)),
-                        mips_inst.Lb(Reg.t7, src_reg, src_ofst - (done + 2)),
+                        mips_inst.Sb(Reg.t7, dst_reg, dst_ofst - (done + 2)),
                     )
                 )
 
         return move_instrs
+
+    def calc_arg_offsets(self, args: list[ir.Instruction], base: int) -> list[_ArgOffset]:
+        """
+        Calculate the offsets of the provided arguments.
+        
+        :param args: The arguments to calculate the offsets for.
+        :param base: The base offset.
+        """
+        args_with_offset: list[_ArgOffset] = []
+        for arg in args:
+            # get typesize of arg
+            arg_size: int = get_type_size(arg.type)
+
+            # align to arg aligment, discard alginment instructions
+            base, _, _ = self.align_to(arg_size, apply=False, base=base)
+
+            # create arg
+            args_with_offset.append(_ArgOffset(arg, base, arg_size))
+
+            # offset stack
+            base -= arg_size
+        return args_with_offset
