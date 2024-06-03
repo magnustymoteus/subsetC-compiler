@@ -203,7 +203,7 @@ scan_string:
     	add $t9, $a0, $a1
     	lb $t9, ($t9)
     	addi $a1, $a1, 1
-    	bne $t9, '\0', get_string_length
+    	bne $t9, 0, get_string_length
     addi $a1, $a1, -1
     li $v0, 8           # Scan string syscall
     syscall
