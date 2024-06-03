@@ -88,7 +88,7 @@ class TypeCheckerVisitor(ASTVisitor):
         else:
             self.raiseSemanticErr("lvalue required as left operand of assignment")
     def checkCompositeTypes(self, left_type: SymbolType, operator: str, right_type: SymbolType):
-        if isinstance(left_type, CompositeType) or isinstance(right_type, CompositeType):
+        if (isinstance(left_type, CompositeType) or isinstance(right_type, CompositeType)) and (left_type.ptr_count == 0 and right_type.ptr_count == 0):
             if left_type != right_type or operator not in ['=']:
                 self.raiseSemanticErr(f"invalid operands to {operator} ({left_type} and {right_type})")
 
