@@ -1,6 +1,6 @@
 import llvmlite.ir as ir
 from src.constructs.mips_program.node import instr as mips_inst
-from src.compilation.codegen.MIPS_codegen.base import MVBase, get_align, get_type_size
+from src.compilation.codegen.MIPS_codegen.base import MVBase, get_type_size
 from src.constructs.mips_program.node.reg import Reg, Regf
 
 class MVHandleStoreMixin(MVBase):
@@ -35,7 +35,7 @@ class MVHandleStoreMixin(MVBase):
                     self.store_value(value, Regf.f0 if is_float else Reg.t1, 0, mem_base=Reg.t2),
                 )
                 if is_const
-                else self.copy_data(Reg.fp, src_offset, Reg.t2, 0, size, get_align(dest.type))
+                else self.copy_data(Reg.fp, src_offset, Reg.t2, 0, size)
             ),
             mips_inst.Blank(),
         )

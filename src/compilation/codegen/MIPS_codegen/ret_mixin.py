@@ -1,6 +1,6 @@
 import llvmlite.ir as ir
 from src.constructs.mips_program.node import instr as mips_inst
-from src.compilation.codegen.MIPS_codegen.base import MVBase, get_align, get_type_size
+from src.compilation.codegen.MIPS_codegen.base import MVBase, get_type_size
 from src.constructs.mips_program.node.reg import Reg, Regf
 
 
@@ -15,9 +15,6 @@ class MVHandleRetMixin(MVBase):
             if len(args_with_offset) > 0
             else 0
         )
-        if len(args_with_offset) > 0:
-            first_empty = args_with_offset[-1].offset + args_with_offset[-1].size
-            tot_arg_size += self.align_to(4, apply=False, base=first_empty)[1]  # Align to word for start of next frame
 
         if not is_void:
             ret_val: ir.Instruction = instr.operands[0]
@@ -39,7 +36,7 @@ class MVHandleRetMixin(MVBase):
                         )
                         if is_const
                         else self.copy_data(
-                            Reg.fp, self.variables[ret_val.name].offset, Reg.fp, tot_size, ret_size, get_align(ret_val.type)
+                            Reg.fp, self.variables[ret_val.name].offset, Reg.fp, tot_size, ret_size,
                         )
                     ),
                 )

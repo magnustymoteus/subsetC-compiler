@@ -16,7 +16,6 @@ class MVHandleLoadMixin(MVBase):
 
         # Allocate space for the new variable and store the loaded value
         size = get_type_size(instr.type)
-        self.align_to(instr.align)
         var = self.variables.new_var(Label(instr.name), self.stack_offset)
         self.stack_offset -= size
 
@@ -30,8 +29,6 @@ class MVHandleLoadMixin(MVBase):
 
             # load value at pointer (deref)
             # store value at var offset from frame pointer
-            self.copy_data(
-                Reg.t2, 0, Reg.fp, var.offset, size, instr.align
-            ),
+            self.copy_data( Reg.t2, 0, Reg.fp, var.offset, size),
             mips_inst.Blank(),
         )

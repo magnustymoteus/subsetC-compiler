@@ -175,11 +175,6 @@ class MipsVisitor(
                     if len(args_with_offset) > 0
                     else 0
                 )
-                first_empty = (
-                    args_with_offset[-1].offset - args_with_offset[-1].size if len(args_with_offset) > 0 else 0
-                )
-                # Align to word for start of next frame
-                tot_arg_size += self.align_to(4, apply=False, base=first_empty)[1]
                 for arg, arg_offset, _ in args_with_offset:
                     # `size + offset` because offset is already negative
                     self.variables.new_var(Label(arg.name), tot_arg_size + arg_offset)

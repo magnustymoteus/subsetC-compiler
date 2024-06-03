@@ -1,6 +1,6 @@
 import llvmlite.ir as ir
 from src.constructs.mips_program.node import instr as mips_inst
-from src.compilation.codegen.MIPS_codegen.base import MVBase, get_align, get_type_size, PTR_SIZE
+from src.compilation.codegen.MIPS_codegen.base import MVBase, get_type_size, PTR_SIZE
 from src.constructs.mips_program.node.label import Label
 from src.constructs.mips_program.node.reg import Reg
 
@@ -25,7 +25,6 @@ class MVHandleAllocaMixin(MVBase):
 
         # size of the allocated type
         size = get_type_size(pointee_type)
-        self.align_to(get_align(pointee_type))
 
         self.stack_offset -= size
         self.last_block.add_instr(
@@ -35,7 +34,6 @@ class MVHandleAllocaMixin(MVBase):
 
         # add variable to the list of variables of that function scope
         var = self.variables.new_var(Label(instr.name), self.stack_offset)
-        self.align_to(instr.align)
         self.stack_offset -= PTR_SIZE
         self.last_block.add_instr(
             mips_inst.Addiu(Reg.sp, Reg.sp, -PTR_SIZE),

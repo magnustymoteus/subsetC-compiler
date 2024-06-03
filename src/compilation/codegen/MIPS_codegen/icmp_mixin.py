@@ -14,7 +14,6 @@ class MVHandleICMPMixin(MVBase):
         assert len(instr.operands) == 2
 
         size: int = get_type_size(instr.type)  # TODO allow for arrays
-        self.align_to(size)
         var = self.variables.new_var(Label(instr.name), self.stack_offset)
         self.stack_offset -= size
 

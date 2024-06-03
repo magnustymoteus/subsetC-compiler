@@ -38,25 +38,6 @@ def get_type_size(t: ir.Type) -> int:
     return res
 
 
-def get_align(t: ir.Type) -> int:
-    match t:
-        case ir.IntType():
-            return get_type_size(t)
-        case ir.PointerType():
-            return PTR_SIZE
-        case ir.FloatType() | ir.DoubleType():
-            return 4
-        case ir.VoidType():
-            return 0
-        case ir.ArrayType():
-            # align of contained type
-            return get_align(t.element)
-        case ir.IdentifiedStructType():
-            return max(get_align(field) for field in t.elements)
-        case _:
-            assert False, f"unimplemented: {type(t).__name__}"
-
-
 class _ArgOffset():
     def __init__(self, instr: ir.Instruction, offset: int, size: int) -> None:
         self.instr = instr
@@ -87,48 +68,6 @@ class MVBase:
 
     new_function_started: bool
     "True if a new function has just started. Used to indicate to the block visit a new stack frame should be created."
-
-    def align_to(self, alignment: int, apply=True, base=None) -> tuple[int, int, tuple[mips_inst.Srl, mips_inst.Sll] | None]:
-        """
-        Align the stack to the given alignment in bytes
-
-        :aligment: The number of bytes to align to. Must be a power of 2.
-        :apply: If True (default) the code will be immediately applied.
-        If false the resulting offset and instructions will be returned.
-        NOTE: If ``base`` is provided apply will be forced to False.
-        :base: Base address to align from. If base is set ``apply`` is disabled.
-
-        :return: (offset, diff, instructions)
-        """
-        if base is not None:
-            apply = False
-        else:
-            base = self.stack_offset
-
-        # alignment = max(alignment, 1)
-        if alignment == 0:
-            assert False
-
-        if alignment == 1:
-            if apply:
-                self.last_block.add_instr(
-                    mips_inst.Comment(f"align stack to {alignment} bytes, no change happened")
-                )
-            return base, 1, ()
-
-        shift_bits = int(math.log2(alignment))
-        new_offset = math.floor(base / alignment) * alignment
-        diff = new_offset - base
-        if apply:
-            self.stack_offset = new_offset
-
-        instructions = (
-            mips_inst.Srl(Reg.sp, Reg.sp, shift_bits, mips_inst.Comment(f"align stack to {alignment} bytes")),
-            mips_inst.Sll(Reg.sp, Reg.sp, shift_bits),
-        )
-        if apply:
-            self.last_block.add_instr(instructions)
-        return new_offset, diff, instructions
 
     def load_float(
         self,
@@ -283,11 +222,9 @@ class MVBase:
         dst_reg: Reg,
         dst_ofst: int,
         len: int,
-        align: int,
     ) -> mips_inst.Instruction:
         """
         Copy ``len`` bytes of data from ``src_ofst``(``src_reg``) to ``dst_ofst``(``dst_reg``).
-        Start of data must be aligned to ``align`` bytes.
         """
 
         assert len > 0
@@ -296,67 +233,27 @@ class MVBase:
         move_instrs: list[mips_inst.Instruction] = []
         done = 0
         todo = len
-        l_instr, s_instr, size_moved = None, None, 0
 
-        # determine copy size per instruction
-        match align % 4:
-            case 0:
-                l_instr, s_instr, size_moved = mips_inst.Lw, mips_inst.Sw, 4
-            case 1:
-                l_instr, s_instr, size_moved = mips_inst.Lb, mips_inst.Sb, 1
-            case 2:
-                l_instr, s_instr, size_moved = mips_inst.Lh, mips_inst.Sh, 2
-            case _:
-                assert False, f"alignment of {align%4=} not possible"
-
-        # copy data at of rate min(4, alignment)
-        # stop once there is less to do than the alignment size
-        while todo > align % 4:
+        # copy data
+        while todo > 0:
             move_instrs.extend(
                 (
-                    l_instr(
+                    mips_inst.Lw(
                         Reg.t7,
                         src_reg,
                         src_ofst - done,
-                        mips_inst.Comment(f"load {size_moved} at -{done} from src start"),
+                        mips_inst.Comment(f"load 4 at -{done} from src start"),
                     ),
-                    s_instr(
+                    mips_inst.Sw(
                         Reg.t7,
                         dst_reg,
                         dst_ofst - done,
-                        mips_inst.Comment(f"store {size_moved} at -{done} from dest start"),
+                        mips_inst.Comment(f"store 4 at -{done} from dest start"),
                     ),
                 )
             )
-            todo -= size_moved
-            done += size_moved
-
-        # copy the remaining data over (if any)
-        match todo:
-            case 1:
-                move_instrs.extend(
-                    (
-                        mips_inst.Lb(Reg.t7, src_reg, src_ofst - done),
-                        mips_inst.Sb(Reg.t7, dst_reg, dst_ofst - done),
-                    )
-                )
-            case 2:
-                move_instrs.extend(
-                    (
-                        mips_inst.Lh(Reg.t7, src_reg, src_ofst - done),
-                        mips_inst.Sh(Reg.t7, dst_reg, dst_ofst - done),
-                    )
-                )
-            case 3:
-                move_instrs.extend(
-                    (
-                        mips_inst.Lh(Reg.t7, src_reg, src_ofst - done),
-                        mips_inst.Sh(Reg.t7, dst_reg, dst_ofst - done),
-                        mips_inst.Lb(Reg.t7, src_reg, src_ofst - (done + 2)),
-                        mips_inst.Sb(Reg.t7, dst_reg, dst_ofst - (done + 2)),
-                    )
-                )
-
+            todo -= 4
+            done += 4
         return move_instrs
 
     def calc_arg_offsets(self, args: list[ir.Instruction], base: int) -> list[_ArgOffset]:
@@ -370,9 +267,6 @@ class MVBase:
         for arg in args:
             # get typesize of arg
             arg_size: int = get_type_size(arg.type)
-
-            # align to arg aligment, discard alginment instructions
-            base, _, _ = self.align_to(4, apply=False, base=base)
 
             # create arg
             args_with_offset.append(_ArgOffset(arg, base, arg_size))

@@ -28,7 +28,6 @@ class MVHandleGEPMixin(MVBase):
         # ret_type = instr.type
         size = get_type_size(instr.type)
 
-        # self.align_to(size)
         var = self.variables.new_var(Label(instr.name), self.stack_offset)
         self.stack_offset -= size
 
