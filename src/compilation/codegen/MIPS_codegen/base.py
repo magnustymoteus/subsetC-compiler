@@ -30,13 +30,8 @@ def get_type_size(t: ir.Type) -> int:
             return 0
         case ir.ArrayType():
             res = t.count * get_type_size(t.element)
-        case ir.LiteralStructType():
-            # largest align of contained types
-            assert False, f"unimplemented: {type(t.type).__name__}"
         case ir.IdentifiedStructType():
-            assert False, f"unimplemented: {type(t.type).__name__}"
-        case ir.BaseStructType():
-            assert False, f"unimplemented: {type(t.type).__name__}"
+            res = sum(get_type_size(field) for field in t.elements)
         case _:
             assert False
     assert res > 0
@@ -56,13 +51,8 @@ def get_align(t: ir.Type) -> int:
         case ir.ArrayType():
             # align of contained type
             return get_align(t.element)
-        case ir.LiteralStructType():
-            # largest align of contained types
-            assert False, f"unimplemented: {type(t).__name__}"
         case ir.IdentifiedStructType():
-            assert False, f"unimplemented: {type(t).__name__}"
-        case ir.BaseStructType():
-            assert False, f"unimplemented: {type(t).__name__}"
+            return max(get_align(field) for field in t.elements)
         case _:
             assert False, f"unimplemented: {type(t).__name__}"
 
@@ -382,7 +372,7 @@ class MVBase:
             arg_size: int = get_type_size(arg.type)
 
             # align to arg aligment, discard alginment instructions
-            base, _, _ = self.align_to(arg_size, apply=False, base=base)
+            base, _, _ = self.align_to(4, apply=False, base=base)
 
             # create arg
             args_with_offset.append(_ArgOffset(arg, base, arg_size))

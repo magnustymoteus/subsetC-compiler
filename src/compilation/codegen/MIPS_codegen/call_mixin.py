@@ -43,7 +43,7 @@ class MVHandleCallMixin(MVBase):
         # Align virtual and actual stackpointer to size of return value
         # Must align to at least word size because next frame must start at word boundary
         # and back-calculation of return value in callee can't know stack position when called
-        self.align_to(max(ret_size, 4))
+        self.align_to(4)
         var = self.variables.new_var(Label(instr.name), self.stack_offset)
         # only increase stack offset by return size to overwrite arguments after call ends
         # in mips the stack pointer is increased by total size and reset before return jump

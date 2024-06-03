@@ -60,9 +60,10 @@ class MVHandleCastMixin(MVBase):
                 )
             case "fpext":
                 assert is_float
-                self.last_block.add_instr(self.load_float(value, Regf.f0),
-                                          self.store_float(value, Regf.f0, var.offset))
-                print("unhandled: fpext")
+                self.last_block.add_instr(
+                    self.load_float(value, Regf.f0),
+                    self.store_float(value, Regf.f0, var.offset)
+                )
             case "ptrtoint":
                 print("unhandled: ptrtoint")
             case "inttoptr":
