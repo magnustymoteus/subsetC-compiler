@@ -326,7 +326,7 @@ class LLVMVisitor(CFGVisitor):
         return self._cast(self.visit(node_w.n.expression_w), node_w.n.expression_w.n.type, node_w.n.target_type)
 
     def array_access(self, node_w: Wrapper[ArrayAccess]):
-        indices = [self.visit(wrap(IntLiteral(0))), self.visit(node_w.n.index_w)]
+        indices = [self.visit(wrap(IntLiteral(0))), self._load_if_pointer(self.visit(node_w.n.index_w))]
         no_load = self.no_load
         self.no_load = True
         accessed = self.visit(node_w.n.accessed_w)

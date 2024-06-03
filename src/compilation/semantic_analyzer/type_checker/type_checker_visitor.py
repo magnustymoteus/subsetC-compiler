@@ -118,11 +118,13 @@ class TypeCheckerVisitor(ASTVisitor):
             if not noRaise:
                 self.raiseSemanticErr(f"invalid operands to {operator} (have {left_type} and {right_type})")
     def checkReturnType(self, return_type: PrimitiveType, returned_type: PrimitiveType):
-        if return_type.type == "void" and returned_type != return_type:
-            self.raiseSemanticErr(f"Cannot return type {returned_type} as void")
-        self.checkImplicitDemotion(return_type, returned_type)
-        self.checkPointerTypes(return_type, '=', returned_type)
-        self.checkCompositeTypes(return_type, '=', returned_type)
+        if (return_type.type == "void" or returned_type.type == "void"):
+            if returned_type != return_type:
+                self.raiseSemanticErr(f"Cannot return type {returned_type} as {return_type}")
+        else:
+            self.checkImplicitDemotion(return_type, returned_type)
+            self.checkPointerTypes(return_type, '=', returned_type)
+            self.checkCompositeTypes(return_type, '=', returned_type)
     def checkArrayInitialization(self, node_w: Wrapper[VariableDeclaration]):
         arr_type: ArrayType = node_w.n.type
         definition_type = node_w.n.definition_w.n.type
@@ -263,10 +265,12 @@ class TypeCheckerVisitor(ASTVisitor):
 
     def return_stmt(self, node_w: Wrapper[ReturnStatement]):
         super().return_stmt(node_w)
+        returned_type = PrimitiveType("void")
         if node_w.n.expr_w is not None:
             node_w.n.type = node_w.n.expr_w.n.type
-            function_signature: FunctionType = node_w.n.local_symtab_w.n.get_enclosing_function_type()
-            self.checkReturnType(function_signature.return_type, node_w.n.type)
+            returned_type = node_w.n.type
+        function_signature: FunctionType = node_w.n.local_symtab_w.n.get_enclosing_function_type()
+        self.checkReturnType(function_signature.return_type, returned_type)
 
 
 
