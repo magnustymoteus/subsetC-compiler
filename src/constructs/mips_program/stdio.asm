@@ -142,7 +142,7 @@ end_print:
     addiu $t5, $t5, 1
     mul $t5, $t5, 4
     lw $fp, 0($sp)
-    addu $sp, $sp, $t5
+    # addu $sp, $sp, $t5
     jr $ra
 
  .text
@@ -256,7 +256,7 @@ end_scan:
     addiu $t5, $t5, 1
     mul $t5, $t5, 4
     lw $fp, 0($sp)
-    addu $sp, $sp, $t5
+    # addu $sp, $sp, $t5
     jr $ra
 
 

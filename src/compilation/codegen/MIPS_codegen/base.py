@@ -228,7 +228,8 @@ class MVBase:
         Copy ``len`` bytes of data from ``src_ofst``(``src_reg``) to ``dst_ofst``(``dst_reg``).
         """
 
-        assert len > 0
+        if len == 0:
+            return []
         assert src_reg != Reg.t7, dst_reg != Reg.t7
 
         move_instrs: list[mips_inst.Instruction] = []

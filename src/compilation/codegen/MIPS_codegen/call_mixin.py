@@ -77,6 +77,7 @@ class MVHandleCallMixin(MVBase):
             mips_inst.Jal(jal_block),
             self.copy_data(Reg.s7, 0, Reg.fp, var.offset, ret_size),
             # restore stack pointer
-            mips_inst.Addiu(Reg.sp, Reg.sp, tot_size),
+            # mips_inst.Addiu(Reg.sp, Reg.sp, tot_size),
+            mips_inst.Move(Reg.sp, Reg.s7),
             mips_inst.Blank(),
         )
