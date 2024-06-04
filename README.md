@@ -1,5 +1,6 @@
 # Compiler Project
 * [LLVM IR 1-7 Video](https://youtu.be/pVn3mJ-2uyw)
+* [MIPS Video](https://youtu.be/FEFQrp8MiuE)
 ## Authors
 * Patryk Pilichowski
 * Valérie Jacobs
