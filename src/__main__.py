@@ -154,8 +154,6 @@ def main(argv):
                     case "llvm":
                         compiler.export_llvm(module, Path(f"{filename}.ll"))
                     case "mips":
-                        compiler.export_llvm(module, Path(f"{filename}.ll"))  # TODO remove, temporary for development
-                        print(path)
                         mips_program: MipsProgram = compiler.compile_mips(module)
                         compiler.export_mips(mips_program, Path(f"{filename}.asm"))
                     case _:

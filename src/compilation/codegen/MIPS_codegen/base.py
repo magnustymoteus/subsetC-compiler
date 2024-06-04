@@ -153,8 +153,6 @@ class MVBase:
         # Retrieve the variable's offset
         var_offset = self.variables[value.name].offset
 
-        # TODO: add support for function
-
         # Load the address into the register by adding the variable's offset to the frame pointer
         return mips_inst.Addiu(r, Reg.fp, var_offset, mips_inst.Comment(f"Store address of {value.name}"))
 
