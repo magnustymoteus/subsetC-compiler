@@ -95,11 +95,15 @@ def test_mov_s():
 
 def test_l_s():
     instruction = L_s(Regf.f0, Reg.t1, 1)
-    assert str(instruction) == "l.s $f0, 1($t1)"
+    assert len(instruction) == 2
+    assert str(instruction[0]) == "lw $t0, 1($t1)"
+    assert str(instruction[1]) == "mtc1 $t0, $f0"
 
 def test_s_s():
     instruction = S_s(Regf.f0, Reg.t1, 1)
-    assert str(instruction) == "s.s $f0, 1($t1)"
+    assert len(instruction) == 2
+    assert str(instruction[0]) == "mfc1 $t0, $f0"
+    assert str(instruction[1]) == "sw $t0, 1($t1)"
 
 def test_mtc1():
     instruction = Mtc1(Regf.f0, Regf.f1)
