@@ -66,7 +66,10 @@ class MVHandleCallMixin(MVBase):
                         ),
                         # store value at store address
                         self.store_value(
-                            arg, Regf.f0 if isinstance(arg.type, (ir.FloatType, ir.DoubleType)) else Reg.t1, arg_offset
+                            arg,
+                            Regf.f0 if isinstance(arg.type, (ir.FloatType, ir.DoubleType)) else Reg.t1,
+                            arg_offset,
+                            mem_base=Reg.s7,
                         ),
                     )
                     if isinstance(arg, ir.Constant)
