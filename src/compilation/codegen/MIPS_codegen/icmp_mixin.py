@@ -48,7 +48,5 @@ class MVHandleICMPMixin(MVBase):
 
         self.last_block.add_instr(
             self.store_int(instr, Reg.t1, var.offset),
-            # mips_inst.Sw(Reg.t1, Reg.fp, var.offset),
-            mips_inst.Addiu(Reg.sp, Reg.sp, -size),
             mips_inst.Blank(),
         )

@@ -45,9 +45,9 @@ class MVHandleCallMixin(MVBase):
         # in mips the stack pointer is increased by total size and reset before return jump
         self.stack_offset -= ret_size
 
-        args_with_offset = self.calc_arg_offsets(func_args, self.stack_offset)
+        args_with_offset = self.calc_arg_offsets(func_args, -ret_size)
         tot_arg_size = (
-            (self.stack_offset - args_with_offset[-1].offset + get_type_size(args_with_offset[-1].instr.type))
+            (-ret_size - args_with_offset[-1].offset + get_type_size(args_with_offset[-1].instr.type))
             if len(args_with_offset) > 0
             else 0
         )
@@ -56,9 +56,7 @@ class MVHandleCallMixin(MVBase):
 
         self.last_block.add_instr(
             # allocate stack space for function and return arguments
-            mips_inst.Addiu(
-                Reg.sp, Reg.sp, -tot_size, mips_inst.IrComment(f"{instr}")
-            ),  # addiu $sp, $sp, -(ret_size + tot_arg_size)
+            mips_inst.Addiu(Reg.sp, Reg.sp, -tot_size, mips_inst.IrComment(f"{instr}")),
             [
                 (
                     (
@@ -72,10 +70,13 @@ class MVHandleCallMixin(MVBase):
                         ),
                     )
                     if isinstance(arg, ir.Constant)
-                    else self.copy_data(Reg.fp, self.variables[arg.name].offset, Reg.fp, arg_offset, arg_size)
+                    else self.copy_data(Reg.fp, self.variables[arg.name].offset, Reg.s7, arg_offset, arg_size)
                 )
                 for arg, arg_offset, arg_size in args_with_offset
             ],
             mips_inst.Jal(jal_block),
+            self.copy_data(Reg.s7, 0, Reg.fp, var.offset, ret_size),
+            # restore stack pointer
+            mips_inst.Addiu(Reg.sp, Reg.sp, tot_size),
             mips_inst.Blank(),
         )

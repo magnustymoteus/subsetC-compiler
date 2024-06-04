@@ -1,3 +1,5 @@
+from typing import Any
+from src.constructs.mips_program.node.instr.instruction import Instruction
 from src.constructs.mips_program.node import LabeledBlock
 from src.constructs.mips_program.variable import Global
 
@@ -28,3 +30,7 @@ class MipsProgram:
         # convert all blocks in the program to asm and join them with a newline
         blocks = "\n".join([f"{b}" for b in self.blocks])
         return f"{globl}\n.data\n{data}\n{entry}\n{blocks}"
+
+    def replace_placeholder(self, name: str, replacement: Any):
+        for b in self.blocks:
+            b.replace_placeholder(name, replacement)

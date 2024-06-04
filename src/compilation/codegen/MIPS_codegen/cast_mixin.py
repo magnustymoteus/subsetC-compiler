@@ -19,7 +19,7 @@ class MVHandleCastMixin(MVBase):
         "whether the result is a float"
 
         self.last_block.add_instr(
-            mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -size
+            mips_inst.IrComment(f"{instr}"),
         )
 
         match instr.opname:

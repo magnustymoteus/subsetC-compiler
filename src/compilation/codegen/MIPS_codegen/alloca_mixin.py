@@ -27,16 +27,12 @@ class MVHandleAllocaMixin(MVBase):
         size = get_type_size(pointee_type)
 
         self.stack_offset -= size
-        self.last_block.add_instr(
-            # move the stack pointer by the size of the variable
-            mips_inst.Addiu(Reg.sp, Reg.sp, -(size), mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -size
-        )
 
         # add variable to the list of variables of that function scope
         var = self.variables.new_var(Label(instr.name), self.stack_offset)
         self.stack_offset -= PTR_SIZE
         self.last_block.add_instr(
-            mips_inst.Addiu(Reg.sp, Reg.sp, -PTR_SIZE),
+            mips_inst.IrComment(f"{instr}"),
             # calculate address of allocated variable
             mips_inst.Addiu(Reg.t1, Reg.fp, var.offset + size),
             # offset (already negative) minus type size

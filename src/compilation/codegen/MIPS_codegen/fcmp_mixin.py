@@ -22,7 +22,7 @@ class MVHandleFCMPMixin(MVBase):
         branch_end_label = Label(f"{self.function.name}.{self.basic_block.name}.{instr.name}.end")
 
         self.last_block.add_instr(
-            mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
+            mips_inst.IrComment(f"{instr}"),
             self.load_float(value1, Regf.f0),
             self.load_float(value2, Regf.f2),
         )

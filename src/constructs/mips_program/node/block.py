@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import Any
+
 from src.constructs.mips_program.node.label import Label
 from src.constructs.mips_program.node.node import Node
 from src.constructs.mips_program.node.instr.instruction import Instruction
@@ -29,3 +32,8 @@ class LabeledBlock(Node):
     def add_instr(self, *instr: Instruction | list):
         """Add an instruction to the block"""
         self.instructions.extend(flatten(instr))
+
+    def replace_placeholder(self, name: str, replacement: Any) -> LabeledBlock:
+        for idx, instr in enumerate(self.instructions):
+            self.instructions[idx] = instr.replace_placeholder(name, replacement)
+        return self

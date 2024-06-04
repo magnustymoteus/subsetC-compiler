@@ -32,7 +32,7 @@ class MVHandleGEPMixin(MVBase):
         self.stack_offset -= size
 
         self.last_block.add_instr(
-            mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
+            mips_inst.IrComment(f"{instr}"),
             mips_inst.Move(Reg.t1, Reg.zero, mips_inst.Comment("set up offset")),
         )
         

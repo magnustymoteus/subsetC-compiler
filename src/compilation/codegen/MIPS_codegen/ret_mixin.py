@@ -45,12 +45,11 @@ class MVHandleRetMixin(MVBase):
             ),
             # restore return register
             mips_inst.Lw(Reg.ra, Reg.fp, -4, mips_inst.IrComment(f"{instr}")),  # lw  $ra, -4($fp)
+            mips_inst.Lw(Reg.s7, Reg.fp, -8),  # lw  $s7, -8($fp)
             # restore stack pointer to start of frame
             mips_inst.Move(Reg.sp, Reg.fp),  # move    $sp, $fp
             # restore previous frame pointer
             mips_inst.Lw(Reg.fp, Reg.sp),  # lw  $fp, 0($sp)
-            # reset stack by size of arguments  #? do with virtual stack checkpoint instead  #TODO
-            mips_inst.Addiu(Reg.sp, Reg.sp, tot_arg_size),  # reset stack pointer to "deallocate" arguments
             # jump back to caller
             mips_inst.Jr(Reg.ra),  # jr  $ra
             mips_inst.Blank(),

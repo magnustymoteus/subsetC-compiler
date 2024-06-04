@@ -1,4 +1,3 @@
-import math
 import struct
 
 from llvmlite import ir
@@ -58,6 +57,8 @@ class MVBase:
     @property
     def last_block(self):
         """Current block being visited."""
+        if len(self.tree.blocks) == 0:
+            return None
         return self.tree.blocks[-1]
 
     variables: Variables

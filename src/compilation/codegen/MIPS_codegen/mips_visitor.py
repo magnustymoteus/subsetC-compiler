@@ -179,6 +179,11 @@ class MipsVisitor(
                     # `size + offset` because offset is already negative
                     self.variables.new_var(Label(arg.name), tot_arg_size + arg_offset)
                 super().visit_Function(func)
+                if self.last_block is not None:
+                    self.tree.replace_placeholder(
+                        f"stack-prealloc-{self.function.name}",
+                        self.stack_offset,
+                    )
 
     def visit_BasicBlock(self, bb: ir_inst.Block):
         """Visit a basic block."""
@@ -195,12 +200,16 @@ class MipsVisitor(
                 mips_inst.Move(Reg.fp, Reg.sp),  # move    $fp, $sp
                 # store return address on stack
                 mips_inst.Sw(Reg.ra, Reg.fp, -4),  # sw  $ra, -4($fp)
-                # move stack pointer down
-                mips_inst.Addiu(Reg.sp, Reg.sp, -8),  # subiu   $sp, $sp, 8
+                # store s7 on stack
+                mips_inst.Sw(Reg.s7, Reg.fp, -8),
+                # preallocate space for local variables
+                mips_inst.Addiu(Reg.sp, Reg.sp, mips_inst.Placeholder(f"stack-prealloc-{self.function.name}")),
+                # store the end of the function allocated space in s7
+                mips_inst.Move(Reg.s7, Reg.sp),
                 mips_inst.Blank(),
             )
             self.new_function_started = False
-            self.stack_offset -= 8  # offset stack by 2 words (fp, ra)
+            self.stack_offset -= 12  # offset stack by 3 words (fp, ra, s7)
         super().visit_BasicBlock(bb)
 
     def visit_Instruction(self, instr: ir_inst.Instruction):
@@ -208,11 +217,11 @@ class MipsVisitor(
         # print(f"    - {type(instr).__name__}")  # TODO remove when finished
 
         # for debugging stack pointer desyncs, marks location in mars before each instruction
-        # if not isinstance(instr, ir_inst.Comment):
-        #     self.last_block.add_instr(
-        #         mips_inst.Lw(Reg.t1, Reg.sp, text="mark sp location"),
-        #         mips_inst.Sw(Reg.t1, Reg.sp, text="mark sp location"),
-        #     )
+        if not isinstance(instr, ir_inst.Comment):
+            self.last_block.add_instr(
+                mips_inst.Lw(Reg.t1, Reg.sp, text="mark sp location"),
+                mips_inst.Sw(Reg.t1, Reg.sp, text="mark sp location"),
+            )
         match instr:
             case ir_inst.AllocaInstr():
                 super().handle_alloca(instr)

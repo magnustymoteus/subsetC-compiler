@@ -16,8 +16,7 @@ class MVHandleInstructionMixin(MVBase):
         is_float = isinstance(instr.type, ir.FloatType)
 
         self.last_block.add_instr(
-            mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),  # addiu $sp, $sp, -size
-            self.load_value(instr.operands[0], Regf.f0 if is_float else Reg.t1),
+            self.load_value(instr.operands[0], Regf.f0 if is_float else Reg.t1, mips_inst.IrComment(f"{instr}")),
             (self.load_value(instr.operands[1], Regf.f2 if is_float else Reg.t2) if len(instr.operands) == 2 else ()),
         )
 

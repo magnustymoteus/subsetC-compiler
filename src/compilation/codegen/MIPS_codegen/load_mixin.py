@@ -22,7 +22,6 @@ class MVHandleLoadMixin(MVBase):
         # is_float = isinstance(operand.type, ir.FloatType)
 
         self.last_block.add_instr(
-            mips_inst.Addiu(Reg.sp, Reg.sp, -size, mips_inst.IrComment(f"{instr}")),
             # load pointer address
             # assured operand is int because operand is pointer
             self.load_int(operand, Reg.t2, mips_inst.Comment("load pointer address")),
