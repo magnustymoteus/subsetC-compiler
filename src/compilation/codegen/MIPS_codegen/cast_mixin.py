@@ -64,9 +64,17 @@ class MVHandleCastMixin(MVBase):
                     self.store_float(value, Regf.f0, var.offset)
                 )
             case "ptrtoint":
-                print("unhandled: ptrtoint")
+                assert not is_float
+                self.last_block.add_instr(
+                    self.load_int(value, Reg.t1),
+                    self.store_int(instr, Reg.t1, var.offset),
+                )
             case "inttoptr":
-                print("unhandled: inttoptr")
+                assert not is_float
+                self.last_block.add_instr(
+                    self.load_int(value, Reg.t1),
+                    self.store_int(instr, Reg.t1, var.offset),
+                )
             case "bitcast":
                 print("unhandled: bitcast")
             case "addrspacecast":
